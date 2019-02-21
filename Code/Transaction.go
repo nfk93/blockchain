@@ -1,4 +1,4 @@
-package main
+package Code
 
 type Transaction struct {
 	From      PublicKey
