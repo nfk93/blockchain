@@ -7,7 +7,7 @@ import (
 var rpc_ RPC
 
 // Method for failing a test and reporting a meaningful error
-func fail(t *testing.T, expected string, actual string) {
+func fail(t *testing.T, expected interface{}, actual interface{}) {
 	if actual != expected {
 		t.Errorf("FAILURE: expected: %s, actual: %s",
 			expected, actual)
@@ -39,18 +39,20 @@ func TestGreet2(t *testing.T) {
 	fail(t, expected, response)
 }
 
-func TestGreetAsRPC1(t *testing.T) {
-	myAddress := listenForRPC()
-	response := sendGreeting(myAddress, "Hello, m'lady")
+func TestRPCListening(t *testing.T) {
+	rpcListener := listenForRPC()
+	defer rpcListener.Close()
 
-	expected := "Hello, sir"
-	fail(t, expected, response)
-}
+	t.Run("TestGreetingRPC1", func(t *testing.T) {
+		response := sendGreeting(rpcListener.Addr(), "Hello, m'lady")
 
-func TestGreetAsRPC2(t *testing.T) {
-	myAddress := listenForRPC()
-	response := sendGreeting(myAddress, "yo")
+		expected := "Hello, sir"
+		fail(t, expected, response)
+	})
+	t.Run("TestGreetingRPC2", func(t *testing.T) {
+		response := sendGreeting(rpcListener.Addr(), "yo")
 
-	expected := "That's no way to greet a lady!"
-	fail(t, expected, response)
+		expected := "That's no way to greet a lady!"
+		fail(t, expected, response)
+	})
 }

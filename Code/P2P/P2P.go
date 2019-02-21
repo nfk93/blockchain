@@ -44,9 +44,8 @@ func (r *RPC) Greet(msg string, returnAddress *string) error {
 
 // Call this method to register all your RPC methods and listen for calls
 // to them
-func listenForRPC() (myAddress net.Addr) {
-	ln, _ := net.Listen("tcp", ":")
-	myAddress = ln.Addr()
+func listenForRPC() (rpcListener net.Listener) {
+	rpcListener, _ = net.Listen("tcp", ":")
 
 	rpc_ := new(RPC)
 	err := rpc.Register(rpc_)
@@ -54,7 +53,7 @@ func listenForRPC() (myAddress net.Addr) {
 		log.Fatal("RPC registration failed: ", err)
 	}
 	rpc.HandleHTTP()
-	go http.Serve(ln, nil)
+	go http.Serve(rpcListener, nil)
 	return
 }
 
