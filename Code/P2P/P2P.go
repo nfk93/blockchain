@@ -33,6 +33,7 @@ func sendGreeting(addr net.Addr, msg string) string {
 	}
 	return response
 }
+
 func (r *RPC) Greet(msg string, returnAddress *string) error {
 	if msg != "Hello, m'lady" {
 		*returnAddress = "That's no way to greet a lady!"
