@@ -2,7 +2,6 @@ package P2P
 
 import (
 	"net"
-	"os"
 	"testing"
 )
 
@@ -59,3 +58,8 @@ func TestRPCListening(t *testing.T) {
 		fail(t, expected, response)
 	})
 }*/
+
+func TestGetAddr(t *testing.T) {
+	// this will throw an error if given a wrong ip.
+	net.JoinHostPort(net.ParseIP(getIP()).String(), "8000")
+}
