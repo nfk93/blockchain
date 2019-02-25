@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"sync"
 )
 
 func main() {
@@ -14,6 +15,14 @@ func main() {
 
 type RPC int
 type void struct{}
+
+type P2P struct {
+	Networklist    int // TODO: should be set
+	networkLock    sync.RWMutex
+	rpcListener    net.Listener
+	connectedPeers int // TODO: should be set
+	rpcObject      RPC
+}
 
 // Dummy methods for testing the RPC calls. Use as examples for how to
 // make RPC methods
@@ -44,7 +53,7 @@ func (r *RPC) Greet(msg string, returnAddress *string) error {
 
 // Call this method to register all your RPC methods and listen for calls
 // to them
-func listenForRPC() (rpcListener net.Listener) {
+func (p *P2P) listenForRPC() (rpcListener net.Listener) {
 	rpcListener, _ = net.Listen("tcp", ":")
 
 	rpc_ := new(RPC)
@@ -58,21 +67,21 @@ func listenForRPC() (rpcListener net.Listener) {
 }
 
 /*This method should distribute a transaction/smartcontract on the P2P network */
-func SendTransaction() {
+func (p *P2P) SendTransaction() {
 	/* TODO */
 }
 
 // This method should be called from the consensus layer to distribute a Block on the network
-func SendBlock() {
+func (p *P2P) SendBlock() {
 	/* TODO */
 }
 
 //This method should handle user input to allow transactions to be sent
-func handleUserInput() {
+func (p *P2P) handleUserInput() {
 	/* TODO */
 }
 
 //This method should deliver a received transaction or block to the consensus layer
-func received() {
+func (p *P2P) received() {
 	/*TODO */
 }

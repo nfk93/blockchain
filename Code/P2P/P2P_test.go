@@ -56,3 +56,7 @@ func TestRPCListening(t *testing.T) {
 		fail(t, expected, response)
 	})
 }
+
+func TestMakingBlock(t *testing.T) {
+	icanmakeablock()
+}
