@@ -24,6 +24,11 @@ type P2P struct {
 	rpcObject      RPC
 }
 
+func NewP2P() *P2P {
+	p2p := new(P2P)
+	return p2p
+}
+
 // Dummy methods for testing the RPC calls. Use as examples for how to
 // make RPC methods
 func sendGreeting(addr net.Addr, msg string) string {
