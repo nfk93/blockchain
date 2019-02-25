@@ -16,7 +16,9 @@ finalization, but most likely it will be the consensus layer.
 25/02-2019
 On the P2P layer:
    We have decided to implement our own rudimentary p2p layer, rather than use a preexisting package. We have chosen to
-do this to maintain tight control with how networking works in our project.
+do this to maintain tight control with how networking works in our project. This way we can make easy-to-use tailor-made
+methods for sending blocks etc rather than going through the process of marshalling/demarshalling and various dependancy
+clashes.
    This choice does immediately make our project extremely vulnerable to known attacks against poorly implemented P2p
 networks, however, given the modular design we plan on implementing, this toy p2p network layer should be easy to
 replace with a more robust solution, such as the go-etherium p2p package
