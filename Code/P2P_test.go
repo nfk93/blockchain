@@ -26,5 +26,5 @@ func TestKeyset(t *testing.T) {
 
 	keys := keyset(m)
 
-	fail(t, 1, len(keys))
+	fail(t, 2, len(keys))
 }

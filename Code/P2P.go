@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 )
 
 const (
@@ -15,6 +16,7 @@ const (
 )
 
 var networkList map[string]bool
+var networkListLock sync.RWMutex
 var peers *[]string
 
 func serveOnPort(port string) error {
@@ -55,15 +57,30 @@ func receivedNewConnection(conn net.Conn) {
 	decoder := gob.NewDecoder(conn)
 	decoder.Decode(&data)
 
-	if networkList[data.Address] {
-		// Early exit, since we already know the address
+	alreadyKnown := false
+	func() {
+		networkListLock.RLock()
+		defer networkListLock.Unlock()
+		if networkList[data.Address] {
+			alreadyKnown = true
+		}
+	}()
+	if alreadyKnown {
+		// early exit
 		return
+	} else {
+		addNetworkConnection(data.Address)
 	}
 
-	networkList[data.Address] = true
 	for _, peer := range getPeers() {
 		broadcastNewConnection(peer, data)
 	}
+}
+
+func addNetworkConnection(addr string) {
+	networkListLock.Lock()
+	networkList[addr] = true
+	networkListLock.Unlock()
 }
 
 func broadcastNewConnection(toAddr string, data newConnectionData) {

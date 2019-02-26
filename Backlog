@@ -1,1 +1,7 @@
 Implement method to calculate the current stake
+
+
+
+Networking:
+    Make sure a new node joining will not miss any nodes inbetween him requesting the current tree, processing it, and
+    starts listening for nodes.
