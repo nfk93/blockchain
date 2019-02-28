@@ -1,4 +1,4 @@
-package Consensus
+package consensus
 
 func createBlock() {
 

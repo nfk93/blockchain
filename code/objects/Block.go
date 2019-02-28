@@ -1,4 +1,4 @@
-package Code
+package objects
 
 type Block struct {
 	Value int

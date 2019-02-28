@@ -1,4 +1,4 @@
-package Code
+package p2p
 
 func keyset(m map[string]bool) []string {
 	keyset := make([]string, 0, len(m))

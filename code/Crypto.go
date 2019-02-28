@@ -1,9 +1,10 @@
-package Code
+package main
 
 import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	. "github.com/nfk93/blockchain/code/objects"
 	"math/big"
 	"strconv"
 )
@@ -109,8 +110,6 @@ func SignTransaction(t Transaction, sk SecretKey) Transaction {
 
 func buildStringToSign(t Transaction) string {
 	var buf bytes.Buffer
-	buf.WriteString(t.From.String())
-	buf.WriteString(t.To.String())
 	buf.WriteString(strconv.Itoa(t.Amount))
 	buf.WriteString(t.ID)
 	return buf.String()
