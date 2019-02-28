@@ -18,12 +18,14 @@ type Block struct {
 }
 
 type Data struct {
-	Value int
+	Trans []Transaction
 }
 
 func (d *Data) DataString() string {
 	var buf bytes.Buffer
-	buf.WriteString(strconv.Itoa(d.Value))
+	for _, t := range d.Trans {
+		buf.WriteString(t.buildStringToSign())
+	}
 	return buf.String()
 }
 
@@ -34,7 +36,7 @@ func GetTestBlock() Block {
 		"VALID",
 		42,
 		"",
-		Data{42},
+		Data{},
 		""}
 }
 
