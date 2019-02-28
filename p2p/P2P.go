@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"fmt"
-	. "github.com/nfk93/blockchain/code/objects"
+	. "github.com/nfk93/blockchain/objects"
 	"log"
 	"net"
 	"sync"

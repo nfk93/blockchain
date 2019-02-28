@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/nfk93/blockchain/code/p2p"
+	"github.com/nfk93/blockchain/p2p"
 )
 
 func main() {
