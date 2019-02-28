@@ -1,6 +1,7 @@
 package Code
 
 import (
+	. "github.com/nfk93/blockchain/objects"
 	"testing"
 )
 
