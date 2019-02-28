@@ -1,12 +1,9 @@
 package Code
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	. "github.com/nfk93/blockchain/objects"
 	"math/big"
-	"strconv"
 )
 
 type SecretKey struct {
@@ -101,7 +98,7 @@ func HashSHA(m string) string {
 	return z.SetBytes(hash[:]).String()
 }
 
-func verify(m string, s string, pk PublicKey) bool {
+func Verify(m string, s string, pk PublicKey) bool {
 	sInt := big.NewInt(0)
 	sInt.SetString(s, 10)
 	hash := sha256.Sum256([]byte(m))
@@ -113,49 +110,4 @@ func verify(m string, s string, pk PublicKey) bool {
 		return true
 	}
 	return false
-}
-
-func SignTransaction(t Transaction, sk SecretKey) Transaction {
-	m := buildStringToSign(t)
-	s := Sign(m, sk)
-	t.Signature = s
-	return t
-}
-
-func buildStringToSign(t Transaction) string {
-	var buf bytes.Buffer
-	buf.WriteString(t.From.String())
-	buf.WriteString(t.To.String())
-	buf.WriteString(strconv.Itoa(t.Amount))
-	buf.WriteString(t.ID)
-	return buf.String()
-}
-
-func VerifyTransaction(t Transaction, pk PublicKey) bool {
-	return verify(buildStringToSign(t), t.Signature, pk)
-}
-
-//Signing and verification of Blocks
-
-func buildBlockStringToSign(b Block) string {
-	var buf bytes.Buffer
-	buf.WriteString(strconv.Itoa(b.Slot))
-	buf.WriteString(b.ParentPointer)
-	buf.WriteString(strconv.Itoa(b.BakerID))
-	buf.WriteString(b.BlockProof)
-	buf.WriteString(strconv.Itoa(b.BlockNonce))
-	buf.WriteString(b.LastFinalized)
-	buf.WriteString(b.BlockData.DataString())
-	return buf.String()
-}
-
-func SignBlock(b Block, sk SecretKey) Block {
-	m := buildBlockStringToSign(b)
-	s := Sign(m, sk)
-	b.Signature = s
-	return b
-}
-
-func VerifyBlock(b Block, pk PublicKey) bool {
-	return verify(buildBlockStringToSign(b), b.Signature, pk)
 }

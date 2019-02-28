@@ -1,7 +1,7 @@
-package Code
+package objects
 
 import (
-	. "github.com/nfk93/blockchain/objects"
+	. "github.com/nfk93/blockchain/crypto"
 	"testing"
 )
 
