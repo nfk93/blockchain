@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"testing"
@@ -25,14 +24,22 @@ func TestReceiveBlock(t *testing.T) {
 		"",
 	}
 
-	BeRich(p1.String())
+	//BeRich(p1.String())
 
-	ReceiveBlock(b)
+	blockChannel := make(chan Block)
 
-	fmt.Println(GetLedger())
+	stateReturn := make(chan State)
 
-	if GetShare(p2.String()) != 500 {
-		t.Error("P2 does not own 500")
+	StartTransactionLayer(blockChannel, stateReturn)
+
+	blockChannel <- b
+
+	for {
+		state := <-stateReturn
+		if state.ledger[p2.String()] != 500 {
+			t.Error("P2 does not own 500")
+		}
+		return
 	}
 
 }

@@ -1,32 +1,41 @@
 package transaction
 
-import . "github.com/nfk93/blockchain/objects"
+import (
+	"fmt"
+	. "github.com/nfk93/blockchain/objects"
+)
 
-var ledger = map[string]int{}
-
-func ReceiveBlock(b Block) {
-	processBlock(b)
+type TLNode struct {
+	block Block
+	state State
 }
 
-func processBlock(b Block) {
+type State struct {
+	ledger     map[string]int
+	parentHash string
+}
+
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State) {
+	go func() {
+		for {
+			b := <-blockInput
+			stateReturn <- processBlock(b)
+		}
+	}()
+}
+
+func processBlock(b Block) State {
+	s := State{}
+	s.ledger = map[string]int{}
+
 	for _, t := range b.BlockData.Trans {
-		addTransaction(t)
+		s.addTransaction(t)
 	}
+	fmt.Println(s.ledger)
+	return s
 }
 
-func addTransaction(t Transaction) {
-	ledger[t.To.String()] += t.Amount
-	ledger[t.From.String()] -= t.Amount
-}
-
-func GetShare(s string) int {
-	return ledger[s]
-}
-
-func GetLedger() map[string]int {
-	return ledger
-}
-
-func BeRich(s string) {
-	ledger[s] += 100000
+func (s *State) addTransaction(t Transaction) {
+	s.ledger[t.To.String()] += t.Amount
+	s.ledger[t.From.String()] -= t.Amount
 }
