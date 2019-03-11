@@ -1,227 +1,157 @@
 package p2p
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/gob"
 	"fmt"
-	. "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/objects"
 	"log"
 	"net"
+	"net/http"
+	"net/rpc"
+	"sort"
 	"sync"
 )
 
 const (
-	BROADCAST_BLOCK          uint16 = 44444
-	BROADCAST_NEW_CONNECTION uint16 = 32001
-	CONNECT_TO_NETWORK       uint16 = 32000
-	OK                       uint16 = 10000
+	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
+	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 )
 
 var networkList map[string]bool
-var networkListLock sync.RWMutex
+var nLock sync.RWMutex
 var peers []string
 var peersLock sync.RWMutex
+var myHostPort string
+var myIp string
+var deliverBlock chan objects.Block
+var deliverTrans chan objects.Transaction
 
-func StartP2P(connectTo string, myHostPort string) {
+func StartP2P(connectTo string, hostPort string) {
 	networkList = make(map[string]bool)
-	peers = make([]string, 0)
+	myIp = getIP().String()
+	myHostPort = hostPort
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
-		myAddr := "127.0.0.1" + ":" + myHostPort // TODO: get real ip
-		addNewConnection(myAddr)
-		serveOnPort(myHostPort)
+		networkList[myIp+":"+myHostPort] = true
+		determinePeers()
+		go listenForRPC(myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
-		connectToNetwork(connectTo, myHostPort)
-		serveOnPort(myHostPort)
+		connectToNetwork(connectTo)
+		go listenForRPC(myHostPort)
 	}
 }
 
 func PrintNetworkList() {
-	for _, k := range keyset(networkList) {
+	for _, k := range setAsList(networkList) {
 		fmt.Println(k)
 	}
 }
 
-func serveOnPort(port string) (net.Listener, error) {
-	ln, err := net.Listen("tcp", ":"+port)
+func listenForRPC(port string) {
+	ln, _ := net.Listen("tcp", ":"+port)
+	rpcObj := new(RPCHandler)
+	err := rpc.Register(rpcObj)
 	if err != nil {
-		return nil, err
+		log.Fatal("RPCHandler can't be registered, ", err)
 	}
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				log.Println("Connection error: ", err)
-			}
-			go handleConnection(conn)
-		}
-	}()
-	return ln, err
-}
-
-func handleConnection(conn net.Conn) {
-	requestIDEncoded := make([]byte, 16)
-	conn.Read(requestIDEncoded)
-	requestId := binary.BigEndian.Uint16(requestIDEncoded)
-
-	switch requestId {
-	case BROADCAST_BLOCK:
-		fmt.Print("\nReceived BROADCAST_BLOCK")
-		receivedBlock(conn)
-	case BROADCAST_NEW_CONNECTION:
-		fmt.Print("\nReceived BROADCAST_NEW_CONNECTION")
-		receivedNewConnection(conn)
-	case CONNECT_TO_NETWORK:
-		fmt.Print("\nReceived CONNECT_TO_NETWORK")
-		receivedConnectToNetwork(conn)
-	default:
-		fmt.Print("\nInvalid request ID: ", requestId)
+	rpc.HandleHTTP()
+	er := http.Serve(ln, nil)
+	if er != nil {
+		log.Fatal("Error serving: ", err)
 	}
 }
 
 // -----------------------------------------------------------
 // NETWORK METHODS
 // -----------------------------------------------------------
+type RPCHandler int
 
-type newConnectionData struct {
-	Address string
+func (r *RPCHandler) RequestNetworkList(_ struct{}, reply *map[string]bool) error {
+	nLock.RLock()
+	defer nLock.RUnlock()
+	*reply = networkList
+	return nil
 }
 
-func receivedNewConnection(conn net.Conn) {
-	var data newConnectionData
-	decoder := gob.NewDecoder(conn)
-	decoder.Decode(&data)
-	fmt.Println("\n\treceived broadcast connection:", data.Address)
-
-	// Check if we know the peer, and exit if we do.
+func (r *RPCHandler) NewConnection(newAddr string, reply *struct{}) error {
+	// Check if we know the peer, and exit early if we do.
 	alreadyKnown := false
 	func() {
-		networkListLock.RLock()
-		defer networkListLock.RUnlock()
-		if networkList[data.Address] {
+		nLock.RLock()
+		defer nLock.RUnlock()
+		if networkList[newAddr] {
 			alreadyKnown = true
 		}
 	}()
 	if alreadyKnown {
 		// Early exit
-		return
+		return nil
 	}
 
-	// Add the connection to your network
-	addNewConnection(data.Address)
+	nLock.Lock()
+	defer nLock.Unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if networkList[newAddr] != true {
+		networkList[newAddr] = true
+		determinePeers()
 
-	// Broadcast it to everyone else
-	broadcastNewConnection(data)
+		go broadcastNewConnection(newAddr)
+	}
+	return nil
 }
 
-func broadcastNewConnection(data newConnectionData) {
+func broadcastNewConnection(newAddr string) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
-	for _, peer := range getPeers() {
-		sendNewConnectionTo(peer, data)
+	for _, peer := range peers {
+		client, err := rpc.DialHTTP("tcp", peer)
+		if err != nil {
+			fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to " + peer)
+		} else {
+			void := struct{}{}
+			client.Call(RPC_NEW_CONNECTION, newAddr, &void)
+		}
 	}
 }
 
-func sendNewConnectionTo(toAddr string, data newConnectionData) {
-	conn := initateRequest(toAddr, BROADCAST_NEW_CONNECTION)
-	defer conn.Close()
-
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(data)
-}
-
-func receivedBlock(conn net.Conn) {
-	var block Block
-	decoder := gob.NewDecoder(conn)
-	decoder.Decode(&block)
-	// TODO
-}
-
-func broadcastBlock(addr string, block Block) {
-	conn := initateRequest(addr, BROADCAST_BLOCK)
-	defer conn.Close()
-
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(block)
-}
-
-func connectToNetwork(addr string, myPort string) {
-	conn := initateRequest(addr, CONNECT_TO_NETWORK)
-	defer conn.Close()
-
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, myPort)
-	conn.Write(buf.Bytes())
-
-	/*
-		encoder := gob.NewEncoder(conn)
-		encoder.Encode(myPort)
-
-		time.Sleep(time.Second*2)
-
-		var myAddr string
-		decoder := gob.NewDecoder(conn)
-		decoder.Decode(&myAddr)
-		decoder.Decode(&networkList)
-		fmt.Println("\n\t... connected!") */
-}
-
-func receivedConnectToNetwork(conn net.Conn) {
-	decoder := gob.NewDecoder(conn)
-	var port string
-	decoder.Decode(&port)
-
-	addr, _, _ := net.SplitHostPort(conn.LocalAddr().String())
-	fmt.Println("\n\tconnecting", addr)
-	addNewConnection(addr + ":" + port)
-
-	encoder := gob.NewEncoder(conn)
-	encoder.Encode(addr)
-	encoder.Encode(networkList)
-
-	data := newConnectionData{addr + ":" + port}
-	go broadcastNewConnection(data)
+func connectToNetwork(addr string) {
+	client, err := rpc.DialHTTP("tcp", addr)
+	if err != nil {
+		// TODO: handle error
+		log.Fatal(err)
+	} else {
+		var reply map[string]bool
+		client.Call(RPC_REQUEST_NETWORK_LIST, struct{}{}, &reply)
+		networkList = reply
+		networkList[myIp+":"+myHostPort] = true
+		determinePeers()
+		broadcastNewConnection(myIp + ":" + myHostPort)
+	}
 }
 
 // -----------------------------------------------------------
 // INTERNAL METHODS
 // -----------------------------------------------------------
 
-func addNewConnection(addr string) {
-	networkListLock.Lock()
-	defer networkListLock.Unlock()
-	peersLock.Lock()
-	defer peersLock.Unlock()
-	networkList[addr] = true
-	determinePeers()
-}
-
-func getPeers() []string {
-	if peers == nil {
-		determinePeers()
-	}
-	return peers
-}
-
 func determinePeers() {
 	// determines your peers. Is run every time you receive a new connection
 	// TODO
-	peers = keyset(networkList)
-}
-
-func initateRequest(toAddr string, requestID uint16) net.Conn {
-	conn, err := net.Dial("tcp", toAddr)
+	peersLock.Lock()
+	defer peersLock.Unlock()
+	connections := setAsList(networkList)
+	sort.Strings(connections)
+	networkSize := len(connections)
+	peersSize := min(networkSize, 10)
+	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("FATAL ERROR, determinePeers: ", err)
 	}
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, requestID)
-	conn.Write(buf.Bytes())
-	return conn
+	peers = make([]string, peersSize)
+	for i := 0; i < peersSize; i++ {
+		peers[i] = connections[(myIndex+i)%networkSize]
+	}
 }
 
 // This is a slightly hacky way to obtain your own IPv4 IP address
