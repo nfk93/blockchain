@@ -9,9 +9,9 @@ func TestVerifyBlock(t *testing.T) {
 	var sk, pk = KeyGen(256)
 
 	b := GetTestBlock()
-	b = SignBlock(b, sk)
+	b.SignBlock(sk)
 
-	if !VerifyBlock(b, pk) {
+	if !b.VerifyBlock(pk) {
 		t.Error("Block Failed")
 	}
 
