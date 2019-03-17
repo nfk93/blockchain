@@ -5,6 +5,8 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"strconv"
+	"sync"
+	"time"
 )
 
 //var treeMap map[string]TLNode //Map of hash -> node
@@ -21,19 +23,23 @@ type State struct {
 
 type Tree struct {
 	treeMap map[string]TLNode
+	head    string
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State) {
-	tree := Tree{make(map[string]TLNode)}
-	_ = processBlock(createGenesis(), tree)
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, transInput chan Transaction, msgChannel chan string, blockReturn chan Block) {
+	tree := Tree{make(map[string]TLNode), ""}
+	gen := createGenesis()
+	_ = processBlock(gen, tree)
 
-	for {
-		b := <-blockInput
-		s := processBlock(b, tree)
-		stateReturn <- s
-		fmt.Print()
-	}
+	go func() {
+		for {
+			b := <-blockInput
+			s := processBlock(b, tree)
+			stateReturn <- s
+		}
+	}()
 
+	checkForMsg(stateReturn, transInput, msgChannel, blockReturn)
 }
 
 func processBlock(b Block, t Tree) State {
@@ -51,9 +57,11 @@ func processBlock(b Block, t Tree) State {
 		}
 	}
 
+	// Update head
+	t.head = b.BlockHash
+
 	// Create new node in the tree
 	createNewNode(b, s, t)
-	fmt.Println(s)
 	return s
 }
 
@@ -64,6 +72,7 @@ func createNewNode(b Block, s State, t Tree) {
 }
 
 func (s *State) addTransaction(t Transaction) {
+	//TODO: Handle checks of legal transactions
 	s.ledger[t.To.String()] += t.Amount
 	s.ledger[t.From.String()] -= t.Amount
 }
@@ -83,4 +92,70 @@ func createGenesis() Block {
 	genBlock.SignBlock(sk)
 	genBlock.HashBlock()
 	return genBlock
+}
+
+func createNewBlock(transactions []Transaction) Block {
+	//s := State{}
+	//var addedTransactions []Transaction
+	//for i:=0; i<10; i++  {
+	//	newTrans := transactions[0]
+	//	transactions = transactions[1:]
+	//	s.addTransaction(newTrans)
+	//	addedTransactions = append(addedTransactions, newTrans)
+	//}
+
+	//TODO: Make proper way of creating a new block
+	b := Block{43,
+		"",
+		43,
+		"",
+		43,
+		"",
+		Data{transactions[0:min(10, len(transactions))]},
+		"",
+		""}
+
+	return b
+}
+
+func checkForMsg(stateReturn chan State, transChannel chan Transaction, msgChan chan string, blockReturn chan Block) {
+
+	var transactions []Transaction
+	mux := sync.Mutex{}
+
+	go func() {
+		for {
+			trans := <-transChannel
+			mux.Lock()
+			transactions = append(transactions, trans)
+			mux.Unlock()
+		}
+	}()
+
+	for {
+		msg := <-msgChan
+
+		if msg == "createBlock" {
+			mux.Lock()
+			transList := transactions
+			transactions = []Transaction{}
+			mux.Unlock()
+			blockReturn <- createNewBlock(transList)
+
+			fmt.Println("Receive msg: " + msg)
+		}
+
+		if msg == "finalize" {
+			time.Sleep(1)
+		}
+
+	}
+
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
