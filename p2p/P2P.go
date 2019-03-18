@@ -14,21 +14,60 @@ import (
 const (
 	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
+	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
 )
 
 var networkList map[string]bool
 var nLock sync.RWMutex
 var peers []string
 var peersLock sync.RWMutex
+var blocksSeen stringSet
 var myHostPort string
 var myIp string
 var deliverBlock chan objects.Block
 var deliverTrans chan objects.Transaction
 
-func StartP2P(connectTo string, hostPort string) {
+type stringSet struct {
+	m map[string]bool
+	l sync.RWMutex
+}
+
+func (b *stringSet) add(s string) {
+	b.m[s] = true
+}
+
+func (b *stringSet) lock() {
+	b.l.Lock()
+}
+
+func (b *stringSet) unlock() {
+	b.l.Unlock()
+}
+
+func (b *stringSet) rlock() {
+	b.l.RLock()
+}
+
+func (b *stringSet) runlock() {
+	b.l.RUnlock()
+}
+
+func (b *stringSet) contains(s string) bool {
+	return b.m[s]
+}
+
+func StartP2P(connectTo string,
+	hostPort string,
+	outputBlock chan objects.Block,
+	outputTrans chan objects.Transaction,
+	inputBlock chan objects.Block,
+	inputTrans chan objects.Transaction) {
 	networkList = make(map[string]bool)
+	blocksSeen = *new(stringSet)
 	myIp = getIP().String()
 	myHostPort = hostPort
+	outputBlock = deliverBlock
+	outputTrans = deliverTrans
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
@@ -75,7 +114,7 @@ func (r *RPCHandler) RequestNetworkList(_ struct{}, reply *map[string]bool) erro
 	return nil
 }
 
-func (r *RPCHandler) NewConnection(newAddr string, reply *struct{}) error {
+func (r *RPCHandler) NewConnection(newAddr string, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
 	alreadyKnown := false
 	func() {
@@ -108,10 +147,54 @@ func broadcastNewConnection(newAddr string) {
 	for _, peer := range peers {
 		client, err := rpc.DialHTTP("tcp", peer)
 		if err != nil {
-			fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to " + peer)
+			fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
 			client.Call(RPC_NEW_CONNECTION, newAddr, &void)
+		}
+	}
+}
+
+func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
+	// Check if we know the peer, and exit early if we do.
+	alreadyKnown := false
+	func() {
+		blocksSeen.rlock()
+		defer blocksSeen.runlock()
+		if blocksSeen.contains(block.BlockHash) {
+			alreadyKnown = true
+		}
+	}()
+	if alreadyKnown {
+		// Early exit
+		return nil
+	}
+
+	blocksSeen.lock()
+	defer blocksSeen.unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if blocksSeen.contains(block.BlockHash) != true {
+		blocksSeen.add(block.BlockHash)
+		determinePeers()
+
+		// TODO: handle the block more?
+		deliverBlock <- block
+
+		go broadcastBlock(block)
+	}
+	return nil
+}
+
+func broadcastBlock(block objects.Block) {
+	peersLock.RLock()
+	defer peersLock.RUnlock()
+	for _, peer := range peers {
+		client, err := rpc.DialHTTP("tcp", peer)
+		if err != nil {
+			fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
+		} else {
+			void := struct{}{}
+			client.Call(RPC_SEND_BLOCK, block, &void)
 		}
 	}
 }
@@ -137,13 +220,12 @@ func connectToNetwork(addr string) {
 
 func determinePeers() {
 	// determines your peers. Is run every time you receive a new connection
-	// TODO
 	peersLock.Lock()
 	defer peersLock.Unlock()
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
-	peersSize := min(networkSize, 10)
+	peersSize := min(networkSize, 10) //TODO use dynamic parameter rather than 10
 	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
 		log.Fatal("FATAL ERROR, determinePeers: ", err)
