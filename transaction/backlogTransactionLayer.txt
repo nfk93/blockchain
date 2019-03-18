@@ -1,0 +1,27 @@
+
+
+
+OK - What is a node
+OK - tree structure of nodes
+OK  - store global state for every block
+OK - receiving blocks
+OK - handling blocks
+OK - Update/create new node from parent state
+NO - create hash of state
+NO - create hash of Note
+OK - Where to store/use hash of a node, to keep it for later use(next blocks parent)
+OK - Use parent ledger instead of creating a new
+OK - returning global states
+
+ok - Change key in tree back to hash value of block
+
+- Do validation for transaction in add transaction
+    - Comment in the check for sender balance
+
+- Genesis hash skal ikke kunne rammes af hashing functionen
+- Create correct Genesis block/Node
+
+ok - Finalization
+   ok - return the state of a block
+ok - parent hash
+
