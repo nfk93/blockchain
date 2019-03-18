@@ -23,13 +23,12 @@ func (t Transaction) buildStringToSign() string {
 	return buf.String()
 }
 
-func SignTransaction(t Transaction, sk SecretKey) Transaction {
+func (t Transaction) SignTransaction(sk SecretKey) {
 	m := t.buildStringToSign()
 	s := Sign(m, sk)
 	t.Signature = s
-	return t
 }
 
-func VerifyTransaction(t Transaction, pk PublicKey) bool {
-	return Verify(t.buildStringToSign(), t.Signature, pk)
+func (t Transaction) VerifyTransaction() bool {
+	return Verify(t.buildStringToSign(), t.Signature, t.From)
 }

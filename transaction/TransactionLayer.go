@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 )
@@ -23,7 +24,7 @@ type Tree struct {
 func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string) {
 	tree := Tree{make(map[string]TLNode), ""}
 	gen := createGenesis()
-	_ = processBlock(gen, tree)
+	processBlock(gen, tree)
 
 	go func() {
 		for {
@@ -70,6 +71,16 @@ func createNewNode(b Block, s State, t Tree) {
 
 func (s *State) addTransaction(t Transaction) {
 	//TODO: Handle checks of legal transactions
+
+	if !t.VerifyTransaction() {
+		fmt.Println("The transactions didn't verify")
+		return
+	}
+
+	//if s.ledger[t.From] < t.Amount { //TODO: remove comment such that it checks the balance
+	//	fmt.Println("Not enough money on senders account")
+	//	return
+	//}
 	s.ledger[t.To] += t.Amount
 	s.ledger[t.From] -= t.Amount
 }
@@ -79,41 +90,17 @@ func createGenesis() Block {
 	genBlock := Block{0,
 		"",
 		0,
-		"VALID",
-		0,
+		"VALID", //TODO: Still missing Blockproof
+		0,       //TODO: Should this be chosen for next round?
 		"",
 		Data{},
-		"",
+		"", //TODO: Genesis Hash Should not collide with any other hashes
 		""}
 
 	genBlock.SignBlock(sk)
 	genBlock.HashBlock()
 	return genBlock
 }
-
-//func createNewBlock(transactions []Transaction) Block {
-//	//s := State{}
-//	//var addedTransactions []Transaction
-//	//for i:=0; i<10; i++  {
-//	//	newTrans := transactions[0]
-//	//	transactions = transactions[1:]
-//	//	s.addTransaction(newTrans)
-//	//	addedTransactions = append(addedTransactions, newTrans)
-//	//}
-//
-//	//TODO: Make proper way of creating a new block
-//	b := Block{43,
-//		"",
-//		43,
-//		"",
-//		43,
-//		"",
-//		Data{transactions[0:min(10, len(transactions))]},
-//		"",
-//		""}
-//
-//	return b
-//}
 
 func min(a, b int) int {
 	if a < b {

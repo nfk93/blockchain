@@ -16,6 +16,7 @@ OK - returning global states
 ok - Change key in tree back to hash value of block
 
 - Do validation for transaction in add transaction
+    - Comment in the check for sender balance
 
 - Genesis hash skal ikke kunne rammes af hashing functionen
 - Create correct Genesis block/Node

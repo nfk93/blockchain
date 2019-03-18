@@ -28,8 +28,8 @@ func TestReceiveBlock(t *testing.T) {
 	_, p2 := KeyGen(256)
 	t1 := Transaction{p1, p2, 200, "ID112", ""}
 	t2 := Transaction{p1, p2, 300, "ID222", ""}
-	t1 = SignTransaction(t1, sk1)
-	t2 = SignTransaction(t2, sk1)
+	t1.SignTransaction(sk1)
+	t2.SignTransaction(sk1)
 	b := createBlock([]Transaction{t1, t2}, 0)
 
 	blockChannel, stateChannel, finalChannel := createChannels()
@@ -68,8 +68,8 @@ func TestTreeBuild(t *testing.T) {
 		_, p2 := KeyGen(256)
 		t1 := Transaction{p1, p2, 200, strconv.Itoa(i), ""}
 		t2 := Transaction{p1, p2, 300, strconv.Itoa(i + 1), ""}
-		t1 = SignTransaction(t1, sk1)
-		t2 = SignTransaction(t2, sk1)
+		t1.SignTransaction(sk1)
+		t2.SignTransaction(sk1)
 		b := createBlock([]Transaction{t1, t2}, i)
 
 		blockChannel <- b
@@ -88,8 +88,8 @@ func TestFinalize(t *testing.T) {
 	_, p2 := KeyGen(256)
 	t1 := Transaction{p1, p2, 200, strconv.Itoa(0), ""}
 	t2 := Transaction{p1, p2, 300, strconv.Itoa(0 + 1), ""}
-	t1 = SignTransaction(t1, sk1)
-	t2 = SignTransaction(t2, sk1)
+	t1.SignTransaction(sk1)
+	t2.SignTransaction(sk1)
 	block := createBlock([]Transaction{t1, t2}, 0)
 	block.HashBlock()
 
