@@ -13,19 +13,14 @@ OK - Where to store/use hash of a node, to keep it for later use(next blocks par
 OK - Use parent ledger instead of creating a new
 OK - returning global states
 
-- Change key in tree back to hash value of block
+ok - Change key in tree back to hash value of block
 
-- Check for transaction validation
-- inform consensus of bad transaction
+- Do validation for transaction in add transaction
 
 - Genesis hash skal ikke kunne rammes af hashing functionen
 - Create correct Genesis block/Node
-- Generation of genesis block
 
-- Finalization
-- Block creation
-    - Implement proper Block creation
-- parent hash
-
-- Do validation for transaction in add transaction
+ok - Finalization
+   ok - return the state of a block
+ok - parent hash
 
