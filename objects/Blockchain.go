@@ -7,8 +7,16 @@ import (
 
 // Node a single node that composes the list
 type Node struct {
-	content Block
+	content string
 	next    *Node
+}
+
+func (n Node) Next() *Node {
+	return n.next
+}
+
+func (n Node) Content() string {
+	return n.content
 }
 
 // BlockLinkedList the linked list of Items
@@ -19,7 +27,7 @@ type BlockLinkedList struct {
 }
 
 // Append adds an Item to the end of the linked list
-func (ll *BlockLinkedList) Append(t Block) {
+func (ll *BlockLinkedList) Append(t string) {
 	ll.lock.Lock()
 	node := Node{t, nil}
 	if ll.head == nil {
@@ -39,7 +47,7 @@ func (ll *BlockLinkedList) Append(t Block) {
 }
 
 // Insert adds an Item at position i
-func (ll *BlockLinkedList) Insert(i int, t Block) error {
+func (ll *BlockLinkedList) Insert(i int, t string) error {
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
 	if i < 0 || i > ll.size {
@@ -64,7 +72,7 @@ func (ll *BlockLinkedList) Insert(i int, t Block) error {
 }
 
 // RemoveAt removes a node at position i
-func (ll *BlockLinkedList) RemoveAt(i int) (*Block, error) {
+func (ll *BlockLinkedList) RemoveAt(i int) (*string, error) {
 	ll.lock.Lock()
 	defer ll.lock.Unlock()
 	if i < 0 || i > ll.size {
@@ -83,13 +91,13 @@ func (ll *BlockLinkedList) RemoveAt(i int) (*Block, error) {
 }
 
 // IndexOf returns the position of the Item t
-func (ll *BlockLinkedList) IndexOf(t Block) int {
+func (ll *BlockLinkedList) IndexOf(t string) int {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 	node := ll.head
 	j := 0
 	for {
-		if node.content.BlockEquals(t) {
+		if node.content == t {
 			return j
 		}
 		if node.next == nil {
@@ -149,8 +157,4 @@ func (ll *BlockLinkedList) Head() *Node {
 	ll.lock.RLock()
 	defer ll.lock.RUnlock()
 	return ll.head
-}
-
-func (b *Block) BlockEquals(b2 Block) bool {
-	return b.Signature == b2.Signature
 }
