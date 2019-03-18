@@ -89,6 +89,21 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 		connectToNetwork(connectTo)
 		listenForRPC(myHostPort)
 	}
+
+	// Pull user-input transactions and send via p2p
+	go func() {
+		for {
+			trans := <-inputTrans
+			go handleTransaction(trans)
+		}
+	}()
+	// Send blocks coming from the Consensus layer via p2p, without delivering them back to consensuslayer
+	go func() {
+		for {
+			block := <-inputBlock
+			go handleBlockWithoutDelivering(block)
+		}
+	}()
 }
 
 func PrintNetworkList() {
@@ -179,6 +194,11 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 		return nil
 	}
 
+	handleBlock(block)
+	return nil
+}
+
+func handleBlock(block objects.Block) {
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
@@ -189,7 +209,16 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 		go func() { deliverBlock <- block }()
 		go broadcastBlock(block)
 	}
-	return nil
+}
+
+func handleBlockWithoutDelivering(block objects.Block) {
+	blocksSeen.lock()
+	defer blocksSeen.unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if blocksSeen.contains(block.BlockHash) != true {
+		blocksSeen.add(block.BlockHash)
+		go broadcastBlock(block)
+	}
 }
 
 func broadcastBlock(block objects.Block) {
@@ -219,6 +248,11 @@ func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) err
 		return nil
 	}
 
+	handleTransaction(trans)
+	return nil
+}
+
+func handleTransaction(trans objects.Transaction) {
 	transSeen.lock()
 	defer transSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
@@ -229,7 +263,6 @@ func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) err
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}
-	return nil
 }
 
 func broadcastTrans(trans objects.Transaction) {
@@ -279,7 +312,7 @@ func determinePeers() {
 	peersSize := min(networkSize, 10) //TODO use dynamic parameter rather than 10
 	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
-		// TODO handle gracefully
+		// TODO: handle gracefully
 		log.Fatal("FATAL ERROR, determinePeers: ", err)
 	}
 	peers = make([]string, peersSize)
