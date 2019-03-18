@@ -1,0 +1,6 @@
+Handle edge cases:
+    Received block with unknown transactions
+    Handle transaction duplicatioon when switching head
+
+Add checks and balances
+Add initialization method (use channels)
