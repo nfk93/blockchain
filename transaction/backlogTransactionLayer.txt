@@ -28,4 +28,5 @@ ok - parent hash
 
 Write tests for forking/branching
 Write method to create a block given a set of transactions
+Don't create your own genesis, unless you ARE genesis
 Gas?
