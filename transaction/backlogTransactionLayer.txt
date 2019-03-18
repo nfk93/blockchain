@@ -25,3 +25,7 @@ ok - Finalization
    ok - return the state of a block
 ok - parent hash
 
+
+Write tests for forking/branching
+Write method to create a block given a set of transactions
+Gas?
