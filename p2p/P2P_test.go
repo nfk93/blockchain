@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"testing"
 	"time"
@@ -13,10 +15,12 @@ func fail(t *testing.T, expected interface{}, actual interface{}) {
 	}
 }
 
+var _, mockPK = Crypto.KeyGen(128)
+
 var testBlock_1 = objects.Block{
 	42,
 	"",
-	42,
+	mockPK,
 	"VALID",
 	42,
 	"",
@@ -27,13 +31,27 @@ var testBlock_1 = objects.Block{
 var testBlock_2 = objects.Block{
 	42,
 	"",
-	42,
+	mockPK,
 	"VALID",
 	42,
 	"",
 	objects.Data{},
 	"555",
 	""}
+
+var mockTrans_1 = objects.Transaction{
+	mockPK,
+	mockPK,
+	103,
+	"id1",
+	"sign1"}
+
+var mockTrans_2 = objects.Transaction{
+	mockPK,
+	mockPK,
+	11,
+	"id2",
+	"sign2"}
 
 /*func TestAll(t *testing.T) {
 	blockIn := make(chan objects.Block)
@@ -44,11 +62,12 @@ var testBlock_2 = objects.Block{
 }*/
 
 func TestRPC(t *testing.T) {
-	instantiateMockVars()
 	rpcObj := new(RPCHandler)
 	listenForRPC(myHostPort)
 	time.Sleep(1 * time.Second)
 
+	resetMockVars()
+	fmt.Println("Running BlocksReceivedOnce_1")
 	t.Run("BlocksReceivedOnce_1", func(t *testing.T) {
 		rpcObj.SendBlock(testBlock_1, &struct{}{})
 		block := <-deliverBlock
@@ -56,6 +75,7 @@ func TestRPC(t *testing.T) {
 			t.Errorf("First block seen isn't testblock_1")
 		}
 	})
+	fmt.Println("Running BlocksReceivedOnce_2")
 	t.Run("BlocksReceivedOnce_2", func(t *testing.T) {
 		go rpcObj.SendBlock(testBlock_2, &struct{}{})
 		go rpcObj.SendBlock(testBlock_1, &struct{}{})
@@ -71,6 +91,7 @@ func TestRPC(t *testing.T) {
 			t.Error("Second block seen isn't testblock_2")
 		}
 	})
+	fmt.Println("Running BlocksReceivedOnce_3")
 	t.Run("BlocksReceivedOnce_3", func(t *testing.T) {
 		select {
 		case _ = <-deliverBlock:
@@ -79,7 +100,8 @@ func TestRPC(t *testing.T) {
 			// do nothing
 		}
 	})
-	instantiateMockVars()
+	resetMockVars()
+	fmt.Println("Running SendBlockUpdatesBlocksSeen")
 	t.Run("SendBlockUpdatesBlocksSeen", func(t *testing.T) {
 		rpcObj := new(RPCHandler)
 		rpcObj.SendBlock(testBlock_1, &struct{}{})
@@ -96,12 +118,51 @@ func TestRPC(t *testing.T) {
 			t.Fail()
 		}
 	})
+
+	// Testing Transaction
+	resetMockVars()
+	fmt.Println("Running TransactionsReceivedOnce_1")
+	t.Run("TransactionsReceivedOnce_1", func(t *testing.T) {
+		rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		trans := <-deliverTrans
+		if trans != mockTrans_1 {
+			t.Errorf("First transaction seen isn't mockTrans_1")
+		}
+	})
+	fmt.Println("Printing TransactionsReceivedOnce_2")
+	t.Run("TransactionsReceivedOnce_2", func(t *testing.T) {
+		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
+		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		trans := <-deliverTrans
+		if trans != mockTrans_2 {
+			t.Error("Second transaction seen isn't mockTrans_2")
+		}
+	})
+	fmt.Println("Running TransactionReceivedOnce_3")
+	t.Run("TransactionReceivedOnce_3", func(t *testing.T) {
+		select {
+		case _ = <-deliverTrans:
+			t.Errorf("Too many transactions delivered!")
+		default:
+			// do nothing
+		}
+	})
 }
 
-func instantiateMockVars() {
+func resetMockVars() {
 	deliverBlock = make(chan objects.Block)
+	deliverTrans = make(chan objects.Transaction)
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
+	transSeen = *newStringSet()
 	myIp = "127.0.0.1"
 	myHostPort = "65000"
 	networkList["127.0.0.1:65000"] = true

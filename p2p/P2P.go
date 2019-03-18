@@ -15,6 +15,7 @@ const (
 	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
+	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
 )
 
 var networkList map[string]bool
@@ -22,6 +23,7 @@ var nLock sync.RWMutex
 var peers []string
 var peersLock sync.RWMutex
 var blocksSeen stringSet
+var transSeen stringSet
 var myHostPort string
 var myIp string
 var deliverBlock chan objects.Block
@@ -68,6 +70,7 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 	transIn chan objects.Transaction, transOut chan objects.Transaction) {
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
+	transSeen = *newStringSet()
 	myIp = getIP().String()
 	myHostPort = hostPort
 	deliverBlock = blockOut
@@ -169,9 +172,7 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 	func() {
 		blocksSeen.rlock()
 		defer blocksSeen.runlock()
-		if blocksSeen.contains(block.BlockHash) {
-			alreadyKnown = true
-		}
+		alreadyKnown = blocksSeen.contains(block.BlockHash)
 	}()
 	if alreadyKnown {
 		// Early exit
@@ -183,7 +184,6 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
 	if blocksSeen.contains(block.BlockHash) != true {
 		blocksSeen.add(block.BlockHash)
-		determinePeers()
 
 		// TODO: handle the block more?
 		go func() { deliverBlock <- block }()
@@ -204,6 +204,50 @@ func broadcastBlock(block objects.Block) {
 			client.Call(RPC_SEND_BLOCK, block, &void)
 		}
 	}
+}
+
+func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
+	// Check if we know the peer, and exit early if we do.
+	alreadyKnown := false
+	func() {
+		transSeen.rlock()
+		defer transSeen.runlock()
+		alreadyKnown = transSeen.contains(transHash(trans))
+	}()
+	if alreadyKnown {
+		// Early exit
+		return nil
+	}
+
+	transSeen.lock()
+	defer transSeen.unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if transSeen.contains(transHash(trans)) != true {
+		transSeen.add(transHash(trans))
+
+		// TODO: handle the block more?
+		go func() { deliverTrans <- trans }()
+		go broadcastTrans(trans)
+	}
+	return nil
+}
+
+func broadcastTrans(trans objects.Transaction) {
+	peersLock.RLock()
+	defer peersLock.RUnlock()
+	for _, peer := range peers {
+		client, err := rpc.DialHTTP("tcp", peer)
+		if err != nil {
+			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
+		} else {
+			void := struct{}{}
+			client.Call(RPC_SEND_TRANSACTION, trans, &void)
+		}
+	}
+}
+
+func transHash(t objects.Transaction) string {
+	return t.From.String() + t.ID
 }
 
 func connectToNetwork(addr string) {
