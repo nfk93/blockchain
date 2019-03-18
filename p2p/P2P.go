@@ -18,6 +18,7 @@ const (
 	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
 )
 
+// TODO use stringSet for networklist aswell
 var networkList map[string]bool
 var nLock sync.RWMutex
 var peers []string
