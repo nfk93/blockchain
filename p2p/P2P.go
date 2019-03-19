@@ -15,6 +15,7 @@ const (
 	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
+	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
 )
 
 var networkList map[string]bool
@@ -22,14 +23,23 @@ var nLock sync.RWMutex
 var peers []string
 var peersLock sync.RWMutex
 var blocksSeen stringSet
+var transSeen stringSet
 var myHostPort string
 var myIp string
 var deliverBlock chan objects.Block
 var deliverTrans chan objects.Transaction
+var inputBlock chan objects.Block
+var inputTrans chan objects.Transaction
 
 type stringSet struct {
 	m map[string]bool
 	l sync.RWMutex
+}
+
+func newStringSet() *stringSet {
+	result := new(stringSet)
+	result.m = make(map[string]bool)
+	return result
 }
 
 func (b *stringSet) add(s string) {
@@ -56,30 +66,44 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-func StartP2P(connectTo string,
-	hostPort string,
-	outputBlock chan objects.Block,
-	outputTrans chan objects.Transaction,
-	inputBlock chan objects.Block,
-	inputTrans chan objects.Transaction) {
+func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blockOut chan objects.Block,
+	transIn chan objects.Transaction, transOut chan objects.Transaction) {
 	networkList = make(map[string]bool)
-	blocksSeen = *new(stringSet)
+	blocksSeen = *newStringSet()
+	transSeen = *newStringSet()
 	myIp = getIP().String()
 	myHostPort = hostPort
-	outputBlock = deliverBlock
-	outputTrans = deliverTrans
+	deliverBlock = blockOut
+	deliverTrans = transOut
+	inputBlock = blockIn
+	inputTrans = transIn
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
 		networkList[myIp+":"+myHostPort] = true
 		determinePeers()
-		go listenForRPC(myHostPort)
+		listenForRPC(myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
 		connectToNetwork(connectTo)
-		go listenForRPC(myHostPort)
+		listenForRPC(myHostPort)
 	}
+
+	// Pull user-input transactions and send via p2p
+	go func() {
+		for {
+			trans := <-inputTrans
+			go handleTransaction(trans)
+		}
+	}()
+	// Send blocks coming from the Consensus layer via p2p, without delivering them back to consensuslayer
+	go func() {
+		for {
+			block := <-inputBlock
+			go handleBlockWithoutDelivering(block)
+		}
+	}()
 }
 
 func PrintNetworkList() {
@@ -96,10 +120,12 @@ func listenForRPC(port string) {
 		log.Fatal("RPCHandler can't be registered, ", err)
 	}
 	rpc.HandleHTTP()
-	er := http.Serve(ln, nil)
-	if er != nil {
-		log.Fatal("Error serving: ", err)
-	}
+	go func() {
+		er := http.Serve(ln, nil)
+		if er != nil {
+			log.Fatal("Error serving: ", err)
+		}
+	}()
 }
 
 // -----------------------------------------------------------
@@ -161,28 +187,38 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 	func() {
 		blocksSeen.rlock()
 		defer blocksSeen.runlock()
-		if blocksSeen.contains(block.BlockHash) {
-			alreadyKnown = true
-		}
+		alreadyKnown = blocksSeen.contains(block.BlockHash)
 	}()
 	if alreadyKnown {
 		// Early exit
 		return nil
 	}
 
+	handleBlock(block)
+	return nil
+}
+
+func handleBlock(block objects.Block) {
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
 	if blocksSeen.contains(block.BlockHash) != true {
 		blocksSeen.add(block.BlockHash)
-		determinePeers()
 
 		// TODO: handle the block more?
-		deliverBlock <- block
-
+		go func() { deliverBlock <- block }()
 		go broadcastBlock(block)
 	}
-	return nil
+}
+
+func handleBlockWithoutDelivering(block objects.Block) {
+	blocksSeen.lock()
+	defer blocksSeen.unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if blocksSeen.contains(block.BlockHash) != true {
+		blocksSeen.add(block.BlockHash)
+		go broadcastBlock(block)
+	}
 }
 
 func broadcastBlock(block objects.Block) {
@@ -197,6 +233,54 @@ func broadcastBlock(block objects.Block) {
 			client.Call(RPC_SEND_BLOCK, block, &void)
 		}
 	}
+}
+
+func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
+	// Check if we know the peer, and exit early if we do.
+	alreadyKnown := false
+	func() {
+		transSeen.rlock()
+		defer transSeen.runlock()
+		alreadyKnown = transSeen.contains(transHash(trans))
+	}()
+	if alreadyKnown {
+		// Early exit
+		return nil
+	}
+
+	handleTransaction(trans)
+	return nil
+}
+
+func handleTransaction(trans objects.Transaction) {
+	transSeen.lock()
+	defer transSeen.unlock()
+	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+	if transSeen.contains(transHash(trans)) != true {
+		transSeen.add(transHash(trans))
+
+		// TODO: handle the block more?
+		go func() { deliverTrans <- trans }()
+		go broadcastTrans(trans)
+	}
+}
+
+func broadcastTrans(trans objects.Transaction) {
+	peersLock.RLock()
+	defer peersLock.RUnlock()
+	for _, peer := range peers {
+		client, err := rpc.DialHTTP("tcp", peer)
+		if err != nil {
+			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
+		} else {
+			void := struct{}{}
+			client.Call(RPC_SEND_TRANSACTION, trans, &void)
+		}
+	}
+}
+
+func transHash(t objects.Transaction) string {
+	return t.From.String() + t.ID
 }
 
 func connectToNetwork(addr string) {
@@ -228,6 +312,7 @@ func determinePeers() {
 	peersSize := min(networkSize, 10) //TODO use dynamic parameter rather than 10
 	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
+		// TODO: handle gracefully
 		log.Fatal("FATAL ERROR, determinePeers: ", err)
 	}
 	peers = make([]string, peersSize)
