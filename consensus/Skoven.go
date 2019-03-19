@@ -2,21 +2,54 @@ package consensus
 
 import (
 	o "github.com/nfk93/blockchain/objects"
+	"sync"
 )
 
 var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
-var blocks map[string]o.Block
+var tLock sync.RWMutex
+var blocks skov
 var currentHead string
 var currentLength int
 var lastFinalized string
 
 //Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
+type skov struct {
+	m map[string]o.Block
+	l sync.RWMutex
+}
+
+func (s *skov) add(block o.Block) {
+	hash := block.HashBlock()
+	s.m[hash] = block
+}
+
+func (s *skov) get(blockHash string) o.Block {
+	return s.m[blockHash]
+}
+
+func (s *skov) lock() {
+	s.l.Lock()
+}
+
+func (s *skov) unlock() {
+	s.l.Unlock()
+}
+
+func (s *skov) rlock() {
+	s.l.RLock()
+}
+
+func (s *skov) runlock() {
+	s.l.RUnlock()
+}
+
 func comparePathWeight(b o.Block) {
 	len := 1
 	for {
-		parent := blocks[b.ParentPointer]
+		parent := blocks.get(b.ParentPointer)
+		// TODO: case on nil
 		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
@@ -33,7 +66,7 @@ func comparePathWeight(b o.Block) {
 		return
 	}
 
-	if calculateDraw(blocks[currentHead]) < calculateDraw(b) {
+	if calculateDraw(blocks.get(currentHead)) < calculateDraw(b) {
 		rollback()
 		currentHead = b.HashBlock()
 	}
@@ -66,7 +99,7 @@ func updateHead(b o.Block) {
 
 //Adds a block to our blockmap and calls updateHead
 func addBlock(b o.Block) {
-	blocks[b.HashBlock()] = b
+	blocks.get(b.HashBlock()) = b
 	updateHead(b)
 }
 
