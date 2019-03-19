@@ -14,6 +14,8 @@ var currentHead string
 var currentLength int
 var lastFinalized string
 
+//Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
+// Updates the head and initiates rollbacks accordingly
 type skov struct {
 	m map[string]o.Block
 	l sync.RWMutex
@@ -93,10 +95,12 @@ func comparePathWeight(b o.Block) {
 	}
 }
 
+//Manages rollback in the case of branch shifting
 func rollback() {
 	//* TODO
 }
 
+//Removes the transactions used in a block from unusedTransactions, and saves transactions that we have not already saved.
 func transactionsUsed(b o.Block) {
 	trans := b.BlockData.Trans
 	for _, t := range trans {
@@ -105,6 +109,7 @@ func transactionsUsed(b o.Block) {
 	}
 }
 
+//Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
 	if b.ParentPointer == currentHead {
 		currentHead = b.HashBlock()
@@ -115,11 +120,13 @@ func updateHead(b o.Block) {
 	}
 }
 
+//Adds a block to our blockmap and calls updateHead
 func addBlock(b o.Block) {
 	blocks.get(b.HashBlock()) = b
 	updateHead(b)
 }
 
+//Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
 func transactionReceived(t o.Transaction) {
 	if t.VerifyTransaction() != true {
 		return
@@ -131,10 +138,12 @@ func transactionReceived(t o.Transaction) {
 	}
 }
 
+//Sends a block to the P2P layer to be broadcasted
 func broadcastBlock(b o.Block) {
 
 }
 
+//Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func blockReceived(b o.Block) {
 	if !b.VerifyBlock(b.BakerID) || !verifyDraw(b) {
 		return
