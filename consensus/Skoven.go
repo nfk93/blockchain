@@ -2,6 +2,7 @@ package consensus
 
 import (
 	o "github.com/nfk93/blockchain/objects"
+	GenisisData "github.com/nfk93/blockchain/objects/genesisdata"
 	"sync"
 )
 
@@ -43,24 +44,46 @@ func (s *skov) runlock() {
 	s.l.RUnlock()
 }
 
+func StartConsensus(genesisData GenisisData.GenesisData, transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+	// TODO: do something with the genesis data
+
+	// Start processing blocks on one thread, non-concurrently
+	go func() {
+		block := <-blockFromP2P
+		handleBlock(block)
+	}()
+	// Start processing transactions on one thread, concurrently
+	go func() {
+		trans := <-transFromP2P
+		go handleTrans(trans)
+	}()
+}
+func handleTrans(transaction o.Transaction) {
+	// TODO:
+}
+
+func handleBlock(block o.Block) {
+	// TODO:
+}
+
 func comparePathWeight(b o.Block) {
-	len := 1
+	l := 1
 	for {
 		parent := blocks.get(b.ParentPointer)
 		// TODO: case on nil
 		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
-		len += 1
+		l += 1
 	}
-	if len < currentLength {
+	if l < currentLength {
 		return
 	}
 
-	if len > currentLength {
+	if l > currentLength {
 		rollback()
 		currentHead = b.HashBlock()
-		currentLength = len
+		currentLength = l
 		return
 	}
 
