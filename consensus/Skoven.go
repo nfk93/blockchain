@@ -14,38 +14,6 @@ var currentHead string
 var currentLength int
 var lastFinalized string
 
-//Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
-// Updates the head and initiates rollbacks accordingly
-type skov struct {
-	m map[string]o.Block
-	l sync.RWMutex
-}
-
-func (s *skov) add(block o.Block) {
-	hash := block.HashBlock()
-	s.m[hash] = block
-}
-
-func (s *skov) get(blockHash string) o.Block {
-	return s.m[blockHash]
-}
-
-func (s *skov) lock() {
-	s.l.Lock()
-}
-
-func (s *skov) unlock() {
-	s.l.Unlock()
-}
-
-func (s *skov) rlock() {
-	s.l.RLock()
-}
-
-func (s *skov) runlock() {
-	s.l.RUnlock()
-}
-
 func StartConsensus(genesisData GenisisData.GenesisData, transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
 	// TODO: do something with the genesis data
 
@@ -60,14 +28,16 @@ func StartConsensus(genesisData GenisisData.GenesisData, transFromP2P chan o.Tra
 		go handleTrans(trans)
 	}()
 }
+
 func handleTrans(transaction o.Transaction) {
 	// TODO:
 }
-
 func handleBlock(block o.Block) {
 	// TODO:
 }
 
+// Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
+// Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
 	for {
@@ -159,4 +129,34 @@ func calculateDraw(b o.Block) int {
 func verifyDraw(b o.Block) bool {
 	// *TODO
 	return true
+}
+
+type skov struct {
+	m map[string]o.Block
+	l sync.RWMutex
+}
+
+func (s *skov) add(block o.Block) {
+	hash := block.HashBlock()
+	s.m[hash] = block
+}
+
+func (s *skov) get(blockHash string) o.Block {
+	return s.m[blockHash]
+}
+
+func (s *skov) lock() {
+	s.l.Lock()
+}
+
+func (s *skov) unlock() {
+	s.l.Unlock()
+}
+
+func (s *skov) rlock() {
+	s.l.RLock()
+}
+
+func (s *skov) runlock() {
+	s.l.RUnlock()
 }
