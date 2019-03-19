@@ -92,7 +92,7 @@ func updateHead(b o.Block) {
 
 //Adds a block to our blockmap and calls updateHead
 func addBlock(b o.Block) {
-	blocks.get(b.HashBlock()) = b
+	blocks.add(b)
 	updateHead(b)
 }
 
