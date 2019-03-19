@@ -15,7 +15,7 @@ func comparePathWeight(b o.Block) {
 	len := 1
 	for {
 		parent := blocks[b.ParentPointer]
-		if parent.Slot == 0 {
+		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
 		len += 1
@@ -65,7 +65,7 @@ func addBlock(b o.Block) {
 }
 
 func transactionReceived(t o.Transaction) {
-	if o.VerifyTransaction(t, t.From) != true {
+	if t.VerifyTransaction() != true {
 		return
 	}
 	_, alreadyReceived := transactions[t.ID]
