@@ -43,7 +43,7 @@ func comparePathWeight(b o.Block) {
 	for {
 		parent := blocks.get(b.ParentPointer)
 		// TODO: case on nil
-		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
+		if parent.Slot == 0 { // TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
 		l += 1

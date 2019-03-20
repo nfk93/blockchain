@@ -49,8 +49,8 @@ func buildBlockStringToSign(b Block) string {
 	var buf bytes.Buffer
 	buf.WriteString(strconv.Itoa(b.Slot))
 	buf.WriteString(b.ParentPointer)
-	buf.WriteString(b.BakerID.N().String())
-	buf.WriteString(b.BakerID.E().String())
+	buf.WriteString(b.BakerID.N.String())
+	buf.WriteString(b.BakerID.E.String())
 	buf.WriteString(b.BlockProof)
 	buf.WriteString(strconv.Itoa(b.BlockNonce))
 	buf.WriteString(b.LastFinalized)

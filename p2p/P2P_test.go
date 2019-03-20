@@ -15,9 +15,9 @@ func fail(t *testing.T, expected interface{}, actual interface{}) {
 	}
 }
 
-var _, mockPK = Crypto.KeyGen(128)
+var _, mockPK = crypto.KeyGen(128)
 
-var testBlock_1 = objects.Block{
+var mockBlock_1 = objects.Block{
 	42,
 	"",
 	mockPK,
@@ -28,7 +28,7 @@ var testBlock_1 = objects.Block{
 	"123",
 	""}
 
-var testBlock_2 = objects.Block{
+var mockBlock_2 = objects.Block{
 	42,
 	"",
 	mockPK,
@@ -63,31 +63,31 @@ var mockTrans_2 = objects.Transaction{
 
 func TestRPC(t *testing.T) {
 	rpcObj := new(RPCHandler)
-	listenForRPC(myHostPort)
+	go listenForRPC(myHostPort)
 	time.Sleep(1 * time.Second)
 
 	resetMockVars()
 	fmt.Println("Running BlocksReceivedOnce_1")
 	t.Run("BlocksReceivedOnce_1", func(t *testing.T) {
-		rpcObj.SendBlock(testBlock_1, &struct{}{})
+		rpcObj.SendBlock(mockBlock_1, &struct{}{})
 		block := <-deliverBlock
-		if block.BlockHash != testBlock_1.BlockHash {
+		if block.BlockHash != mockBlock_1.BlockHash {
 			t.Errorf("First block seen isn't testblock_1")
 		}
 	})
 	fmt.Println("Running BlocksReceivedOnce_2")
 	t.Run("BlocksReceivedOnce_2", func(t *testing.T) {
-		go rpcObj.SendBlock(testBlock_2, &struct{}{})
-		go rpcObj.SendBlock(testBlock_1, &struct{}{})
-		go rpcObj.SendBlock(testBlock_2, &struct{}{})
-		go rpcObj.SendBlock(testBlock_1, &struct{}{})
-		go rpcObj.SendBlock(testBlock_2, &struct{}{})
-		go rpcObj.SendBlock(testBlock_1, &struct{}{})
-		go rpcObj.SendBlock(testBlock_2, &struct{}{})
-		go rpcObj.SendBlock(testBlock_1, &struct{}{})
-		go rpcObj.SendBlock(testBlock_2, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_1, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_1, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_1, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_1, &struct{}{})
+		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
 		block := <-deliverBlock
-		if block.BlockHash != testBlock_2.BlockHash {
+		if block.BlockHash != mockBlock_2.BlockHash {
 			t.Error("Second block seen isn't testblock_2")
 		}
 	})
@@ -104,7 +104,7 @@ func TestRPC(t *testing.T) {
 	fmt.Println("Running SendBlockUpdatesBlocksSeen")
 	t.Run("SendBlockUpdatesBlocksSeen", func(t *testing.T) {
 		rpcObj := new(RPCHandler)
-		rpcObj.SendBlock(testBlock_1, &struct{}{})
+		rpcObj.SendBlock(mockBlock_1, &struct{}{})
 		_ = <-deliverBlock
 		if !blocksSeen.contains("123") {
 			t.Fail()
@@ -112,7 +112,7 @@ func TestRPC(t *testing.T) {
 		if blocksSeen.contains("555") {
 			t.Fail()
 		}
-		rpcObj.SendBlock(testBlock_2, &struct{}{})
+		rpcObj.SendBlock(mockBlock_2, &struct{}{})
 		_ = <-deliverBlock
 		if !blocksSeen.contains("555") {
 			t.Fail()
@@ -160,6 +160,7 @@ func TestRPC(t *testing.T) {
 func resetMockVars() {
 	deliverBlock = make(chan objects.Block)
 	deliverTrans = make(chan objects.Transaction)
+
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
