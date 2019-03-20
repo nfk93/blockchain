@@ -83,12 +83,13 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 		fmt.Println("STARTING OWN NETWORK!")
 		networkList[myIp+":"+myHostPort] = true
 		determinePeers()
-		listenForRPC(myHostPort)
+		go listenForRPC(myHostPort)
+		fmt.Println("Listening on port " + myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
 		connectToNetwork(connectTo)
-		listenForRPC(myHostPort)
+		go listenForRPC(myHostPort)
 	}
 
 	// Pull user-input transactions and send via p2p
@@ -113,6 +114,18 @@ func PrintNetworkList() {
 	}
 }
 
+func PrintTransHashList() {
+	for _, k := range setAsList(transSeen.m) {
+		fmt.Println(k)
+	}
+}
+
+func PrintPeers() {
+	for _, v := range peers {
+		fmt.Println(v)
+	}
+}
+
 func listenForRPC(port string) {
 	ln, _ := net.Listen("tcp", ":"+port)
 	rpcObj := new(RPCHandler)
@@ -121,12 +134,10 @@ func listenForRPC(port string) {
 		log.Fatal("RPCHandler can't be registered, ", err)
 	}
 	rpc.HandleHTTP()
-	go func() {
-		er := http.Serve(ln, nil)
-		if er != nil {
-			log.Fatal("Error serving: ", err)
-		}
-	}()
+	er := http.Serve(ln, nil)
+	if er != nil {
+		log.Fatal("Error serving: ", err)
+	}
 }
 
 // -----------------------------------------------------------
@@ -238,6 +249,7 @@ func broadcastBlock(block objects.Block) {
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
+	fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
@@ -260,7 +272,8 @@ func handleTransaction(trans objects.Transaction) {
 	if transSeen.contains(transHash(trans)) != true {
 		transSeen.add(transHash(trans))
 
-		// TODO: handle the block more?
+		// TODO: handle the trans more?
+		fmt.Println("Received Transaction: ", trans)
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}
@@ -275,7 +288,10 @@ func broadcastTrans(trans objects.Transaction) {
 			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
-			client.Call(RPC_SEND_TRANSACTION, trans, &void)
+			err := client.Call("RPCHandler.SendTransaction", trans, &void)
+			if err != nil {
+				fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
+			}
 		}
 	}
 }
