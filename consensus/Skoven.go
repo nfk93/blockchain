@@ -36,6 +36,8 @@ func StartConsensus(genesisData GenesisData.GenesisData, transFromP2P chan o.Tra
 
 //Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
 func handleTransaction(t o.Transaction) {
+	tLock.Lock()
+	defer tLock.Unlock()
 	if t.VerifyTransaction() != true {
 		return
 	}
@@ -155,6 +157,8 @@ func updateHead(b o.Block) {
 		return
 	}
 	if b.ParentPointer == currentHead {
+		tLock.Lock()
+		defer tLock.Unlock()
 		currentHead = b.HashBlock()
 		currentLength += 1
 		transactionsUsed(b)
