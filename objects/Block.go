@@ -14,7 +14,6 @@ type Block struct {
 	BlockNonce    int
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
-	BlockHash     string
 	Signature     string
 }
 
@@ -38,7 +37,6 @@ func GetTestBlock() Block {
 		42,
 		"",
 		Data{},
-		"",
 		""}
 }
 
@@ -65,6 +63,6 @@ func (b *Block) VerifyBlock(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
-func (b *Block) HashBlock() {
-	b.BlockHash = HashSHA(buildBlockStringToSign(*b))
+func (b *Block) CalculateBlockHash() string {
+	return HashSHA(buildBlockStringToSign(*b))
 }

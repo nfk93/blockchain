@@ -23,7 +23,7 @@ func (t Transaction) buildStringToSign() string {
 	return buf.String()
 }
 
-func (t Transaction) SignTransaction(sk SecretKey) {
+func (t *Transaction) SignTransaction(sk SecretKey) {
 	m := t.buildStringToSign()
 	s := Sign(m, sk)
 	t.Signature = s

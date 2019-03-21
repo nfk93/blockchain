@@ -21,59 +21,64 @@ type Tree struct {
 	head    string
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, transChan chan []Transaction) {
 	tree := Tree{make(map[string]TLNode), ""}
-	gen := createGenesis()
-	processBlock(gen, tree)
+	//gen := createGenesis() //TODO: Remove this and only add create genesis if you are first on tree
+	//processBlock(gen, tree)
 
 	go func() {
 		for {
 			b := <-blockInput
-			processBlock(b, tree)
+			tree.processBlock(b)
+		}
+	}()
+
+	go func() {
+		for {
+			finalize := <-finalizeChan
+			stateReturn <- tree.treeMap[finalize].state
 		}
 	}()
 
 	for {
-		finalize := <-finalizeChan
-		finalState := tree.treeMap[finalize].state
-		stateReturn <- finalState
+		transList := <-transChan
+		blockReturn <- tree.createNewBlock(transList)
 	}
 
 }
 
-func processBlock(b Block, t Tree) State {
+func (t *Tree) processBlock(b Block) {
 	s := State{}
 	s.parentHash = b.ParentPointer
-	s.ledger = t.treeMap[s.parentHash].state.ledger
+	s.ledger = copyMap(t.treeMap[s.parentHash].state.ledger)
 	if s.ledger == nil {
 		s.ledger = make(map[PublicKey]int)
 	}
 
+	// Update head
+	t.head = b.CalculateBlockHash()
+
 	// Update state
-	if b.Slot != 0 {
+	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
 			s.addTransaction(tr)
 		}
 	}
 
-	// Update head
-	t.head = b.BlockHash
-
 	// Create new node in the tree
-	createNewNode(b, s, t)
-	return s
+	t.createNewNode(b, s)
 }
 
-func createNewNode(b Block, s State, t Tree) {
+func (t *Tree) createNewNode(b Block, s State) {
 	n := TLNode{b, s}
-	t.treeMap[b.BlockHash] = n
+	t.treeMap[b.CalculateBlockHash()] = n
 }
 
 func (s *State) addTransaction(t Transaction) {
 	//TODO: Handle checks of legal transactions
 
 	if !t.VerifyTransaction() {
-		fmt.Println("The transactions didn't verify")
+		fmt.Println("The transactions didn't verify", t)
 		return
 	}
 
@@ -85,7 +90,7 @@ func (s *State) addTransaction(t Transaction) {
 	s.ledger[t.From] -= t.Amount
 }
 
-func createGenesis() Block {
+func CreateGenesis() Block {
 	sk, _ := KeyGen(256)
 	genBlock := Block{0,
 		"",
@@ -93,18 +98,53 @@ func createGenesis() Block {
 		"VALID", //TODO: Still missing Blockproof
 		0,       //TODO: Should this be chosen for next round?
 		"",
-		Data{},
-		"", //TODO: Genesis Hash Should not collide with any other hashes
+		Data{[]Transaction{}},
 		""}
 
 	genBlock.SignBlock(sk)
-	genBlock.HashBlock()
 	return genBlock
 }
 
+func (t Tree) createNewBlock(transactions []Transaction) Block {
+	s := State{}
+	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
+
+	var addedTransactions []Transaction
+
+	noOfTrans := len(transactions)
+
+	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
+		newTrans := transactions[i]
+		//transactions = transactions[1:]
+		s.addTransaction(newTrans)
+		addedTransactions = append(addedTransactions, newTrans)
+	}
+
+	//TODO: Make proper way of creating a new block
+	b := Block{43,
+		t.head,
+		43,
+		"PROOF",
+		43,
+		"LAST_FINALIZED",
+		Data{addedTransactions},
+		""}
+
+	return b
+}
+
+// Helpers
 func min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
+}
+
+func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
+	newMap := make(map[PublicKey]int)
+	for key, value := range originalMap {
+		newMap[key] = value
+	}
+	return newMap
 }
