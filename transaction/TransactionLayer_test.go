@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-func createBlock(t []Transaction, i int) Block {
+func createBlock(t []Transaction, i int, pk PublicKey) Block {
 	return Block{i + 1,
 		strconv.Itoa(i),
-		42,
+		pk,
 		"VALID",
 		42,
 		"",
@@ -29,7 +29,7 @@ func TestReceiveBlock(t *testing.T) {
 	t2 := Transaction{p1, p2, 300, "ID222", ""}
 	t1.SignTransaction(sk1)
 	t2.SignTransaction(sk1)
-	b := createBlock([]Transaction{t1, t2}, 0)
+	b := createBlock([]Transaction{t1, t2}, 0, p1)
 	b.SignBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
@@ -75,7 +75,8 @@ func TestTreeBuild(t *testing.T) {
 		t2 := Transaction{p1, p2, 300, strconv.Itoa(i + 1), ""}
 		t1.SignTransaction(sk1)
 		t2.SignTransaction(sk1)
-		b := createBlock([]Transaction{t1, t2}, i)
+		b := createBlock([]Transaction{t1, t2}, i, p1)
+		b.SignBlock(sk1)
 
 		blockChannel <- b
 	}
@@ -95,7 +96,8 @@ func TestFinalize(t *testing.T) {
 	t2 := Transaction{p1, p2, 300, strconv.Itoa(0 + 1), ""}
 	t1.SignTransaction(sk1)
 	t2.SignTransaction(sk1)
-	block := createBlock([]Transaction{t1, t2}, 0)
+	block := createBlock([]Transaction{t1, t2}, 0, p1)
+	block.SignBlock(sk1)
 
 	b <- block
 
@@ -138,31 +140,35 @@ func TestForking(t *testing.T) {
 	// Block 1, Grow from Genesis
 	t1 := Transaction{p1, p1, 200, strconv.Itoa(1), ""}
 	t1.SignTransaction(sk1)
-	block1 := createBlock([]Transaction{}, 0)
+	block1 := createBlock([]Transaction{}, 0, p1)
+	block1.SignBlock(sk1)
 	b <- block1
 	time.Sleep(100)
 
 	// Block 2 - grow from block 1
 	t2 := Transaction{p1, p2, 200, strconv.Itoa(2), ""}
 	t2.SignTransaction(sk1)
-	block2 := createBlock([]Transaction{t2}, 1)
+	block2 := createBlock([]Transaction{t2}, 1, p1)
 	block2.ParentPointer = block1.CalculateBlockHash()
+	block1.SignBlock(sk1)
 	b <- block2
 	time.Sleep(100)
 
 	// Block 3 - grow from block 1
 	t3 := Transaction{p1, p3, 200, strconv.Itoa(3), ""}
 	t3.SignTransaction(sk1)
-	block3 := createBlock([]Transaction{t3}, 2)
+	block3 := createBlock([]Transaction{t3}, 2, p1)
 	block3.ParentPointer = block1.CalculateBlockHash()
+	block1.SignBlock(sk1)
 	b <- block3
 	time.Sleep(100)
 
 	// Block 4 - grow from block 2
 	t4 := Transaction{p2, p4, 200, strconv.Itoa(4), ""}
 	t4.SignTransaction(sk2)
-	block4 := createBlock([]Transaction{t4}, 3)
+	block4 := createBlock([]Transaction{t4}, 3, p2)
 	block4.ParentPointer = block2.CalculateBlockHash()
+	block1.SignBlock(sk2)
 	b <- block4
 
 	//Finalizing to get states from TL
