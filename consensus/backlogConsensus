@@ -4,3 +4,7 @@ Handle edge cases:
 
 Add checks and balances
 Add initialization method (use channels)
+Add slots?
+
+Add delay for switching head to branch of equal length, as discussed in advisory meeting
+(maybe) Make newly discovered transactions in block be broadcasted via p2p layer

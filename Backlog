@@ -1,6 +1,4 @@
-Implement method to calculate the current stake
-
-
+Implement a way for users to get the publickey for a given network address, to make it easier to make transactions
 
 Networking:
     Make sure a new node joining will not miss any nodes inbetween him requesting the current tree, processing it, and

@@ -1,4 +1,4 @@
-package Crypto
+package crypto
 
 import (
 	"crypto/rand"
@@ -7,46 +7,30 @@ import (
 )
 
 type SecretKey struct {
-	n_ *big.Int
-	d_ *big.Int
+	N *big.Int
+	D *big.Int
 }
 
 type PublicKey struct {
-	n_ *big.Int
-	e_ *big.Int
-}
-
-func (t *SecretKey) N() *big.Int {
-	return t.n_
-}
-
-func (t *SecretKey) D() *big.Int {
-	return t.d_
-}
-
-func (t *PublicKey) N() *big.Int {
-	return t.n_
-}
-
-func (t *PublicKey) E() *big.Int {
-	return t.e_
+	N *big.Int
+	E *big.Int
 }
 
 func (t *PublicKey) String() string {
-	return "{n: " + t.n_.String() + ", e: " + t.e_.String() + "}"
+	return "{n: " + t.N.String() + ", e: " + t.E.String() + "}"
 }
 
 func makePublicKey(n *big.Int, e *big.Int) *PublicKey {
 	pk := new(PublicKey)
-	pk.e_ = e
-	pk.n_ = n
+	pk.E = e
+	pk.N = n
 	return pk
 }
 
 func makePrivateKey(n *big.Int, d *big.Int) *SecretKey {
 	sk := new(SecretKey)
-	sk.n_ = n
-	sk.d_ = d
+	sk.N = n
+	sk.D = d
 	return sk
 }
 
@@ -89,7 +73,7 @@ func Sign(m string, sk SecretKey) string {
 	hash := sha256.Sum256([]byte(m))
 	z := big.NewInt(0)
 	z.SetBytes(hash[:])
-	return z.Exp(z, sk.D(), sk.N()).String()
+	return z.Exp(z, sk.D, sk.N).String()
 }
 
 func HashSHA(m string) string {
@@ -104,7 +88,7 @@ func Verify(m string, s string, pk PublicKey) bool {
 	hash := sha256.Sum256([]byte(m))
 	hashedMessage := big.NewInt(0)
 	hashedMessage.SetBytes(hash[:])
-	toVerify := sInt.Exp(sInt, pk.E(), pk.N())
+	toVerify := sInt.Exp(sInt, pk.E, pk.N)
 
 	if hashedMessage.Cmp(toVerify) == 0 {
 		return true

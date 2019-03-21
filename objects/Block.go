@@ -8,9 +8,9 @@ import (
 
 type Block struct {
 	Slot          int
-	ParentPointer string //a hash of parent block
-	BakerID       int    //
-	BlockProof    string //TODO: Change to right type (whitepaper 2.5.3)
+	ParentPointer string    //a hash of parent block
+	BakerID       PublicKey //
+	BlockProof    string    //TODO: Change to right type (whitepaper 2.5.3)
 	BlockNonce    int
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
@@ -30,9 +30,10 @@ func (d *Data) DataString() string {
 }
 
 func GetTestBlock() Block {
+	_, pk := KeyGen(256)
 	return Block{42,
 		"",
-		42,
+		pk,
 		"VALID",
 		42,
 		"",
@@ -46,7 +47,8 @@ func buildBlockStringToSign(b Block) string {
 	var buf bytes.Buffer
 	buf.WriteString(strconv.Itoa(b.Slot))
 	buf.WriteString(b.ParentPointer)
-	buf.WriteString(strconv.Itoa(b.BakerID))
+	buf.WriteString(b.BakerID.N.String())
+	buf.WriteString(b.BakerID.E.String())
 	buf.WriteString(b.BlockProof)
 	buf.WriteString(strconv.Itoa(b.BlockNonce))
 	buf.WriteString(b.LastFinalized)
