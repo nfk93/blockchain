@@ -6,7 +6,6 @@ import (
 	"github.com/nfk93/blockchain/objects/genesisdata"
 	"strconv"
 	"testing"
-	"time"
 )
 
 var transFromP2P chan Transaction
@@ -19,7 +18,7 @@ func resetMocksAndStart() {
 	blockFromP2P = make(chan Block)
 	blockToP2P = make(chan Block)
 	genesis = genesisdata.GenesisData{}
-	StartConsensus(genesis, transFromP2P, blockFromP2P, blockToP2P)
+	StartConsensus(transFromP2P, blockFromP2P, blockToP2P)
 }
 
 func createTestBlock(t []Transaction, i int, parentHash string) Block {
@@ -30,8 +29,7 @@ func createTestBlock(t []Transaction, i int, parentHash string) Block {
 		"VALID",
 		42,
 		"",
-		Data{t},
-		"",
+		Data{Trans: t},
 		"",
 	}
 	block.SignBlock(sk)
@@ -58,7 +56,6 @@ func TestTree(t *testing.T) {
 		transarr := []Transaction{trans}
 		blockFromP2P <- block
 		transFromP2P <- trans
-		block = createTestBlock(transarr, i, block.HashBlock())
+		block = createTestBlock(transarr, i, block.CalculateBlockHash())
 	}
-	time.Sleep(10000)
 }

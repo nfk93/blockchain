@@ -3,7 +3,6 @@ package consensus
 import (
 	"fmt"
 	o "github.com/nfk93/blockchain/objects"
-	GenesisData "github.com/nfk93/blockchain/objects/genesisdata"
 	"sync"
 )
 
@@ -16,12 +15,11 @@ var currentHead string
 var currentLength int
 var lastFinalized string
 
-func StartConsensus(genesisData GenesisData.GenesisData, transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
-
 	// TODO: do something with the genesis data
 
 	// Start processing blocks on one thread, non-concurrently
@@ -56,10 +54,18 @@ func handleTransaction(t o.Transaction) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
+	if b.Slot == 0 { //*TODO Should probably add some security measures so you can't fake a genesis block
+		handleGenesisBlock(b)
+	}
 	if !b.VerifyBlock(b.BakerID) || !verifyDraw(b) {
 		return
 	}
 	addBlock(b)
+}
+
+func handleGenesisBlock(b o.Block) {
+	blocks.add(b)
+	currentHead = b.CalculateBlockHash()
 }
 
 // Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
@@ -83,7 +89,7 @@ func comparePathWeight(b o.Block) {
 
 	if l > currentLength || calculateDraw(blocks.get(currentHead)) < calculateDraw(b) {
 		if rollback(b) {
-			currentHead = b.HashBlock()
+			currentHead = b.CalculateBlockHash()
 			currentLength = l
 		}
 	}
@@ -101,7 +107,7 @@ func rollback(newHead o.Block) bool {
 	for {
 		transactionsUnused(head)
 		head = blocks.get(head.ParentPointer)
-		if head.HashBlock() == lastFinalized {
+		if head.CalculateBlockHash() == lastFinalized {
 			break
 		}
 	}
@@ -109,7 +115,7 @@ func rollback(newHead o.Block) bool {
 	for {
 		newBranch = append(newBranch, newHead)
 		newHead = blocks.get(newHead.ParentPointer)
-		if newHead.HashBlock() == lastFinalized {
+		if newHead.CalculateBlockHash() == lastFinalized {
 			break
 		}
 	}
@@ -118,7 +124,7 @@ func rollback(newHead o.Block) bool {
 		if noBadBlocks {
 			noBadBlocks = transactionsUsed(newBranch[i])
 		} else {
-			badBlocks[newBranch[i].HashBlock()] = true
+			badBlocks[newBranch[i].CalculateBlockHash()] = true
 		}
 	}
 	if !noBadBlocks {
@@ -147,7 +153,7 @@ func transactionsUsed(b o.Block) bool {
 		}
 		_, alreadyUsed := unusedTransactions[t.ID]
 		if alreadyUsed {
-			badBlocks[b.HashBlock()] = true
+			badBlocks[b.CalculateBlockHash()] = true
 			return false
 		}
 		delete(unusedTransactions, t.ID)
@@ -159,13 +165,13 @@ func transactionsUsed(b o.Block) bool {
 func updateHead(b o.Block) {
 	_, badParent := badBlocks[b.ParentPointer]
 	if badParent {
-		badBlocks[b.HashBlock()] = true
+		badBlocks[b.CalculateBlockHash()] = true
 		return
 	}
 	if b.ParentPointer == currentHead {
 		tLock.Lock()
 		defer tLock.Unlock()
-		currentHead = b.HashBlock()
+		currentHead = b.CalculateBlockHash()
 		currentLength += 1
 		transactionsUsed(b)
 	} else {
@@ -201,7 +207,7 @@ type skov struct {
 }
 
 func (s *skov) add(block o.Block) {
-	hash := block.HashBlock()
+	hash := block.CalculateBlockHash()
 	s.m[hash] = block
 }
 

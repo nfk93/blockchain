@@ -199,7 +199,7 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 	func() {
 		blocksSeen.rlock()
 		defer blocksSeen.runlock()
-		alreadyKnown = blocksSeen.contains(block.BlockHash)
+		alreadyKnown = blocksSeen.contains(block.CalculateBlockHash())
 	}()
 	if alreadyKnown {
 		// Early exit
@@ -214,8 +214,8 @@ func handleBlock(block objects.Block) {
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if blocksSeen.contains(block.BlockHash) != true {
-		blocksSeen.add(block.BlockHash)
+	if blocksSeen.contains(block.CalculateBlockHash()) != true {
+		blocksSeen.add(block.CalculateBlockHash())
 
 		// TODO: handle the block more?
 		go func() { deliverBlock <- block }()
@@ -227,8 +227,8 @@ func handleBlockWithoutDelivering(block objects.Block) {
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if blocksSeen.contains(block.BlockHash) != true {
-		blocksSeen.add(block.BlockHash)
+	if blocksSeen.contains(block.CalculateBlockHash()) != true {
+		blocksSeen.add(block.CalculateBlockHash())
 		go broadcastBlock(block)
 	}
 }

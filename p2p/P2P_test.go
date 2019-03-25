@@ -26,7 +26,7 @@ var mockBlock_1 = objects.Block{
 	"",
 	objects.Data{},
 	"123",
-	""}
+}
 
 var mockBlock_2 = objects.Block{
 	42,
@@ -37,7 +37,7 @@ var mockBlock_2 = objects.Block{
 	"",
 	objects.Data{},
 	"555",
-	""}
+}
 
 var mockTrans_1 = objects.Transaction{
 	mockPK,
@@ -71,7 +71,7 @@ func TestRPC(t *testing.T) {
 	t.Run("BlocksReceivedOnce_1", func(t *testing.T) {
 		rpcObj.SendBlock(mockBlock_1, &struct{}{})
 		block := <-deliverBlock
-		if block.BlockHash != mockBlock_1.BlockHash {
+		if block.CalculateBlockHash() != mockBlock_1.CalculateBlockHash() {
 			t.Errorf("First block seen isn't testblock_1")
 		}
 	})
@@ -87,7 +87,7 @@ func TestRPC(t *testing.T) {
 		go rpcObj.SendBlock(mockBlock_1, &struct{}{})
 		go rpcObj.SendBlock(mockBlock_2, &struct{}{})
 		block := <-deliverBlock
-		if block.BlockHash != mockBlock_2.BlockHash {
+		if block.CalculateBlockHash() != mockBlock_2.CalculateBlockHash() {
 			t.Error("Second block seen isn't testblock_2")
 		}
 	})

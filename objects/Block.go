@@ -3,6 +3,7 @@ package objects
 import (
 	"bytes"
 	. "github.com/nfk93/blockchain/crypto"
+	"github.com/nfk93/blockchain/objects/genesisdata"
 	"strconv"
 )
 
@@ -14,12 +15,12 @@ type Block struct {
 	BlockNonce    int
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
-	BlockHash     string
 	Signature     string
 }
 
 type Data struct {
-	Trans []Transaction
+	Trans       []Transaction
+	GenesisData genesisdata.GenesisData
 }
 
 func (d *Data) DataString() string {
@@ -39,7 +40,6 @@ func GetTestBlock() Block {
 		42,
 		"",
 		Data{},
-		"",
 		""}
 }
 
@@ -67,6 +67,6 @@ func (b *Block) VerifyBlock(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
-func (b *Block) HashBlock() string {
+func (b *Block) CalculateBlockHash() string {
 	return HashSHA(buildBlockStringToSign(*b))
 }
