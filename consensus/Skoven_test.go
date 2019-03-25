@@ -6,6 +6,7 @@ import (
 	"github.com/nfk93/blockchain/objects/genesisdata"
 	"strconv"
 	"testing"
+	"time"
 )
 
 var transFromP2P chan Transaction
@@ -58,4 +59,5 @@ func TestTree(t *testing.T) {
 		transFromP2P <- trans
 		block = createTestBlock(transarr, i, block.CalculateBlockHash())
 	}
+	time.Sleep(10000)
 }

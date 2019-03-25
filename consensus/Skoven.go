@@ -56,6 +56,7 @@ func handleTransaction(t o.Transaction) {
 func handleBlock(b o.Block) {
 	if b.Slot == 0 { //*TODO Should probably add some security measures so you can't fake a genesis block
 		handleGenesisBlock(b)
+		return
 	}
 	if !b.VerifyBlock(b.BakerID) || !verifyDraw(b) {
 		return
@@ -63,7 +64,7 @@ func handleBlock(b o.Block) {
 	addBlock(b)
 }
 
-func handleGenesisBlock(b o.Block) {
+func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
 	currentHead = b.CalculateBlockHash()
 }
@@ -151,8 +152,8 @@ func transactionsUsed(b o.Block) bool {
 			transactions[t.ID] = t
 			unusedTransactions[t.ID] = true
 		}
-		_, alreadyUsed := unusedTransactions[t.ID]
-		if alreadyUsed {
+		_, unused := unusedTransactions[t.ID]
+		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
 			return false
 		}
