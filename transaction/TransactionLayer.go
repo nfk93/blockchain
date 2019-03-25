@@ -38,7 +38,6 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		finalState := tree.treeMap[finalize].state
 		stateReturn <- finalState
 	}
-
 }
 
 func processBlock(b Block, t Tree) State {

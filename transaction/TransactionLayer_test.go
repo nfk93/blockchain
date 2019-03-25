@@ -12,7 +12,7 @@ import (
 func createBlock(t []Transaction, i int) Block {
 	return Block{i + 1,
 		strconv.Itoa(i),
-		42,
+		PublicKey{},
 		"VALID",
 		42,
 		"",
@@ -74,9 +74,7 @@ func TestTreeBuild(t *testing.T) {
 
 		blockChannel <- b
 	}
-
 	time.Sleep(200)
-
 }
 
 func TestFinalize(t *testing.T) {

@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	o "github.com/nfk93/blockchain/objects"
 	GenesisData "github.com/nfk93/blockchain/objects/genesisdata"
 	"sync"
@@ -16,6 +17,11 @@ var currentLength int
 var lastFinalized string
 
 func StartConsensus(genesisData GenesisData.GenesisData, transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+	unusedTransactions = make(map[string]bool)
+	transactions = make(map[string]o.Transaction)
+	badBlocks = make(map[string]bool)
+	blocks.m = make(map[string]o.Block)
+
 	// TODO: do something with the genesis data
 
 	// Start processing blocks on one thread, non-concurrently
@@ -165,6 +171,7 @@ func updateHead(b o.Block) {
 	} else {
 		comparePathWeight(b)
 	}
+	fmt.Println(blocks.get(currentHead).Slot)
 }
 
 //Adds a block to our blockmap and calls updateHead
