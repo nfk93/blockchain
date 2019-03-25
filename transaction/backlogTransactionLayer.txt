@@ -21,13 +21,38 @@ ok - parent hash
 - Do validation for transaction in add transaction
     - Comment in the check for sender balance
 
-
-- Genesis hash skal ikke kunne rammes af hashing functionen
-- Create correct Genesis block/Node
+- Genesis hash skal ikke kunne rammes af hashing functionen -> is now nil
+- Create correct GenesisData
 
 
 
 Ok - Write tests for forking/branching
-Write method to create a block given a set of transactions
+OK - Write method to create a block given a set of transactions
 Don't create your own genesis, unless you ARE genesis
 Gas?
+
+Should Transaction layer create block proof and block nonce
+Should we use VRF scheme?
+
+
+
+
+
+Leader Election:
+First phase:
+    Locally check if you won a slot
+    Returns a blockproof, that you can add to a new block
+
+
+Second phase:
+    VerifyProof()
+
+BlockNonce are created randomly.
+Leader election function therefore also contains function
+for computation and verification of block nonces.
+
+
+
+
+
+

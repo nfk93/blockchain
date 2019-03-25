@@ -21,11 +21,17 @@ type Tree struct {
 	head    string
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, transChan chan []Transaction) {
-	tree := Tree{make(map[string]TLNode), ""}
-	//gen := createGenesis() //TODO: Remove this and only add create genesis if you are first on tree
-	//processBlock(gen, tree)
+type NewBlockData struct {
+	transList []Transaction
+	pk        PublicKey
+	slotNo    int
+	lastFinal string
+}
 
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan NewBlockData, pk PublicKey) {
+	tree := Tree{make(map[string]TLNode), ""}
+
+	// Process a block coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
@@ -33,6 +39,7 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		}
 	}()
 
+	// Finalize a given block
 	go func() {
 		for {
 			finalize := <-finalizeChan
@@ -40,9 +47,10 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		}
 	}()
 
+	// A new block should be created from the transactions in transList
 	for {
-		transList := <-transChan
-		blockReturn <- tree.createNewBlock(transList)
+		newBlockData := <-newBlockChan
+		blockReturn <- tree.createNewBlock(newBlockData)
 	}
 
 }
@@ -90,43 +98,41 @@ func (s *State) addTransaction(t Transaction) {
 	s.ledger[t.From] -= t.Amount
 }
 
-func CreateGenesis() Block {
-	sk, _ := KeyGen(256)
+func CreateGenesis(pk PublicKey) Block {
 	genBlock := Block{0,
-		"",
-		0,
-		"VALID", //TODO: Still missing Blockproof
-		0,       //TODO: Should this be chosen for next round?
-		"",
-		Data{[]Transaction{}},
-		""}
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		Data{[]Transaction{}}, //TODO: GENESISDATA should be proper created
+		nil}
 
-	genBlock.SignBlock(sk)
 	return genBlock
 }
 
-func (t Tree) createNewBlock(transactions []Transaction) Block {
+func (t Tree) createNewBlock(blockData NewBlockData) Block {
 	s := State{}
 	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
 
 	var addedTransactions []Transaction
 
-	noOfTrans := len(transactions)
+	noOfTrans := len(blockData.transList)
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := transactions[i]
+		newTrans := blockData.transList[i]
 		//transactions = transactions[1:]
 		s.addTransaction(newTrans)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
 	//TODO: Make proper way of creating a new block
-	b := Block{43,
+	b := Block{blockData.slotNo,
 		t.head,
-		43,
-		"PROOF",
-		43,
-		"LAST_FINALIZED",
+		blockData.pk,
+		"PROOF", //TODO
+		43,      // TODO
+		blockData.lastFinal,
 		Data{addedTransactions},
 		""}
 

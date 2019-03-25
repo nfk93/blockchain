@@ -33,7 +33,7 @@ func TestReceiveBlock(t *testing.T) {
 	b.SignBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl)
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, p1)
 
 	blockChannel <- b
 
@@ -55,8 +55,9 @@ func TestReceiveBlock(t *testing.T) {
 }
 
 func TestTreeBuild(t *testing.T) {
+	sk1, p1 := KeyGen(2560)
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl)
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, p1)
 
 	go func() {
 		for {
@@ -65,8 +66,6 @@ func TestTreeBuild(t *testing.T) {
 		}
 
 	}()
-
-	sk1, p1 := KeyGen(2560)
 
 	for i := 0; i < 5; i++ {
 
@@ -87,9 +86,9 @@ func TestTreeBuild(t *testing.T) {
 
 func TestFinalize(t *testing.T) {
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl)
 
 	sk1, p1 := KeyGen(2560)
+	go StartTransactionLayer(b, s, f, br, tl, p1)
 
 	_, p2 := KeyGen(2560)
 	t1 := Transaction{p1, p2, 200, strconv.Itoa(0), ""}
@@ -118,13 +117,14 @@ func TestFinalize(t *testing.T) {
 }
 
 func TestForking(t *testing.T) {
-	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl)
 
 	sk1, p1 := KeyGen(2560)
 	sk2, p2 := KeyGen(2560)
 	_, p3 := KeyGen(2560)
 	_, p4 := KeyGen(2560)
+
+	b, s, f, br, tl := createChannels()
+	go StartTransactionLayer(b, s, f, br, tl, p1)
 
 	go func() {
 		for {
@@ -180,8 +180,12 @@ func TestForking(t *testing.T) {
 }
 
 func TestCreateNewBlock(t *testing.T) {
+
+	sk1, pk1 := KeyGen(2560)
+	_, pk2 := KeyGen(2560)
+
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl)
+	go StartTransactionLayer(b, s, f, br, tl, pk1)
 
 	go func() {
 		for {
@@ -193,12 +197,9 @@ func TestCreateNewBlock(t *testing.T) {
 		}
 	}()
 
-	genBlock := CreateGenesis()
+	genBlock := CreateGenesis(pk1)
 	b <- genBlock
 	time.Sleep(300)
-
-	sk1, pk1 := KeyGen(2560)
-	_, pk2 := KeyGen(2560)
 
 	var transList []Transaction
 	for i := 0; i < 20; i++ {
