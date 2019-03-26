@@ -1,0 +1,9 @@
+let%entry main
+    (parameter : key_hash)
+    (storage : storage) =
+
+  if storage.amount_raised >= storage.funding_goal then
+    let storage = storage.amount_raised <- amount in
+    ( ([] : operation list), storage)
+  else
+    ( ([] : operation list), storage)

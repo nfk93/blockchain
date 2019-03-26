@@ -1,0 +1,6 @@
+let%init storage = {
+  owner = koin1YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc;
+  funding_goal = 100tz;
+  amount_raised = 0tz;
+  soft_cap  = 75tz;
+}

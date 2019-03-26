@@ -36,8 +36,8 @@ _b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 hash        : 'k' 'o' 'i' 'n' _b58char { _b58char } ;
 
 /* id's are all minor case in liquidity, starting with a letter */
-_idchars    : {'a'-'z' | '_' } ;
-id          : 'a'-'z' _idchars ;
+_idchars    : 'a'-'z' | '_'  ;
+id          : 'a'-'z' { _idchars };
 
 /* TODO: escape chars */
 string      : '"' {.} '"' ;

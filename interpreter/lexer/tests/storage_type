@@ -1,0 +1,6 @@
+type storage = {
+  owner : key_hash;
+  funding_goal : tez;
+  amount_raised : tez;
+  soft_cap : tez;
+}
