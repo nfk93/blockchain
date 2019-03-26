@@ -14,12 +14,14 @@ var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
+var testDrawVal int //Remove when implementing proper calculateDrawVal
 
 func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
+	testDrawVal = 0
 	// TODO: do something with the genesis data
 
 	// Start processing blocks on one thread, non-concurrently
@@ -67,21 +69,24 @@ func handleBlock(b o.Block) {
 func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
 	currentHead = b.CalculateBlockHash()
+	lastFinalized = b.CalculateBlockHash()
 }
 
 // Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
+	block := b
 	for {
-		if !blocks.contains(b.ParentPointer) {
+		if !blocks.contains(block.ParentPointer) {
 			return
 		}
-		parent := blocks.get(b.ParentPointer)
+		parent := blocks.get(block.ParentPointer)
 
 		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
+		block = parent
 		l += 1
 	}
 	if l < currentLength {
@@ -194,7 +199,8 @@ func broadcastBlock(b o.Block) {
 
 func calculateDraw(b o.Block) int {
 	//*TODO
-	return 0
+	testDrawVal++
+	return testDrawVal
 }
 
 func verifyDraw(b o.Block) bool {
