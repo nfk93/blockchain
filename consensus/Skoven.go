@@ -169,11 +169,6 @@ func transactionsUsed(b o.Block) bool {
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
-	_, badParent := badBlocks[b.ParentPointer]
-	if badParent {
-		badBlocks[b.CalculateBlockHash()] = true
-		return
-	}
 	if b.ParentPointer == currentHead {
 		tLock.Lock()
 		defer tLock.Unlock()
@@ -186,10 +181,26 @@ func updateHead(b o.Block) {
 	fmt.Println(blocks.get(currentHead).Slot)
 }
 
-//Adds a block to our blockmap and calls updateHead
+// Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block
+func isLegalExtension(b o.Block) bool {
+	_, badParent := badBlocks[b.ParentPointer]
+	if badParent {
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	if blocks.contains(b.ParentPointer) && blocks.get(b.ParentPointer).Slot >= b.Slot { //Check that slot of parent is smaller
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	return true
+}
+
+//Adds a block to our blockmap and calls updateHead if it's a legal extension
 func addBlock(b o.Block) {
 	blocks.add(b)
-	updateHead(b)
+	if isLegalExtension(b) {
+		updateHead(b)
+	}
 }
 
 //Sends a block to the P2P layer to be broadcasted
