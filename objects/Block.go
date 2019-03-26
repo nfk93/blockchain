@@ -11,7 +11,7 @@ type Block struct {
 	ParentPointer string    //a hash of parent block
 	BakerID       PublicKey //
 	BlockProof    string    //TODO: Change to right type (whitepaper 2.5.3)
-	BlockNonce    int
+	BlockNonce    BlockNonce
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
 	Signature     string
@@ -35,7 +35,7 @@ func GetTestBlock() Block {
 		"",
 		pk,
 		"VALID",
-		42,
+		BlockNonce{"42", ""},
 		"",
 		Data{},
 		""}
@@ -50,7 +50,7 @@ func buildBlockStringToSign(b Block) string {
 	buf.WriteString(b.BakerID.N.String())
 	buf.WriteString(b.BakerID.E.String())
 	buf.WriteString(b.BlockProof)
-	buf.WriteString(strconv.Itoa(b.BlockNonce))
+	buf.WriteString(b.BlockNonce.Nonce)
 	buf.WriteString(b.LastFinalized)
 	buf.WriteString(b.BlockData.DataString())
 	return buf.String()
@@ -61,7 +61,7 @@ func (b *Block) SignBlock(sk SecretKey) {
 	b.Signature = Sign(m, sk)
 }
 
-func (b *Block) VerifyBlock(pk PublicKey) bool {
+func (b *Block) VerifyBlockSignature(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 

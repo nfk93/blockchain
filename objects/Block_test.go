@@ -6,12 +6,12 @@ import (
 )
 
 func TestVerifyBlock(t *testing.T) {
-	var sk, pk = KeyGen(256)
+	var sk, pk = KeyGen(2560)
 
 	b := GetTestBlock()
 	b.SignBlock(sk)
 
-	if !b.VerifyBlock(pk) {
+	if !b.VerifyBlockSignature(pk) {
 		t.Error("Block Failed")
 	}
 

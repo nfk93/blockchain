@@ -14,7 +14,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		strconv.Itoa(i),
 		pk,
 		"VALID",
-		42,
+		BlockNonce{"42", ""},
 		"",
 		Data{t},
 		"",
@@ -197,7 +197,7 @@ func TestCreateNewBlock(t *testing.T) {
 		}
 	}()
 
-	genBlock := CreateGenesis(pk1)
+	genBlock := CreateGenesis()
 	b <- genBlock
 	time.Sleep(300)
 
@@ -208,16 +208,18 @@ func TestCreateNewBlock(t *testing.T) {
 		transList = append(transList, t1)
 	}
 
-	tl <- transList
+	newBlockData := NewBlockData{transList, sk1, pk1, 2, genBlock.CalculateBlockHash(), ""}
+
+	tl <- newBlockData
 
 	time.Sleep(500)
 }
 
-func createChannels() (chan Block, chan State, chan string, chan Block, chan []Transaction) {
+func createChannels() (chan Block, chan State, chan string, chan Block, chan NewBlockData) {
 	blockChannel := make(chan Block)
 	stateReturn := make(chan State)
 	finalizeChannel := make(chan string)
 	blockReturn := make(chan Block)
-	transList := make(chan []Transaction)
+	transList := make(chan NewBlockData)
 	return blockChannel, stateReturn, finalizeChannel, blockReturn, transList
 }

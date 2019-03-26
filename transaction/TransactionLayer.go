@@ -17,19 +17,23 @@ type State struct {
 }
 
 type Tree struct {
-	treeMap map[string]TLNode
-	head    string
+	treeMap       map[string]TLNode
+	head          string
+	lastFinalized string
+	hardness      int
 }
 
 type NewBlockData struct {
 	transList []Transaction
+	sk        SecretKey
 	pk        PublicKey
 	slotNo    int
 	lastFinal string
+	draw      string
 }
 
 func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan NewBlockData, pk PublicKey) {
-	tree := Tree{make(map[string]TLNode), ""}
+	tree := Tree{make(map[string]TLNode), "", "", 0}
 
 	// Process a block coming from the consensus layer
 	go func() {
@@ -98,15 +102,15 @@ func (s *State) addTransaction(t Transaction) {
 	s.ledger[t.From] -= t.Amount
 }
 
-func CreateGenesis(pk PublicKey) Block {
+func CreateGenesis() Block {
 	genBlock := Block{0,
-		nil,
-		nil,
-		nil,
-		nil,
-		nil,
+		"",
+		PublicKey{},
+		"",
+		BlockNonce{},
+		"",
 		Data{[]Transaction{}}, //TODO: GENESISDATA should be proper created
-		nil}
+		""}
 
 	return genBlock
 }
@@ -126,15 +130,17 @@ func (t Tree) createNewBlock(blockData NewBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	//TODO: Make proper way of creating a new block
+	blockNonce := t.treeMap[t.head].block.CreateNewBlockNonce(blockData.slotNo, blockData.sk)
+
 	b := Block{blockData.slotNo,
 		t.head,
 		blockData.pk,
-		"PROOF", //TODO
-		43,      // TODO
+		blockData.draw,
+		blockNonce,
 		blockData.lastFinal,
 		Data{addedTransactions},
 		""}
+	b.SignBlock(blockData.sk)
 
 	return b
 }
