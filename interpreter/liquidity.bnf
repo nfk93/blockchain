@@ -31,6 +31,11 @@ else        : 'e' 'l' 's' 'e' ;
 type        : 't' 'y' 'p' 'e' ;
 tez         : 't' 'e' 'z' ;
 
+/* Modules */
+current     : 'C' 'u' 'r' 'r' 'e' 'n' 't' ;
+contract    : 'C' 'o' 'n' 't' 'r' 'a' 'c' 't' ;
+account     : 'A' 'c' 'c' 'o' 'u' 'n' 't' ;
+
 /* TODO: make sure hashes without capital letters can be distinguished from ids */
 _b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 hash        : 'k' 'o' 'i' 'n' _b58char { _b58char } ;
@@ -54,9 +59,9 @@ float       : _digit { _digit } '.' { _digit } ;
 dot         : '.' ;
 
 /* Comments are treated as whitespace. As are version identifier TODO */
-!whitespace : ' ' | '\t' | '\n' | '\r' |
-              '(' '*' {.} '*' ')'; |
-              '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']'
+_comment    : '(' '*' {.} '*' ')' ;
+_version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
+!whitespace : ' ' | '\t' | '\n' | '\r' | _comment | _version ;
 
 
 

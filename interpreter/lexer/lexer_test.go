@@ -92,6 +92,20 @@ func TestLexFloat(t *testing.T) {
 	compare_tokens(t, strings, lex)
 }
 
+func TestNoInvalidsInFundMe(t *testing.T) {
+	bytes := read_file("tests/fundme", t)
+	lex := NewLexer(bytes)
+
+	for {
+		nextToken := lex.Scan()
+		if nextToken.Type == 0 {
+			t.Error("\nInvalid token:", nextToken.Type, token.TokMap.Id(nextToken.Type), nextToken.String())
+		} else if nextToken.Type == token.TokMap.Type("$") {
+			break
+		}
+	}
+}
+
 // TODO: make tests covering all of the below
 
 const (
@@ -133,4 +147,7 @@ const (
 	FLOAT     string = "float"
 	DOT       string = "dot"
 	EOF       string = "$"
+	CURRENT   string = "current"
+	CONTRACT  string = "contract"
+	ACCOUNT   string = "account"
 )
