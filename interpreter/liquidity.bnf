@@ -31,18 +31,14 @@ else        : 'e' 'l' 's' 'e' ;
 type        : 't' 'y' 'p' 'e' ;
 tez         : 't' 'e' 'z' ;
 
-/* Modules */
-current     : 'C' 'u' 'r' 'r' 'e' 'n' 't' ;
-contract    : 'C' 'o' 'n' 't' 'r' 'a' 'c' 't' ;
-account     : 'A' 'c' 'c' 'o' 'u' 'n' 't' ;
-
 /* TODO: make sure hashes without capital letters can be distinguished from ids */
 _b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 hash        : 'k' 'o' 'i' 'n' _b58char { _b58char } ;
 
 /* id's are all minor case in liquidity, starting with a letter */
-_idchars    : 'a'-'z' | '_'  ;
-id          : 'a'-'z' { _idchars };
+_idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;
+lident      : ( 'a'-'z' | '_' ) { _idchars } ;
+uident      : ( 'A'-'Z' ) { _idchars } ;
 
 /* TODO: escape chars */
 string      : '"' {.} '"' ;
@@ -70,4 +66,29 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 << import "github.com/nfk93/blockchain/interpreter/ast" >>
 
-Hello:  "hello" id << ast.NewWorld($1) >> ;
+Toplevel        : Structure             << ast.NewExpression() >> ;
+
+Structure       : lident                << ast.NewExpression() >> ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

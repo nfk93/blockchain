@@ -50,8 +50,8 @@ func TestLexStorage(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		TYPE, ID, EQ, LBRACE, ID, COLON, KEYHASH, SEMICOLON, ID, COLON, TEZ, SEMICOLON, ID, COLON, TEZ,
-		SEMICOLON, ID, COLON, TEZ, SEMICOLON, RBRACE, EOF}
+		TYPE, LIDENT, EQ, LBRACE, LIDENT, COLON, KEYHASH, SEMICOLON, LIDENT, COLON, TEZ, SEMICOLON, LIDENT, COLON, TEZ,
+		SEMICOLON, LIDENT, COLON, TEZ, SEMICOLON, RBRACE, EOF}
 	compare_tokens(t, strings, lex)
 }
 
@@ -60,8 +60,8 @@ func TestLexInitStorage(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, ID, ID, EQ, LBRACE, ID, EQ, HASH, SEMICOLON, ID, EQ, TEZ_LIT, SEMICOLON, ID, EQ, TEZ_LIT, SEMICOLON,
-		ID, EQ, TEZ_LIT, SEMICOLON, RBRACE, EOF}
+		LET, PERC, LIDENT, LIDENT, EQ, LBRACE, LIDENT, EQ, HASH, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON,
+		LIDENT, EQ, TEZ_LIT, SEMICOLON, RBRACE, EOF}
 	compare_tokens(t, strings, lex)
 }
 
@@ -70,10 +70,10 @@ func TestLexSimpleEntry(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, ID, ID, LPAREN, ID, COLON, KEYHASH, RPAREN, LPAREN, ID, COLON, ID, RPAREN, EQ, IF, ID, DOT, ID, GEQ,
-		ID, DOT, ID, THEN, LET, ID, EQ, ID, DOT, ID, LARROW, ID, IN, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION,
-		LIST, RPAREN, COMMA, ID, RPAREN, ELSE, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION, LIST, RPAREN, COMMA,
-		ID, RPAREN, EOF}
+		LET, PERC, LIDENT, LIDENT, LPAREN, LIDENT, COLON, KEYHASH, RPAREN, LPAREN, LIDENT, COLON, LIDENT, RPAREN, EQ, IF, LIDENT, DOT, LIDENT, GEQ,
+		LIDENT, DOT, LIDENT, THEN, LET, LIDENT, EQ, LIDENT, DOT, LIDENT, LARROW, LIDENT, IN, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION,
+		LIST, RPAREN, COMMA, LIDENT, RPAREN, ELSE, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION, LIST, RPAREN, COMMA,
+		LIDENT, RPAREN, EOF}
 	compare_tokens(t, strings, lex)
 }
 
@@ -82,13 +82,13 @@ func TestLexFloat(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, ID, EQ, FLOAT, IN,
-		LET, ID, EQ, FLOAT, IN,
-		LET, ID, EQ, FLOAT, IN,
-		LET, ID, EQ, INT, IN,
-		LET, ID, EQ, FLOAT, IN,
-		LET, ID, EQ, FLOAT, IN,
-		LET, ID, EQ, ID, PLUS, ID, MINUS, ID, EOF}
+		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, INT, IN,
+		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, LIDENT, PLUS, LIDENT, MINUS, LIDENT, EOF}
 	compare_tokens(t, strings, lex)
 }
 
@@ -104,6 +104,14 @@ func TestNoInvalidsInFundMe(t *testing.T) {
 			break
 		}
 	}
+}
+
+func TestLidUid(t *testing.T) {
+	bytes := read_file("tests/lid_uid", t)
+	lex := NewLexer(bytes)
+	strings := []string{
+		LIDENT, LIDENT, UIDENT, UIDENT, LIDENT, LIDENT, EOF}
+	compare_tokens(t, strings, lex)
 }
 
 // TODO: make tests covering all of the below
@@ -140,14 +148,12 @@ const (
 	TYPE      string = "type"
 	TEZ       string = "tez"
 	HASH      string = "hash"
-	ID        string = "id"
+	LIDENT    string = "lident"
+	UIDENT    string = "uident"
 	STRING    string = "string"
 	TEZ_LIT   string = "tez_lit"
 	INT       string = "int"
 	FLOAT     string = "float"
 	DOT       string = "dot"
 	EOF       string = "$"
-	CURRENT   string = "current"
-	CONTRACT  string = "contract"
-	ACCOUNT   string = "account"
 )
