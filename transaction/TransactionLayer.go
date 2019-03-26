@@ -121,9 +121,11 @@ func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	blockNonce := t.treeMap[t.head].block.CreateNewBlockNonce(blockData.slotNo, blockData.sk)
+	prevBlockNonce := t.treeMap[t.lastFinalized].block.BlockNonce
 
-	b := CreateNewBlock(blockData, t.head, blockNonce, addedTransactions)
+	newBlockNonce := CreateNewBlockNonce(prevBlockNonce, blockData.SlotNo, blockData.Sk, blockData.Pk)
+
+	b := CreateNewBlock(blockData, t.head, newBlockNonce, addedTransactions)
 
 	return b
 }

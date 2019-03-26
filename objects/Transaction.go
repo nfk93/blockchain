@@ -23,7 +23,7 @@ func (t Transaction) buildStringToSign() string {
 	return buf.String()
 }
 
-func (t *Transaction) SignTransaction(sk SecretKey) {
+func (t *Transaction) signTransaction(sk SecretKey) {
 	m := t.buildStringToSign()
 	s := Sign(m, sk)
 	t.Signature = s
@@ -35,6 +35,6 @@ func (t Transaction) VerifyTransaction() bool {
 
 func CreateTransaction(from PublicKey, to PublicKey, amount int, id string, sk SecretKey) Transaction {
 	t := Transaction{from, to, amount, id, ""}
-	t.SignTransaction(sk)
+	t.signTransaction(sk)
 	return t
 }
