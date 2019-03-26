@@ -66,11 +66,28 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 << import "github.com/nfk93/blockchain/interpreter/ast" >>
 
-Toplevel        : Structure             << ast.NewExpression() >> ;
+Toplevel    : Structure                                                             << ast.NewExpression() >> ;
 
-Structure       : lident                << ast.NewExpression() >> ;
+Structure   : empty                                                                 << // TODO >> ;
 
+Exp         : lident                                                                << // TODO idexp >>
+            | uident dot lident                                                     << // TODO external lookup exp >>
+            | Lookup lident                                                         << // TODO lookupexp >>
+            | Lookup lident larrow Exp                                              << // TODO lookupexp >>
+            | if Exp then Exp                                                       << // TODO ifthen exp >>
+            | if Exp then Exp else Exp                                              << // TODO ifthenelse exp >>
+            | Exp semicolon Exp                                                     << // TODO seqexp >>
+            | Exp colon colon Exp                                                   << // TODO listconcat >>
+            | let Pattern eq Exp in Exp                                             << // TODO letexp >>
+            | Constant                                                              << // TODO litexp >> ;
 
+Lookup      : Lookup lident dot                                                     << /* TODO intermediate for lookup
+                                                                                          calls */ >>
+            | empty                                                                 << // TODO see above >> ;
+
+Pattern     : empty << // TODO >> ;
+
+Constant    : empty << // TODO >> ;
 
 
 
