@@ -23,16 +23,7 @@ type Tree struct {
 	hardness      int
 }
 
-type NewBlockData struct {
-	transList []Transaction
-	sk        SecretKey
-	pk        PublicKey
-	slotNo    int
-	lastFinal string
-	draw      string
-}
-
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan NewBlockData, pk PublicKey) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, pk PublicKey) {
 	tree := Tree{make(map[string]TLNode), "", "", 0}
 
 	// Process a block coming from the consensus layer
@@ -115,16 +106,16 @@ func CreateGenesis() Block {
 	return genBlock
 }
 
-func (t Tree) createNewBlock(blockData NewBlockData) Block {
+func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
 
 	var addedTransactions []Transaction
 
-	noOfTrans := len(blockData.transList)
+	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := blockData.transList[i]
+		newTrans := blockData.TransList[i]
 		//transactions = transactions[1:]
 		s.addTransaction(newTrans)
 		addedTransactions = append(addedTransactions, newTrans)
@@ -132,15 +123,7 @@ func (t Tree) createNewBlock(blockData NewBlockData) Block {
 
 	blockNonce := t.treeMap[t.head].block.CreateNewBlockNonce(blockData.slotNo, blockData.sk)
 
-	b := Block{blockData.slotNo,
-		t.head,
-		blockData.pk,
-		blockData.draw,
-		blockNonce,
-		blockData.lastFinal,
-		Data{addedTransactions},
-		""}
-	b.SignBlock(blockData.sk)
+	b := CreateNewBlock(blockData, t.head, blockNonce, addedTransactions)
 
 	return b
 }

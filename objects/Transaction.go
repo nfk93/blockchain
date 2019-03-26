@@ -32,3 +32,9 @@ func (t *Transaction) SignTransaction(sk SecretKey) {
 func (t Transaction) VerifyTransaction() bool {
 	return Verify(t.buildStringToSign(), t.Signature, t.From)
 }
+
+func CreateTransaction(from PublicKey, to PublicKey, amount int, id string, sk SecretKey) Transaction {
+	t := Transaction{from, to, amount, id, ""}
+	t.SignTransaction(sk)
+	return t
+}

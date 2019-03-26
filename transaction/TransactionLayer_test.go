@@ -30,7 +30,7 @@ func TestReceiveBlock(t *testing.T) {
 	t1.SignTransaction(sk1)
 	t2.SignTransaction(sk1)
 	b := createBlock([]Transaction{t1, t2}, 0, p1)
-	b.SignBlock(sk1)
+	b.signBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
 	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, p1)
@@ -38,7 +38,7 @@ func TestReceiveBlock(t *testing.T) {
 	blockChannel <- b
 
 	time.Sleep(3000)
-	finalChannel <- b.CalculateBlockHash()
+	finalChannel <- b.calculateBlockHash()
 
 	go func() {
 		for {
@@ -75,7 +75,7 @@ func TestTreeBuild(t *testing.T) {
 		t1.SignTransaction(sk1)
 		t2.SignTransaction(sk1)
 		b := createBlock([]Transaction{t1, t2}, i, p1)
-		b.SignBlock(sk1)
+		b.signBlock(sk1)
 
 		blockChannel <- b
 	}
@@ -96,14 +96,14 @@ func TestFinalize(t *testing.T) {
 	t1.SignTransaction(sk1)
 	t2.SignTransaction(sk1)
 	block := createBlock([]Transaction{t1, t2}, 0, p1)
-	block.SignBlock(sk1)
+	block.signBlock(sk1)
 
 	b <- block
 
 	// Needs a bit of time for processing the block before finalizing it
 	time.Sleep(100)
 
-	f <- block.CalculateBlockHash()
+	f <- block.calculateBlockHash()
 
 	for {
 
@@ -141,7 +141,7 @@ func TestForking(t *testing.T) {
 	t1 := Transaction{p1, p1, 200, strconv.Itoa(1), ""}
 	t1.SignTransaction(sk1)
 	block1 := createBlock([]Transaction{}, 0, p1)
-	block1.SignBlock(sk1)
+	block1.signBlock(sk1)
 	b <- block1
 	time.Sleep(100)
 
@@ -149,8 +149,8 @@ func TestForking(t *testing.T) {
 	t2 := Transaction{p1, p2, 200, strconv.Itoa(2), ""}
 	t2.SignTransaction(sk1)
 	block2 := createBlock([]Transaction{t2}, 1, p1)
-	block2.ParentPointer = block1.CalculateBlockHash()
-	block1.SignBlock(sk1)
+	block2.ParentPointer = block1.calculateBlockHash()
+	block1.signBlock(sk1)
 	b <- block2
 	time.Sleep(100)
 
@@ -158,8 +158,8 @@ func TestForking(t *testing.T) {
 	t3 := Transaction{p1, p3, 200, strconv.Itoa(3), ""}
 	t3.SignTransaction(sk1)
 	block3 := createBlock([]Transaction{t3}, 2, p1)
-	block3.ParentPointer = block1.CalculateBlockHash()
-	block1.SignBlock(sk1)
+	block3.ParentPointer = block1.calculateBlockHash()
+	block1.signBlock(sk1)
 	b <- block3
 	time.Sleep(100)
 
@@ -167,14 +167,14 @@ func TestForking(t *testing.T) {
 	t4 := Transaction{p2, p4, 200, strconv.Itoa(4), ""}
 	t4.SignTransaction(sk2)
 	block4 := createBlock([]Transaction{t4}, 3, p2)
-	block4.ParentPointer = block2.CalculateBlockHash()
-	block1.SignBlock(sk2)
+	block4.ParentPointer = block2.calculateBlockHash()
+	block1.signBlock(sk2)
 	b <- block4
 
 	//Finalizing to get states from TL
 	// Needs a bit of time for processing the block before finalizing it
 	time.Sleep(1000)
-	f <- block4.CalculateBlockHash()
+	f <- block4.calculateBlockHash()
 	time.Sleep(1000)
 
 }
@@ -208,18 +208,18 @@ func TestCreateNewBlock(t *testing.T) {
 		transList = append(transList, t1)
 	}
 
-	newBlockData := NewBlockData{transList, sk1, pk1, 2, genBlock.CalculateBlockHash(), ""}
+	newBlockData := CreateBlockData{transList, sk1, pk1, 2, genBlock.calculateBlockHash(), ""}
 
 	tl <- newBlockData
 
 	time.Sleep(500)
 }
 
-func createChannels() (chan Block, chan State, chan string, chan Block, chan NewBlockData) {
+func createChannels() (chan Block, chan State, chan string, chan Block, chan CreateBlockData) {
 	blockChannel := make(chan Block)
 	stateReturn := make(chan State)
 	finalizeChannel := make(chan string)
 	blockReturn := make(chan Block)
-	transList := make(chan NewBlockData)
+	transList := make(chan CreateBlockData)
 	return blockChannel, stateReturn, finalizeChannel, blockReturn, transList
 }

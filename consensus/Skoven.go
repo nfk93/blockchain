@@ -50,7 +50,7 @@ func handleTransaction(t o.Transaction) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	if !b.VerifyBlockSignature(b.BakerID) || !verifyDraw(b) {
+	if !b.validateBlockSignature(b.BakerID) || !verifyDraw(b) {
 		return
 	}
 	addBlock(b)

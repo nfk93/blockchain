@@ -3,6 +3,7 @@ package objects
 import (
 	"bytes"
 	. "github.com/nfk93/blockchain/crypto"
+	"math/big"
 	"strconv"
 )
 
@@ -17,10 +18,122 @@ type Block struct {
 	Signature     string
 }
 
+type CreateBlockData struct {
+	TransList []Transaction
+	Sk        SecretKey
+	Pk        PublicKey
+	SlotNo    int
+	LastFinal string
+	Draw      string
+}
+
+type BlockNonce struct {
+	Nonce     string
+	Signature string
+}
+
 type Data struct {
 	Trans []Transaction
 }
 
+func (b Block) CreateNewBlockNonce(slot int, sk SecretKey) BlockNonce {
+	var buf bytes.Buffer
+	buf.WriteString("NONCE")
+	buf.WriteString(b.BlockNonce.Nonce) //Old block nonce //TODO: Should also contain new states
+	buf.WriteString(strconv.Itoa(slot))
+
+	newNonceString := buf.String()
+	newNonce := HashSHA(newNonceString)
+	signature := Sign(string(newNonce), sk)
+
+	return BlockNonce{newNonce, signature}
+}
+
+func CreateNewBlock(blockData CreateBlockData, parent string, nonce BlockNonce, translist []Transaction) Block {
+	b := Block{blockData.SlotNo,
+		parent,
+		blockData.Pk,
+		blockData.Draw,
+		nonce,
+		blockData.LastFinal,
+		Data{translist},
+		""}
+	b.SignBlock(blockData.Sk)
+	return b
+}
+
+//Signing of Blocks
+func (b *Block) SignBlock(sk SecretKey) {
+	m := buildBlockStringToSign(*b)
+	b.Signature = Sign(m, sk)
+}
+
+// Validation functions
+func (b *Block) validateBlockSignature(pk PublicKey) bool {
+	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
+}
+
+func (b Block) validateDraw(stake int, hardness int) bool {
+	var valBuf bytes.Buffer
+	valBuf.WriteString("LEADERSHIP_ELECTION")
+	valBuf.WriteString(b.BlockNonce.Nonce)
+	valBuf.WriteString(strconv.Itoa(b.Slot))
+	valBuf.WriteString(b.BakerID.String())
+	valBuf.WriteString(b.BlockProof)
+
+	hashVal := big.NewInt(0)
+	hashVal.SetString(HashSHA(valBuf.String()), 10)
+
+	drawValue := big.NewInt(0).Mul(hashVal, big.NewInt(int64(stake))) //TODO: How is the draw value calculated?
+
+	threshold := big.NewInt(0).Exp(big.NewInt(int64(hardness)), big.NewInt(int64(hardness)), nil) //TODO how to calc threshold?
+
+	// Checks if the draw is bigger than the threshold
+	// Returns -1 if x < y
+	if drawValue.Cmp(threshold) < 0 {
+		return false
+	}
+
+	return true
+
+}
+
+func (b Block) validateBlockProof() bool {
+	var buf bytes.Buffer
+	buf.WriteString("LEADERSHIP_ELECTION")
+	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(strconv.Itoa(b.Slot))
+
+	return Verify(buf.String(), b.BlockProof, b.BakerID)
+}
+
+func (bl BlockNonce) validateBlockNonce(pk PublicKey) bool {
+
+	return Verify(bl.Nonce, bl.Signature, pk)
+}
+
+func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
+
+	if !b.validateBlockProof() {
+		return false, "Block Proof failed"
+	}
+
+	if !b.validateDraw(stake, hardness) {
+		return false, "Block failed Hardness"
+	}
+
+	if !b.BlockNonce.validateBlockNonce(b.BakerID) {
+		return false, "Block Nonce validation failed"
+	}
+
+	if !b.validateBlockSignature(b.BakerID) {
+		return false, "Block Signature validation failed"
+	}
+
+	return true, ""
+}
+
+// Helpers
 func (d *Data) DataString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
@@ -28,20 +141,6 @@ func (d *Data) DataString() string {
 	}
 	return buf.String()
 }
-
-func GetTestBlock() Block {
-	_, pk := KeyGen(256)
-	return Block{42,
-		"",
-		pk,
-		"VALID",
-		BlockNonce{"42", ""},
-		"",
-		Data{},
-		""}
-}
-
-//Signing and verification of Blocks
 
 func buildBlockStringToSign(b Block) string {
 	var buf bytes.Buffer
@@ -56,15 +155,18 @@ func buildBlockStringToSign(b Block) string {
 	return buf.String()
 }
 
-func (b *Block) SignBlock(sk SecretKey) {
-	m := buildBlockStringToSign(*b)
-	b.Signature = Sign(m, sk)
-}
-
-func (b *Block) VerifyBlockSignature(pk PublicKey) bool {
-	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
-}
-
 func (b *Block) CalculateBlockHash() string {
 	return HashSHA(buildBlockStringToSign(*b))
+}
+
+func GetTestBlock() Block {
+	_, pk := KeyGen(256)
+	return Block{42,
+		"",
+		pk,
+		"VALID",
+		BlockNonce{"42", ""},
+		"",
+		Data{},
+		""}
 }
