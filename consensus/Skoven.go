@@ -8,6 +8,7 @@ import (
 
 var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
+var blockToTL chan o.Block
 var tLock sync.RWMutex
 var blocks skov
 var badBlocks map[string]bool
@@ -97,6 +98,7 @@ func comparePathWeight(b o.Block) {
 		if rollback(b) {
 			currentHead = b.CalculateBlockHash()
 			currentLength = l
+			sendBranchToTL()
 		}
 	}
 }
@@ -150,6 +152,10 @@ func transactionsUnused(b o.Block) {
 //Removes the transactions used in a block from unusedTransactions, and saves transactions that we have not already saved.
 //It returns false if the block reuses any transactions already spent on the chain and marks the block as bad. It returns true otherwise.
 func transactionsUsed(b o.Block) bool {
+	oldUnusedTransmap := make(map[string]bool)
+	for k, v := range unusedTransactions {
+		oldUnusedTransmap[k] = v
+	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
 		_, alreadyStored := transactions[t.ID]
@@ -160,6 +166,7 @@ func transactionsUsed(b o.Block) bool {
 		_, unused := unusedTransactions[t.ID]
 		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
+			unusedTransactions = oldUnusedTransmap
 			return false
 		}
 		delete(unusedTransactions, t.ID)
@@ -167,18 +174,32 @@ func transactionsUsed(b o.Block) bool {
 	return true
 }
 
+//Used after a rollback to send the branch of the new head to the transaction layer
+func sendBranchToTL() {
+
+	//TODO
+}
+
+//Used to send a new head to the transaction layer
+func sendBlockToTL(block o.Block) {
+
+	//TODO
+}
+
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
 	if b.ParentPointer == currentHead {
 		tLock.Lock()
 		defer tLock.Unlock()
-		currentHead = b.CalculateBlockHash()
-		currentLength += 1
-		transactionsUsed(b)
+		if transactionsUsed(b) {
+			currentHead = b.CalculateBlockHash()
+			currentLength += 1
+			sendBlockToTL(b)
+		}
 	} else {
 		comparePathWeight(b)
 	}
-	fmt.Println(blocks.get(currentHead).Slot)
+	fmt.Println(blocks.get(currentHead).Slot) //Used for testing purposes
 }
 
 // Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block

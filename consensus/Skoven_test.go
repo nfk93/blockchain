@@ -80,3 +80,13 @@ func TestRollBack(t *testing.T) {
 		block = createTestBlock(transarr, i+10, block.CalculateBlockHash())
 	}
 }
+
+func TestBadBlock(t *testing.T) {
+	resetMocksAndStart()
+	genesis := createTestBlock([]Transaction{}, 0, "")
+	b := createTestBlock([]Transaction{}, 5, genesis.CalculateBlockHash())
+	c := createTestBlock([]Transaction{}, 3, b.CalculateBlockHash())
+	blockFromP2P <- genesis
+	blockFromP2P <- b
+	blockFromP2P <- c
+}
