@@ -53,7 +53,10 @@ float       : _digit { _digit } '.' { _digit } ;
 /* This must go below float detection, for obvious reasons */
 dot         : '.' ;
 
-!whitespace : ' ' | '\t' | '\n' | '\r' ;
+/* Comments are treated as whitespace. As are version identifier TODO */
+!whitespace : ' ' | '\t' | '\n' | '\r' |
+              '(' '*' {.} '*' ')'; |
+              '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']'
 
 
 
