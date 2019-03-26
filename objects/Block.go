@@ -2,6 +2,7 @@ package objects
 
 import (
 	"bytes"
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	"math/big"
 	"strconv"
@@ -11,7 +12,7 @@ type Block struct {
 	Slot          int
 	ParentPointer string    //a hash of parent block
 	BakerID       PublicKey //
-	BlockProof    string    //TODO: Change to right type (whitepaper 2.5.3)
+	BlockProof    string
 	BlockNonce    BlockNonce
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
@@ -30,26 +31,32 @@ type CreateBlockData struct {
 type BlockNonce struct {
 	Nonce     string
 	Signature string
+	Pk        PublicKey
 }
 
 type Data struct {
 	Trans []Transaction
 }
 
-func (b Block) CreateNewBlockNonce(slot int, sk SecretKey) BlockNonce {
+func CreateNewBlockNonce(nonce BlockNonce, slot int, sk SecretKey, pk PublicKey) BlockNonce {
 	var buf bytes.Buffer
 	buf.WriteString("NONCE")
-	buf.WriteString(b.BlockNonce.Nonce) //Old block nonce //TODO: Should also contain new states
+	buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
 	buf.WriteString(strconv.Itoa(slot))
 
 	newNonceString := buf.String()
 	newNonce := HashSHA(newNonceString)
 	signature := Sign(string(newNonce), sk)
 
-	return BlockNonce{newNonce, signature}
+	return BlockNonce{newNonce, signature, pk}
 }
 
 func CreateNewBlock(blockData CreateBlockData, parent string, nonce BlockNonce, translist []Transaction) Block {
+	validNonce := nonce.validateBlockNonce()
+	if !validNonce {
+		fmt.Println("Couldn't create block! Nonce is not verified!")
+		return Block{}
+	}
 	b := Block{blockData.SlotNo,
 		parent,
 		blockData.Pk,
@@ -107,9 +114,9 @@ func (b Block) validateBlockProof() bool {
 	return Verify(buf.String(), b.BlockProof, b.BakerID)
 }
 
-func (bl BlockNonce) validateBlockNonce(pk PublicKey) bool {
+func (bl BlockNonce) validateBlockNonce() bool {
 
-	return Verify(bl.Nonce, bl.Signature, pk)
+	return Verify(bl.Nonce, bl.Signature, bl.Pk)
 }
 
 func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
@@ -122,7 +129,7 @@ func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
 		return false, "Block failed Hardness"
 	}
 
-	if !b.BlockNonce.validateBlockNonce(b.BakerID) {
+	if !b.BlockNonce.validateBlockNonce() {
 		return false, "Block Nonce validation failed"
 	}
 
@@ -165,7 +172,7 @@ func GetTestBlock() Block {
 		"",
 		pk,
 		"VALID",
-		BlockNonce{"42", ""},
+		BlockNonce{"42", "", pk},
 		"",
 		Data{},
 		""}

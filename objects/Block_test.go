@@ -21,20 +21,11 @@ func TestVerifyBlockSignature(t *testing.T) {
 func TestCreateAndVerifyNonce(t *testing.T) {
 	var sk, pk = KeyGen(256)
 
-	nonce := BlockNonce{"8556", "Something"}
+	nonce := BlockNonce{"8556", "Something", pk}
 
-	prevBlock := Block{0,
-		"",
-		pk,
-		"",
-		nonce,
-		"",
-		Data{},
-		""}
+	blockNonce := CreateNewBlockNonce(nonce, 2, sk, pk)
 
-	blockNonce := prevBlock.CreateNewBlockNonce(2, sk)
-
-	if !blockNonce.validateBlockNonce(pk) {
+	if !blockNonce.validateBlockNonce() {
 		t.Error("Block Failed")
 	}
 
@@ -44,19 +35,11 @@ func TestCreateAndVerifyNonceFAIL(t *testing.T) {
 	var sk, _ = KeyGen(256)
 	var _, pk2 = KeyGen(256)
 
-	nonce := BlockNonce{"8556", "Something"}
+	nonce := BlockNonce{"8556", "Something", pk2}
 
-	prevBlock := Block{0,
-		"",
-		pk2,
-		"",
-		nonce,
-		"",
-		Data{},
-		""}
-	blockNonce := prevBlock.CreateNewBlockNonce(2, sk)
+	blockNonce := CreateNewBlockNonce(nonce, 2, sk, pk2)
 
-	if blockNonce.validateBlockNonce(pk2) {
+	if blockNonce.validateBlockNonce() {
 		t.Error("Block Shouldn't verify!!")
 	}
 
@@ -70,7 +53,7 @@ func TestVerifyBlock(t *testing.T) {
 	stake := 9999999
 
 	// setup of non signed nonce and block to create proper block and nonce from
-	preNonce := BlockNonce{"8556", "Something"}
+	preNonce := BlockNonce{"8556", "Something", pk}
 	prevBlock := Block{0,
 		"",
 		pk,
@@ -80,7 +63,7 @@ func TestVerifyBlock(t *testing.T) {
 		Data{},
 		""}
 
-	nonce := prevBlock.CreateNewBlockNonce(slot, sk)
+	nonce := CreateNewBlockNonce(preNonce, slot, sk, pk)
 
 	createSuccess, draw := CalculateDraw(nonce, hardness, sk, pk, stake, slot)
 	if !createSuccess {

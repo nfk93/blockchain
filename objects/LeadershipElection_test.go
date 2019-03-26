@@ -12,17 +12,9 @@ func TestLeadershipElection(t *testing.T) {
 	slot := 3
 	hardness := 49
 
-	nonce := BlockNonce{"8556", "Something"}
+	nonce := BlockNonce{"8556", "Something", pk}
 
-	prevBlock := Block{0,
-		"",
-		pk,
-		"",
-		nonce,
-		"",
-		Data{},
-		""}
-	blockNonce := prevBlock.CreateNewBlockNonce(slot, sk)
+	blockNonce := CreateNewBlockNonce(nonce, slot, sk, pk)
 
 	b, draw := CalculateDraw(blockNonce, hardness, sk, pk, stake, slot)
 
