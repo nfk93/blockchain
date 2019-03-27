@@ -83,9 +83,13 @@ Exp         : lident                                                            
 
 Lookup      : Lookup lident dot                                                     << /* TODO intermediate for lookup
                                                                                           calls */ >>
-            | empty                                                                 << // TODO see above >> ;
+            | lident dot                                                            << // TODO see above >> ;
 
-Pattern     : empty << // TODO >> ;
+Pattern     : lident                                                                << // TODO param >>
+            | lparen Pattern { comma Pattern } rparen                               << // TODO params >>
+            | lparen lident colon Type rparen                                       << // TODO typedparam >>
+
+Type        : empty << // TODO >> ;
 
 Constant    : empty << // TODO >> ;
 
