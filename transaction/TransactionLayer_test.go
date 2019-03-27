@@ -16,7 +16,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		"VALID",
 		BlockNonce{"42", "", pk},
 		"",
-		Data{t},
+		Data{Trans: t},
 		"",
 	}
 

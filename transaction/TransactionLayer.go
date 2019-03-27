@@ -48,7 +48,6 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		newBlockData := <-newBlockChan
 		blockReturn <- tree.createNewBlock(newBlockData)
 	}
-
 }
 
 func (t *Tree) processBlock(b Block) {

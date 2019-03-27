@@ -25,11 +25,10 @@ func (t Transaction) buildStringToSign() string {
 
 func (t *Transaction) signTransaction(sk SecretKey) {
 	m := t.buildStringToSign()
-	s := Sign(m, sk)
-	t.Signature = s
+	t.Signature = Sign(m, sk)
 }
 
-func (t Transaction) VerifyTransaction() bool {
+func (t *Transaction) VerifyTransaction() bool {
 	return Verify(t.buildStringToSign(), t.Signature, t.From)
 }
 

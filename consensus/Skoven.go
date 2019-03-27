@@ -1,21 +1,28 @@
 package consensus
 
 import (
+	"fmt"
 	o "github.com/nfk93/blockchain/objects"
-	GenesisData "github.com/nfk93/blockchain/objects/genesisdata"
 	"sync"
 )
 
 var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
+var blockToTL chan o.Block
 var tLock sync.RWMutex
 var blocks skov
 var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
+var testDrawVal int //Remove when implementing proper calculateDrawVal
 
-func StartConsensus(genesisData GenesisData.GenesisData, transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+	unusedTransactions = make(map[string]bool)
+	transactions = make(map[string]o.Transaction)
+	badBlocks = make(map[string]bool)
+	blocks.m = make(map[string]o.Block)
+	testDrawVal = 0
 	// TODO: do something with the genesis data
 
 	// Start processing blocks on one thread, non-concurrently
@@ -50,25 +57,37 @@ func handleTransaction(t o.Transaction) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	if !b.validateBlockSignature(b.BakerID) || !verifyDraw(b) {
+	if b.Slot == 0 { //*TODO Should probably add some security measures so you can't fake a genesis block
+		handleGenesisBlock(b)
+		return
+	}
+	if !b.validateBlockSignature(b.BakerID) || !verifyDraw(b) { // TODO: Should use b.ValidateBlock
 		return
 	}
 	addBlock(b)
+}
+
+func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
+	blocks.add(b)
+	currentHead = b.CalculateBlockHash()
+	lastFinalized = b.CalculateBlockHash()
 }
 
 // Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
+	block := b
 	for {
-		if !blocks.contains(b.ParentPointer) {
+		if !blocks.contains(block.ParentPointer) {
 			return
 		}
-		parent := blocks.get(b.ParentPointer)
+		parent := blocks.get(block.ParentPointer)
 
 		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
+		block = parent
 		l += 1
 	}
 	if l < currentLength {
@@ -77,8 +96,9 @@ func comparePathWeight(b o.Block) {
 
 	if l > currentLength || calculateDraw(blocks.get(currentHead)) < calculateDraw(b) {
 		if rollback(b) {
-			currentHead = b.HashBlock()
+			currentHead = b.CalculateBlockHash()
 			currentLength = l
+			sendBranchToTL()
 		}
 	}
 }
@@ -95,7 +115,7 @@ func rollback(newHead o.Block) bool {
 	for {
 		transactionsUnused(head)
 		head = blocks.get(head.ParentPointer)
-		if head.HashBlock() == lastFinalized {
+		if head.CalculateBlockHash() == lastFinalized {
 			break
 		}
 	}
@@ -103,7 +123,7 @@ func rollback(newHead o.Block) bool {
 	for {
 		newBranch = append(newBranch, newHead)
 		newHead = blocks.get(newHead.ParentPointer)
-		if newHead.HashBlock() == lastFinalized {
+		if newHead.CalculateBlockHash() == lastFinalized {
 			break
 		}
 	}
@@ -112,7 +132,7 @@ func rollback(newHead o.Block) bool {
 		if noBadBlocks {
 			noBadBlocks = transactionsUsed(newBranch[i])
 		} else {
-			badBlocks[newBranch[i].HashBlock()] = true
+			badBlocks[newBranch[i].CalculateBlockHash()] = true
 		}
 	}
 	if !noBadBlocks {
@@ -132,6 +152,10 @@ func transactionsUnused(b o.Block) {
 //Removes the transactions used in a block from unusedTransactions, and saves transactions that we have not already saved.
 //It returns false if the block reuses any transactions already spent on the chain and marks the block as bad. It returns true otherwise.
 func transactionsUsed(b o.Block) bool {
+	oldUnusedTransmap := make(map[string]bool)
+	for k, v := range unusedTransactions {
+		oldUnusedTransmap[k] = v
+	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
 		_, alreadyStored := transactions[t.ID]
@@ -139,9 +163,10 @@ func transactionsUsed(b o.Block) bool {
 			transactions[t.ID] = t
 			unusedTransactions[t.ID] = true
 		}
-		_, alreadyUsed := unusedTransactions[t.ID]
-		if alreadyUsed {
-			badBlocks[b.HashBlock()] = true
+		_, unused := unusedTransactions[t.ID]
+		if !unused {
+			badBlocks[b.CalculateBlockHash()] = true
+			unusedTransactions = oldUnusedTransmap
 			return false
 		}
 		delete(unusedTransactions, t.ID)
@@ -149,28 +174,54 @@ func transactionsUsed(b o.Block) bool {
 	return true
 }
 
+//Used after a rollback to send the branch of the new head to the transaction layer
+func sendBranchToTL() {
+
+	//TODO
+}
+
+//Used to send a new head to the transaction layer
+func sendBlockToTL(block o.Block) {
+
+	//TODO
+}
+
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
-	_, badParent := badBlocks[b.ParentPointer]
-	if badParent {
-		badBlocks[b.HashBlock()] = true
-		return
-	}
 	if b.ParentPointer == currentHead {
 		tLock.Lock()
 		defer tLock.Unlock()
-		currentHead = b.HashBlock()
-		currentLength += 1
-		transactionsUsed(b)
+		if transactionsUsed(b) {
+			currentHead = b.CalculateBlockHash()
+			currentLength += 1
+			sendBlockToTL(b)
+		}
 	} else {
 		comparePathWeight(b)
 	}
+	fmt.Println(blocks.get(currentHead).Slot) //Used for testing purposes
 }
 
-//Adds a block to our blockmap and calls updateHead
+// Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block
+func isLegalExtension(b o.Block) bool {
+	_, badParent := badBlocks[b.ParentPointer]
+	if badParent {
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	if blocks.contains(b.ParentPointer) && blocks.get(b.ParentPointer).Slot >= b.Slot { //Check that slot of parent is smaller
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	return true
+}
+
+//Adds a block to our blockmap and calls updateHead if it's a legal extension
 func addBlock(b o.Block) {
 	blocks.add(b)
-	updateHead(b)
+	if isLegalExtension(b) {
+		updateHead(b)
+	}
 }
 
 //Sends a block to the P2P layer to be broadcasted
@@ -180,7 +231,8 @@ func broadcastBlock(b o.Block) {
 
 func calculateDraw(b o.Block) int {
 	//*TODO
-	return 0
+	testDrawVal++
+	return testDrawVal
 }
 
 func verifyDraw(b o.Block) bool {
@@ -194,7 +246,7 @@ type skov struct {
 }
 
 func (s *skov) add(block o.Block) {
-	hash := block.HashBlock()
+	hash := block.CalculateBlockHash()
 	s.m[hash] = block
 }
 
