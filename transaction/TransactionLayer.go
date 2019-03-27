@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/objects/genesisdata"
 )
 
 type TLNode struct {
@@ -100,7 +101,7 @@ func CreateGenesis() Block {
 		"",
 		BlockNonce{},
 		"",
-		Data{[]Transaction{}}, //TODO: GENESISDATA should be proper created
+		Data{[]Transaction{}, genesisdata.GenesisData{}}, //TODO: GENESISDATA should be proper created
 		""}
 
 	return genBlock

@@ -78,7 +78,7 @@ func (b *Block) SignBlock(sk SecretKey) {
 }
 
 // Validation functions
-func (b *Block) validateBlockSignature(pk PublicKey) bool {
+func (b *Block) ValidateBlockSignature(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
@@ -137,7 +137,7 @@ func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
 		return false, "Block Nonce validation failed"
 	}
 
-	if !b.validateBlockSignature(b.BakerID) {
+	if !b.ValidateBlockSignature(b.BakerID) {
 		return false, "Block Signature validation failed"
 	}
 

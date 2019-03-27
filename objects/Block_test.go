@@ -12,7 +12,7 @@ func TestVerifyBlockSignature(t *testing.T) {
 	b := GetTestBlock()
 	b.SignBlock(sk)
 
-	if !b.validateBlockSignature(pk) {
+	if !b.ValidateBlockSignature(pk) {
 		t.Error("Block Failed")
 	}
 
