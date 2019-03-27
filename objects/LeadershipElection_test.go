@@ -6,7 +6,7 @@ import (
 )
 
 func TestLeadershipElection(t *testing.T) {
-	var sk, pk = KeyGen(2560)
+	var sk, pk = KeyGen(2048)
 
 	stake := 9999999
 	slot := 3

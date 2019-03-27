@@ -91,6 +91,8 @@ func (b Block) validateDraw(stake int, hardness int) bool {
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 
+	//asdf := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(len(b.BlockProof))), nil)
+	//fmt.Println(asdf)
 	drawValue := big.NewInt(0).Mul(hashVal, big.NewInt(int64(stake))) //TODO: How is the draw value calculated?
 
 	threshold := big.NewInt(0).Exp(big.NewInt(int64(hardness)), big.NewInt(int64(hardness)), nil) //TODO how to calc threshold?

@@ -7,7 +7,7 @@ import (
 )
 
 func TestVerifyBlockSignature(t *testing.T) {
-	var sk, pk = KeyGen(2560)
+	var sk, pk = KeyGen(2048)
 
 	b := GetTestBlock()
 	b.SignBlock(sk)
@@ -19,7 +19,7 @@ func TestVerifyBlockSignature(t *testing.T) {
 }
 
 func TestCreateAndVerifyNonce(t *testing.T) {
-	var sk, pk = KeyGen(256)
+	var sk, pk = KeyGen(2048)
 
 	nonce := BlockNonce{"8556", "Something", pk}
 
@@ -32,8 +32,8 @@ func TestCreateAndVerifyNonce(t *testing.T) {
 }
 
 func TestCreateAndVerifyNonceFAIL(t *testing.T) {
-	var sk, _ = KeyGen(256)
-	var _, pk2 = KeyGen(256)
+	var sk, _ = KeyGen(2048)
+	var _, pk2 = KeyGen(2048)
 
 	nonce := BlockNonce{"8556", "Something", pk2}
 
@@ -46,7 +46,7 @@ func TestCreateAndVerifyNonceFAIL(t *testing.T) {
 }
 
 func TestVerifyBlock(t *testing.T) {
-	var sk, pk = KeyGen(2560)
+	var sk, pk = KeyGen(2048)
 
 	slot := 4
 	hardness := 49

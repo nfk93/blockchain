@@ -23,7 +23,7 @@ type Tree struct {
 	hardness      int
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, pk PublicKey) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData) {
 	tree := Tree{make(map[string]TLNode), "", "", 0}
 
 	// Process a block coming from the consensus layer
@@ -38,6 +38,7 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 	go func() {
 		for {
 			finalize := <-finalizeChan
+			tree.lastFinalized = finalize
 			stateReturn <- tree.treeMap[finalize].state
 		}
 	}()

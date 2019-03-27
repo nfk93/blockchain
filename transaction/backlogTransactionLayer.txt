@@ -32,7 +32,7 @@ Don't create your own genesis, unless you ARE genesis
 Gas?
 
 
-Use latest state to create the nonce
+Use hash of blocks in gap to create the nonce
 How is the threshold and draw value calculated
 
 
