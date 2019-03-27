@@ -288,7 +288,7 @@ func broadcastTrans(trans objects.Transaction) {
 			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
-			err := client.Call("RPCHandler.SendTransaction", trans, &void)
+			err := client.Call(RPC_SEND_TRANSACTION, trans, &void)
 			if err != nil {
 				fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
 			}
