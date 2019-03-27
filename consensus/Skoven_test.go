@@ -27,7 +27,7 @@ func createTestBlock(t []Transaction, i int, parentHash string) Block {
 		parentHash,
 		pk,
 		"VALID",
-		42,
+		BlockNonce{"42", "", pk},
 		"",
 		Data{Trans: t},
 		"",

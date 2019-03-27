@@ -6,7 +6,6 @@ import (
 	"github.com/nfk93/blockchain/consensus"
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
-	"github.com/nfk93/blockchain/objects/genesisdata"
 	"github.com/nfk93/blockchain/p2p"
 )
 
@@ -30,7 +29,7 @@ func main() {
 	p2p_transactionOut = make(chan objects.Transaction)
 
 	p2p.StartP2P(*addr, *port, p2p_blockIn, p2p_blockOut, p2p_transactionIn, p2p_transactionOut)
-	consensus.StartConsensus(genesisdata.GenesisData{}, p2p_transactionOut, p2p_blockOut, p2p_blockIn)
+	consensus.StartConsensus(p2p_transactionOut, p2p_blockOut, p2p_blockIn)
 	cliLoop()
 }
 

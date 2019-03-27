@@ -21,13 +21,25 @@ ok - parent hash
 - Do validation for transaction in add transaction
     - Comment in the check for sender balance
 
-
-- Genesis hash skal ikke kunne rammes af hashing functionen
-- Create correct Genesis block/Node
+- Genesis hash skal ikke kunne rammes af hashing functionen -> is now nil
+- Create correct GenesisData
 
 
 
 Ok - Write tests for forking/branching
-Write method to create a block given a set of transactions
+OK - Write method to create a block given a set of transactions
 Don't create your own genesis, unless you ARE genesis
 Gas?
+
+
+Use hash of blocks in gap to create the nonce
+How is the threshold and draw value calculated
+
+
+BlockNonce are created randomly.
+
+
+
+
+
+

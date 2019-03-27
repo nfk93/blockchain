@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/objects/genesisdata"
 )
 
 type TLNode struct {
@@ -17,15 +18,16 @@ type State struct {
 }
 
 type Tree struct {
-	treeMap map[string]TLNode
-	head    string
+	treeMap       map[string]TLNode
+	head          string
+	lastFinalized string
+	hardness      int
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, transChan chan []Transaction) {
-	tree := Tree{make(map[string]TLNode), ""}
-	//gen := createGenesis() //TODO: Remove this and only add create genesis if you are first on tree
-	//processBlock(gen, tree)
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData) {
+	tree := Tree{make(map[string]TLNode), "", "", 0}
 
+	// Process a block coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
@@ -33,16 +35,19 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		}
 	}()
 
+	// Finalize a given block
 	go func() {
 		for {
 			finalize := <-finalizeChan
+			tree.lastFinalized = finalize
 			stateReturn <- tree.treeMap[finalize].state
 		}
 	}()
 
+	// A new block should be created from the transactions in transList
 	for {
-		transList := <-transChan
-		blockReturn <- tree.createNewBlock(transList)
+		newBlockData := <-newBlockChan
+		blockReturn <- tree.createNewBlock(newBlockData)
 	}
 }
 
@@ -90,44 +95,38 @@ func (s *State) addTransaction(t Transaction) {
 }
 
 func CreateGenesis() Block {
-	sk, _ := KeyGen(256)
 	genBlock := Block{0,
 		"",
-		0,
-		"VALID", //TODO: Still missing Blockproof
-		0,       //TODO: Should this be chosen for next round?
+		PublicKey{},
 		"",
-		Data{[]Transaction{}},
+		BlockNonce{},
+		"",
+		Data{[]Transaction{}, genesisdata.GenesisData{}}, //TODO: GENESISDATA should be proper created
 		""}
 
-	genBlock.SignBlock(sk)
 	return genBlock
 }
 
-func (t Tree) createNewBlock(transactions []Transaction) Block {
+func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
 
 	var addedTransactions []Transaction
 
-	noOfTrans := len(transactions)
+	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := transactions[i]
+		newTrans := blockData.TransList[i]
 		//transactions = transactions[1:]
 		s.addTransaction(newTrans)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	//TODO: Make proper way of creating a new block
-	b := Block{43,
-		t.head,
-		43,
-		"PROOF",
-		43,
-		"LAST_FINALIZED",
-		Data{addedTransactions},
-		""}
+	prevBlockNonce := t.treeMap[t.lastFinalized].block.BlockNonce
+
+	newBlockNonce := CreateNewBlockNonce(prevBlockNonce, blockData.SlotNo, blockData.Sk, blockData.Pk)
+
+	b := CreateNewBlock(blockData, t.head, newBlockNonce, addedTransactions)
 
 	return b
 }

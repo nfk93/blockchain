@@ -14,7 +14,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		strconv.Itoa(i),
 		pk,
 		"VALID",
-		42,
+		BlockNonce{"42", "", pk},
 		"",
 		Data{Trans: t},
 		"",
@@ -23,12 +23,10 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 }
 
 func TestReceiveBlock(t *testing.T) {
-	sk1, p1 := KeyGen(2560)
-	_, p2 := KeyGen(2560)
-	t1 := Transaction{p1, p2, 200, "ID112", ""}
-	t2 := Transaction{p1, p2, 300, "ID222", ""}
-	t1.SignTransaction(sk1)
-	t2.SignTransaction(sk1)
+	sk1, p1 := KeyGen(2048)
+	_, p2 := KeyGen(2048)
+	t1 := CreateTransaction(p1, p2, 200, "ID112", sk1)
+	t2 := CreateTransaction(p1, p2, 300, "ID222", sk1)
 	b := createBlock([]Transaction{t1, t2}, 0, p1)
 	b.SignBlock(sk1)
 
@@ -55,6 +53,7 @@ func TestReceiveBlock(t *testing.T) {
 }
 
 func TestTreeBuild(t *testing.T) {
+	sk1, p1 := KeyGen(2048)
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
 	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl)
 
@@ -66,15 +65,11 @@ func TestTreeBuild(t *testing.T) {
 
 	}()
 
-	sk1, p1 := KeyGen(2560)
-
 	for i := 0; i < 5; i++ {
 
-		_, p2 := KeyGen(2560)
-		t1 := Transaction{p1, p2, 200, strconv.Itoa(i), ""}
-		t2 := Transaction{p1, p2, 300, strconv.Itoa(i + 1), ""}
-		t1.SignTransaction(sk1)
-		t2.SignTransaction(sk1)
+		_, p2 := KeyGen(2048)
+		t1 := CreateTransaction(p1, p2, 200, strconv.Itoa(i), sk1)
+		t2 := CreateTransaction(p1, p2, 300, strconv.Itoa(i+1), sk1)
 		b := createBlock([]Transaction{t1, t2}, i, p1)
 		b.SignBlock(sk1)
 
@@ -87,15 +82,13 @@ func TestTreeBuild(t *testing.T) {
 
 func TestFinalize(t *testing.T) {
 	b, s, f, br, tl := createChannels()
+
+	sk1, p1 := KeyGen(2048)
 	go StartTransactionLayer(b, s, f, br, tl)
 
-	sk1, p1 := KeyGen(2560)
-
-	_, p2 := KeyGen(2560)
-	t1 := Transaction{p1, p2, 200, strconv.Itoa(0), ""}
-	t2 := Transaction{p1, p2, 300, strconv.Itoa(0 + 1), ""}
-	t1.SignTransaction(sk1)
-	t2.SignTransaction(sk1)
+	_, p2 := KeyGen(2048)
+	t1 := CreateTransaction(p1, p2, 200, strconv.Itoa(0), sk1)
+	t2 := CreateTransaction(p1, p2, 300, strconv.Itoa(0+1), sk1)
 	block := createBlock([]Transaction{t1, t2}, 0, p1)
 	block.SignBlock(sk1)
 
@@ -118,13 +111,14 @@ func TestFinalize(t *testing.T) {
 }
 
 func TestForking(t *testing.T) {
+
+	sk1, p1 := KeyGen(2048)
+	sk2, p2 := KeyGen(2048)
+	_, p3 := KeyGen(2048)
+	_, p4 := KeyGen(2048)
+
 	b, s, f, br, tl := createChannels()
 	go StartTransactionLayer(b, s, f, br, tl)
-
-	sk1, p1 := KeyGen(2560)
-	sk2, p2 := KeyGen(2560)
-	_, p3 := KeyGen(2560)
-	_, p4 := KeyGen(2560)
 
 	go func() {
 		for {
@@ -138,16 +132,14 @@ func TestForking(t *testing.T) {
 	}()
 
 	// Block 1, Grow from Genesis
-	t1 := Transaction{p1, p1, 200, strconv.Itoa(1), ""}
-	t1.SignTransaction(sk1)
-	block1 := createBlock([]Transaction{}, 0, p1)
+	t1 := CreateTransaction(p1, p1, 200, strconv.Itoa(1), sk1)
+	block1 := createBlock([]Transaction{t1}, 0, p1)
 	block1.SignBlock(sk1)
 	b <- block1
 	time.Sleep(100)
 
 	// Block 2 - grow from block 1
-	t2 := Transaction{p1, p2, 200, strconv.Itoa(2), ""}
-	t2.SignTransaction(sk1)
+	t2 := CreateTransaction(p1, p2, 200, strconv.Itoa(2), sk1)
 	block2 := createBlock([]Transaction{t2}, 1, p1)
 	block2.ParentPointer = block1.CalculateBlockHash()
 	block1.SignBlock(sk1)
@@ -155,8 +147,7 @@ func TestForking(t *testing.T) {
 	time.Sleep(100)
 
 	// Block 3 - grow from block 1
-	t3 := Transaction{p1, p3, 200, strconv.Itoa(3), ""}
-	t3.SignTransaction(sk1)
+	t3 := CreateTransaction(p1, p3, 200, strconv.Itoa(3), sk1)
 	block3 := createBlock([]Transaction{t3}, 2, p1)
 	block3.ParentPointer = block1.CalculateBlockHash()
 	block1.SignBlock(sk1)
@@ -164,8 +155,7 @@ func TestForking(t *testing.T) {
 	time.Sleep(100)
 
 	// Block 4 - grow from block 2
-	t4 := Transaction{p2, p4, 200, strconv.Itoa(4), ""}
-	t4.SignTransaction(sk2)
+	t4 := CreateTransaction(p2, p4, 200, strconv.Itoa(4), sk2)
 	block4 := createBlock([]Transaction{t4}, 3, p2)
 	block4.ParentPointer = block2.CalculateBlockHash()
 	block1.SignBlock(sk2)
@@ -180,6 +170,10 @@ func TestForking(t *testing.T) {
 }
 
 func TestCreateNewBlock(t *testing.T) {
+
+	sk1, pk1 := KeyGen(2048)
+	_, pk2 := KeyGen(2048)
+
 	b, s, f, br, tl := createChannels()
 	go StartTransactionLayer(b, s, f, br, tl)
 
@@ -197,26 +191,24 @@ func TestCreateNewBlock(t *testing.T) {
 	b <- genBlock
 	time.Sleep(300)
 
-	sk1, pk1 := KeyGen(2560)
-	_, pk2 := KeyGen(2560)
-
 	var transList []Transaction
 	for i := 0; i < 20; i++ {
-		t1 := Transaction{pk1, pk2, i * 100, "ID" + strconv.Itoa(i), ""}
-		t1.SignTransaction(sk1)
+		t1 := CreateTransaction(pk1, pk2, i*100, "ID"+strconv.Itoa(i), sk1)
 		transList = append(transList, t1)
 	}
 
-	tl <- transList
+	newBlockData := CreateBlockData{transList, sk1, pk1, 2, genBlock.CalculateBlockHash(), ""}
+
+	tl <- newBlockData
 
 	time.Sleep(500)
 }
 
-func createChannels() (chan Block, chan State, chan string, chan Block, chan []Transaction) {
+func createChannels() (chan Block, chan State, chan string, chan Block, chan CreateBlockData) {
 	blockChannel := make(chan Block)
 	stateReturn := make(chan State)
 	finalizeChannel := make(chan string)
 	blockReturn := make(chan Block)
-	transList := make(chan []Transaction)
+	transList := make(chan CreateBlockData)
 	return blockChannel, stateReturn, finalizeChannel, blockReturn, transList
 }

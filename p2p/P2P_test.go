@@ -22,7 +22,7 @@ var mockBlock_1 = objects.Block{
 	"",
 	mockPK,
 	"VALID",
-	42,
+	objects.BlockNonce{"42", "", mockPK},
 	"",
 	objects.Data{},
 	"123",
@@ -33,7 +33,7 @@ var mockBlock_2 = objects.Block{
 	"",
 	mockPK,
 	"VALID",
-	42,
+	objects.BlockNonce{"44", "", mockPK},
 	"",
 	objects.Data{},
 	"555",
@@ -106,15 +106,15 @@ func TestRPC(t *testing.T) {
 		rpcObj := new(RPCHandler)
 		rpcObj.SendBlock(mockBlock_1, &struct{}{})
 		_ = <-deliverBlock
-		if !blocksSeen.contains("123") {
+		if !blocksSeen.contains(mockBlock_1.CalculateBlockHash()) {
 			t.Fail()
 		}
-		if blocksSeen.contains("555") {
+		if blocksSeen.contains(mockBlock_2.CalculateBlockHash()) {
 			t.Fail()
 		}
 		rpcObj.SendBlock(mockBlock_2, &struct{}{})
 		_ = <-deliverBlock
-		if !blocksSeen.contains("555") {
+		if !blocksSeen.contains(mockBlock_2.CalculateBlockHash()) {
 			t.Fail()
 		}
 	})
