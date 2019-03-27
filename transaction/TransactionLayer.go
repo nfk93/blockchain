@@ -85,6 +85,10 @@ func (s *State) addTransaction(t Transaction) {
 		fmt.Println("The transactions didn't verify", t)
 		return
 	}
+	if t.Amount <= 0 {
+		fmt.Println("Invalid transaction Amount! Amount should be positive!", t)
+		return
+	}
 
 	//if s.ledger[t.From] < t.Amount { //TODO: remove comment such that it checks the balance
 	//	fmt.Println("Not enough money on senders account")

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects/genesisdata"
-	"math/big"
 	"strconv"
 )
 
@@ -82,33 +81,6 @@ func (b *Block) ValidateBlockSignature(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
-func (b Block) validateDraw(stake int, hardness int) bool {
-	var valBuf bytes.Buffer
-	valBuf.WriteString("LEADERSHIP_ELECTION")
-	valBuf.WriteString(b.BlockNonce.Nonce)
-	valBuf.WriteString(strconv.Itoa(b.Slot))
-	valBuf.WriteString(b.BakerID.String())
-	valBuf.WriteString(b.BlockProof)
-
-	hashVal := big.NewInt(0)
-	hashVal.SetString(HashSHA(valBuf.String()), 10)
-
-	//asdf := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(len(b.BlockProof))), nil)
-	//fmt.Println(asdf)
-	drawValue := big.NewInt(0).Mul(hashVal, big.NewInt(int64(stake))) //TODO: How is the draw value calculated?
-
-	threshold := big.NewInt(0).Exp(big.NewInt(int64(hardness)), big.NewInt(int64(hardness)), nil) //TODO how to calc threshold?
-
-	// Checks if the draw is bigger than the threshold
-	// Returns -1 if x < y
-	if drawValue.Cmp(threshold) < 0 {
-		return false
-	}
-
-	return true
-
-}
-
 func (b Block) validateBlockProof() bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
@@ -127,10 +99,6 @@ func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
 
 	if !b.validateBlockProof() {
 		return false, "Block Proof failed"
-	}
-
-	if !b.validateDraw(stake, hardness) {
-		return false, "Block failed Hardness"
 	}
 
 	if !b.BlockNonce.validateBlockNonce() {
