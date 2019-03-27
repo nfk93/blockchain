@@ -82,12 +82,12 @@ func TestLexFloat(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, INT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, INT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
 		LET, LIDENT, EQ, LIDENT, PLUS, LIDENT, MINUS, LIDENT, EOF}
 	compare_tokens(t, strings, lex)
 }
@@ -117,43 +117,49 @@ func TestLidUid(t *testing.T) {
 // TODO: make tests covering all of the below
 
 const (
-	COMMA     string = "comma"
-	GEQ       string = "geq"
-	GT        string = "gt"
-	LEQ       string = "leq"
-	LARROW    string = "larrow"
-	NEQ       string = "neq"
-	LT        string = "lt"
-	RARROW    string = "rarrow"
-	EQ        string = "eq"
-	PLUS      string = "plus"
-	MINUS     string = "minus"
-	LBRACE    string = "lbrace"
-	RBRACE    string = "rbrace"
-	LBRACK    string = "lbrack"
-	RBRACK    string = "rbrack"
-	LPAREN    string = "lparen"
-	RPAREN    string = "rparen"
-	COLON     string = "colon"
-	SEMICOLON string = "semicolon"
-	KEYHASH   string = "keyhash"
-	OPERATION string = "operation"
-	LIST      string = "list"
-	PERC      string = "percentage"
-	LET       string = "let"
-	IN        string = "in"
-	IF        string = "if"
-	THEN      string = "then"
-	ELSE      string = "else"
-	TYPE      string = "type"
-	TEZ       string = "tez"
-	HASH      string = "hash"
-	LIDENT    string = "lident"
-	UIDENT    string = "uident"
-	STRING    string = "string"
-	TEZ_LIT   string = "tez_lit"
-	INT       string = "int"
-	FLOAT     string = "float"
-	DOT       string = "dot"
-	EOF       string = "$"
+	COMMA      string = "comma"
+	GEQ        string = "geq"
+	GT         string = "gt"
+	LEQ        string = "leq"
+	LARROW     string = "larrow"
+	NEQ        string = "neq"
+	LT         string = "lt"
+	RARROW     string = "rarrow"
+	EQ         string = "eq"
+	PLUS       string = "plus"
+	MINUS      string = "minus"
+	LBRACE     string = "lbrace"
+	RBRACE     string = "rbrace"
+	LBRACK     string = "lbrack"
+	RBRACK     string = "rbrack"
+	LPAREN     string = "lparen"
+	RPAREN     string = "rparen"
+	COLON      string = "colon"
+	SEMICOLON  string = "semicolon"
+	KEYHASH    string = "keyhash"
+	OPERATION  string = "operation"
+	LIST       string = "list"
+	PERC       string = "percentage"
+	LET        string = "let"
+	IN         string = "in"
+	IF         string = "if"
+	THEN       string = "then"
+	ELSE       string = "else"
+	TYPE       string = "type"
+	TEZ        string = "tez"
+	HASH       string = "hash"
+	LIDENT     string = "lident"
+	UIDENT     string = "uident"
+	STRING_LIT string = "string_lit"
+	TEZ_LIT    string = "tez_lit"
+	INT_LIT    string = "int_lit"
+	FLOAT_LIT  string = "float_lit"
+	DOT        string = "dot"
+	AST        string = "ast"
+	TRUE       string = "true"
+	FALSE      string = "false"
+	BOOL       string = "bool"
+	STRING     string = "string"
+	INT        string = "int"
+	EOF        string = "$"
 )

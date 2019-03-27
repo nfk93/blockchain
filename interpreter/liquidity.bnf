@@ -19,9 +19,15 @@ lparen      : '(' ;
 rparen      : ')' ;
 colon       : ':' ;
 semicolon   : ';' ;
+ast         : '*' ;
 keyhash     : 'k' 'e' 'y' '_' 'h' 'a' 's' 'h' ;
 operation   : 'o' 'p' 'e' 'r' 'a' 't' 'i' 'o' 'n' ;
 list        : 'l' 'i' 's' 't' ;
+bool        : 'b' 'o' 'o' 'l' ;
+int         : 'i' 'n' 't' ;
+string      : 's' 't' 'r' 'i' 'n' 'g' ;
+false       : 'f' 'a' 'l' 's' 'e' ;
+true        : 't' 'r' 'u' 'e' ;
 percentage  : '%' ;
 let         : 'l' 'e' 't' ;
 in          : 'i' 'n' ;
@@ -41,15 +47,13 @@ lident      : ( 'a'-'z' | '_' ) { _idchars } ;
 uident      : ( 'A'-'Z' ) { _idchars } ;
 
 /* TODO: escape chars */
-string      : '"' {.} '"' ;
+string_lit  : '"' {.} '"' ;
 
 _digit      : '0'-'9' ;
 _amount     : _digit { _digit } ;
 tez_lit     : _amount 't' 'z' ;
-
-/* TODO: test float detection */
-int         : _digit { _digit } ;
-float       : _digit { _digit } '.' { _digit } ;
+int_lit     : _digit { _digit } ;
+float_lit   : _digit { _digit } '.' { _digit } ;
 
 /* This must go below float detection, for obvious reasons */
 dot         : '.' ;
@@ -86,12 +90,32 @@ Lookup      : Lookup lident dot                                                 
             | lident dot                                                            << // TODO see above >> ;
 
 Pattern     : lident                                                                << // TODO param >>
-            | lparen Pattern { comma Pattern } rparen                               << // TODO params >>
-            | lparen lident colon Type rparen                                       << // TODO typedparam >>
+            | lparen PatternSeq rparen                                              << // TODO params >>
+            | lparen lident colon Type rparen                                       << // TODO typedparam >> ;
 
-Type        : empty << // TODO >> ;
+PatternSeq  : Pattern                                                               << /* TODO intermediate for pattern
+                                                                                          sequences */ >>
+            | PatternSeq comma PatternSeq                                           << // TODO see above >> ;
 
-Constant    : empty << // TODO >> ;
+Type        : bool                                                                  << // TODO bool >>
+            | int                                                                   << // TODO int >>
+            | tez                                                                   << // TODO tez >>
+            | string                                                                << // TODO string >>
+            | keyhash                                                               << // TODO key_hash >>
+            | operation                                                             << // TODO operation >>
+            | Type list                                                             << // TODO list >>
+            | Type ast Type                                                         << // TODO tuple >>
+            | lident                                                                << // TODO declaredtype >> ;
+
+Constant    : keyhash
+            | true
+            | false
+            | int_lit
+            | float_lit
+            | tez_lit
+            | string_lit
+            | lparen rparen
+            | lrbrack Constant rbrack ;
 
 
 
