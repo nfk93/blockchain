@@ -2,12 +2,14 @@ package objects
 
 import (
 	"bytes"
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
+	"math"
 	"math/big"
 	"strconv"
 )
 
-func CalculateDraw(bnonce BlockNonce, hardness int, sk SecretKey, pk PublicKey, stake int, slot int) (bool, string) {
+func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicKey, yourStake int, systemStake int, slot int) (bool, string) {
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
 	drawBuf.WriteString(bnonce.Nonce)
@@ -24,14 +26,19 @@ func CalculateDraw(bnonce BlockNonce, hardness int, sk SecretKey, pk PublicKey, 
 		Data{},
 		""}
 
-	if ValidateDraw(intermediateBlock, stake, hardness) {
+	if ValidateDrawValue(intermediateBlock, yourStake, systemStake, hardness) {
 		return true, draw
 	}
 	return false, ""
 
 }
 
-func ValidateDraw(b Block, stake int, hardness int) bool {
+func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64) bool {
+
+	if !b.validateBlockProof() {
+		fmt.Println("Block Proof didn't validate!")
+		return false
+	}
 	var valBuf bytes.Buffer
 	valBuf.WriteString("LEADERSHIP_ELECTION")
 	valBuf.WriteString(b.BlockNonce.Nonce)
@@ -42,18 +49,19 @@ func ValidateDraw(b Block, stake int, hardness int) bool {
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 
-	//asdf := big.NewInt(0).Exp(big.NewInt(2), big.NewInt(int64(len(b.BlockProof))), nil)
-	//fmt.Println(asdf)
-	drawValue := big.NewInt(0).Mul(hashVal, big.NewInt(int64(stake))) //TODO: How is the draw value calculated?
+	percentOfTotalStake := float64(yourStake) / float64(systemStake)
+	phiFunc := float64(1) - math.Pow(float64(1)-hardness, float64(percentOfTotalStake))
+	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(hashVal.BitLen())), nil)
 
-	threshold := big.NewInt(0).Exp(big.NewInt(int64(hardness)), big.NewInt(int64(hardness)), nil) //TODO how to calc threshold?
+	threshold := new(big.Int)
+	new(big.Float).Mul(big.NewFloat(float64(phiFunc)), new(big.Float).SetInt(multFactor)).Int(threshold)
 
 	// Checks if the draw is bigger than the threshold
 	// Returns -1 if x < y
-	if drawValue.Cmp(threshold) < 0 {
-		return false
+	if hashVal.Cmp(threshold) == -1 {
+		return true
 	}
 
-	return true
+	return false
 
 }

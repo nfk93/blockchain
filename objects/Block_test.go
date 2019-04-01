@@ -49,8 +49,9 @@ func TestVerifyBlock(t *testing.T) {
 	var sk, pk = KeyGen(2048)
 
 	slot := 4
-	hardness := 49
-	stake := 9999999
+	hardness := 0.9
+	yourStake := 20
+	systemStake := 300
 
 	// setup of non signed nonce and block to create proper block and nonce from
 	preNonce := BlockNonce{"8556", "Something", pk}
@@ -65,7 +66,7 @@ func TestVerifyBlock(t *testing.T) {
 
 	nonce := CreateNewBlockNonce(preNonce, slot, sk, pk)
 
-	createSuccess, draw := CalculateDraw(nonce, hardness, sk, pk, stake, slot)
+	createSuccess, draw := CalculateDraw(nonce, hardness, sk, pk, yourStake, systemStake, slot)
 	if !createSuccess {
 		t.Error("Draw not above Hardness")
 	}
@@ -78,7 +79,7 @@ func TestVerifyBlock(t *testing.T) {
 
 	b := CreateNewBlock(blockdata, parent, nonce, []Transaction{t1, t2, t3})
 
-	validationSuccess, errMsg := b.ValidateBlock(stake, hardness)
+	validationSuccess, errMsg := b.ValidateBlock()
 
 	if !validationSuccess {
 		t.Error(errMsg)

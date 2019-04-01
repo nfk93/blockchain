@@ -95,7 +95,7 @@ func (bl BlockNonce) validateBlockNonce() bool {
 	return Verify(bl.Nonce, bl.Signature, bl.Pk)
 }
 
-func (b Block) ValidateBlock(stake int, hardness int) (bool, string) {
+func (b Block) ValidateBlock() (bool, string) {
 
 	if !b.validateBlockProof() {
 		return false, "Block Proof failed"
