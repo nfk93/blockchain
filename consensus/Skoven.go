@@ -16,8 +16,10 @@ var currentHead string
 var currentLength int
 var lastFinalized string
 var testDrawVal int //Remove when implementing proper calculateDrawVal
+var channels o.ChannelStruct
 
-func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+func StartConsensus(channelStruct o.ChannelStruct) {
+	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
@@ -28,14 +30,14 @@ func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
-			block := <-blockFromP2P
+			block := <-channels.BlockFromP2P
 			handleBlock(block)
 		}
 	}()
 	// Start processing transactions on one thread, concurrently
 	go func() {
 		for {
-			trans := <-transFromP2P
+			trans := <-channels.TransFromP2P
 			go handleTransaction(trans)
 		}
 	}()
@@ -69,6 +71,7 @@ func handleBlock(b o.Block) {
 
 func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
+	processGenesisData(b.BlockData.GenesisData)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
 }
@@ -182,8 +185,7 @@ func sendBranchToTL() {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
-
-	//TODO
+	channels.BlockToTrans <- block
 }
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight

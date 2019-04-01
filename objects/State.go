@@ -1,0 +1,31 @@
+package objects
+
+import (
+	"fmt"
+	. "github.com/nfk93/blockchain/crypto"
+)
+
+type State struct {
+	Ledger     map[PublicKey]int
+	ParentHash string
+}
+
+func (s *State) AddTransaction(t Transaction) {
+	//TODO: Handle checks of legal transactions
+
+	if !t.VerifyTransaction() {
+		fmt.Println("The transactions didn't verify", t)
+		return
+	}
+	if t.Amount <= 0 {
+		fmt.Println("Invalid transaction Amount! Amount should be positive!", t)
+		return
+	}
+
+	//if s.ledger[t.From] < t.Amount { //TODO: remove comment such that it checks the balance
+	//	fmt.Println("Not enough money on senders account")
+	//	return
+	//}
+	s.Ledger[t.To] += t.Amount
+	s.Ledger[t.From] -= t.Amount
+}

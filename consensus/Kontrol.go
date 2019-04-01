@@ -31,6 +31,10 @@ func runSlot() {
 	}
 }
 
+func processGenesisData(genesisData o.GenesisData) {
+
+}
+
 func finalize(slot int) {
 
 }
@@ -40,10 +44,10 @@ func updateStake() {
 }
 
 func drawLottery(slot int) {
-	winner, draw := o.CalculateDraw(currentNonce, hardness, sk, pk, currentStake, slot)
-	if winner {
+	//winner, draw := o.CalculateDraw(currentNonce, hardness, sk, pk, currentStake, slot)
+	//if winner {
 
-	}
+	//}
 
 }
 

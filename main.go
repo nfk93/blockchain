@@ -22,14 +22,10 @@ func main() {
 	flag.Parse()
 
 	secretKey, publicKey = crypto.KeyGen(2048)
-
-	p2p_blockIn = make(chan objects.Block)
-	p2p_blockOut = make(chan objects.Block)
-	p2p_transactionIn = make(chan objects.Transaction)
-	p2p_transactionOut = make(chan objects.Transaction)
-
-	p2p.StartP2P(*addr, *port, p2p_blockIn, p2p_blockOut, p2p_transactionIn, p2p_transactionOut)
-	consensus.StartConsensus(p2p_transactionOut, p2p_blockOut, p2p_blockIn)
+	p2p_transactionIn := make(chan objects.Transaction)
+	channels := objects.CreateChannelStruct()
+	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, p2p_transactionIn, channels.TransFromP2P)
+	consensus.StartConsensus(channels)
 	cliLoop()
 }
 

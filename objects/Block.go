@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
-	"github.com/nfk93/blockchain/objects/genesisdata"
 	"strconv"
 )
 
@@ -36,7 +35,7 @@ type BlockNonce struct {
 
 type Data struct {
 	Trans       []Transaction
-	GenesisData genesisdata.GenesisData
+	GenesisData GenesisData
 }
 
 func CreateNewBlockNonce(nonce BlockNonce, slot int, sk SecretKey, pk PublicKey) BlockNonce {
@@ -64,7 +63,7 @@ func CreateNewBlock(blockData CreateBlockData, parent string, nonce BlockNonce, 
 		blockData.Draw,
 		nonce,
 		blockData.LastFinal,
-		Data{translist, genesisdata.GenesisData{}},
+		Data{translist, GenesisData{}},
 		""}
 	b.SignBlock(blockData.Sk)
 	return b

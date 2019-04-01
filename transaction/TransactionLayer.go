@@ -1,20 +1,13 @@
 package transaction
 
 import (
-	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
-	"github.com/nfk93/blockchain/objects/genesisdata"
 )
 
 type TLNode struct {
 	block Block
 	state State
-}
-
-type State struct {
-	ledger     map[PublicKey]int
-	parentHash string
 }
 
 type Tree struct {
@@ -53,10 +46,10 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 
 func (t *Tree) processBlock(b Block) {
 	s := State{}
-	s.parentHash = b.ParentPointer
-	s.ledger = copyMap(t.treeMap[s.parentHash].state.ledger)
-	if s.ledger == nil {
-		s.ledger = make(map[PublicKey]int)
+	s.ParentHash = b.ParentPointer
+	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	if s.Ledger == nil {
+		s.Ledger = make(map[PublicKey]int)
 	}
 
 	// Update head
@@ -65,7 +58,7 @@ func (t *Tree) processBlock(b Block) {
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
-			s.addTransaction(tr)
+			s.AddTransaction(tr)
 		}
 	}
 
@@ -78,26 +71,6 @@ func (t *Tree) createNewNode(b Block, s State) {
 	t.treeMap[b.CalculateBlockHash()] = n
 }
 
-func (s *State) addTransaction(t Transaction) {
-	//TODO: Handle checks of legal transactions
-
-	if !t.VerifyTransaction() {
-		fmt.Println("The transactions didn't verify", t)
-		return
-	}
-	if t.Amount <= 0 {
-		fmt.Println("Invalid transaction Amount! Amount should be positive!", t)
-		return
-	}
-
-	//if s.ledger[t.From] < t.Amount { //TODO: remove comment such that it checks the balance
-	//	fmt.Println("Not enough money on senders account")
-	//	return
-	//}
-	s.ledger[t.To] += t.Amount
-	s.ledger[t.From] -= t.Amount
-}
-
 func CreateGenesis() Block {
 	genBlock := Block{0,
 		"",
@@ -105,7 +78,7 @@ func CreateGenesis() Block {
 		"",
 		BlockNonce{},
 		"",
-		Data{[]Transaction{}, genesisdata.GenesisData{}}, //TODO: GENESISDATA should be proper created
+		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
 		""}
 
 	return genBlock
@@ -113,7 +86,7 @@ func CreateGenesis() Block {
 
 func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
-	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
+	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 
 	var addedTransactions []Transaction
 
@@ -122,7 +95,7 @@ func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
 		newTrans := blockData.TransList[i]
 		//transactions = transactions[1:]
-		s.addTransaction(newTrans)
+		s.AddTransaction(newTrans)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
