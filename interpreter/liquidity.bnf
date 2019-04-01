@@ -71,16 +71,26 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 << import "github.com/nfk93/blockchain/interpreter/ast" >>
 
-Toplevel    : Structure                                                             << ast.NewTodoExp() //>> ;
+Toplevel    : Structure                                                             << ast.NewStructure($0) >>
+            | Toplevel Structure                                                    << ast.NewTodoExp() >> ;
 
-Structure   : empty                                                               << ast.NewTodoExp() // >> ;
+
+Structure   : ModStruct                                                             << ast.NewModStruct($0) // >>
+            | letinit Exp                                                           << ast.NewTodoExp() // >>
+            | letentry lident Pattern Pattern eq Exp                                << ast.NewTodoExp() // >> ;
+
+ModStruct   : type lident eq Type                                                   << ast.NewSimpleTypeDecl($1, $3) // >>
+            | type lident eq lbrack Struct rbrack                                   << ast.NewTodoExp() // >> ;
+
+Struct      : lident colon Type semicolon Struct                                    << ast.NewTodoExp() // >>
+            | lident colon Type semicolon                                           << ast.NewTodoExp() // >> ;
 
 Exp         : lident                                                                << ast.NewTodoExp() // idexp >>
             | uident dot lident                                                     << ast.NewTodoExp() // external lookup exp >>
             | Lookup lident                                                         << ast.NewTodoExp() // lookupexp >>
             | Lookup lident larrow Exp                                              << ast.NewTodoExp() // lookupexp >>
-            | if Exp then Exp                                                       << ast.NewTodoExp() // ifthen exp >>
             | if Exp then Exp else Exp                                              << ast.NewTodoExp() // ifthenelse exp >>
+            | if Exp then Exp                                                       << ast.NewTodoExp() // ifthen exp >>
             | Exp semicolon Exp                                                     << ast.NewTodoExp() // seqexp >>
             | Exp colon colon Exp                                                   << ast.NewTodoExp() // listconcat >>
             | let Pattern eq Exp in Exp                                             << ast.NewTodoExp() // letexp >>

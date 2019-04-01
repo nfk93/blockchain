@@ -14,7 +14,12 @@ func getLexer(filepath string, t *testing.T) *lexer.Lexer {
 	return lexer.NewLexer(dat)
 }
 
-func TestParseFundMe(t *testing.T) {
+func TestParseInttype(t *testing.T) {
+	parser := NewParser()
+	parser.Parse(getLexer("../test_cases/inttype", t))
+}
+
+/* func TestParseFundMe(t *testing.T) {
 	parser := NewParser()
 	parser.Parse(getLexer("../test_cases/fundme", t))
-}
+} */

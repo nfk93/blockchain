@@ -58,3 +58,41 @@ func PrintExpression(exp Expression) {
 		fmt.Println(exp.oper)
 	}
 }
+
+type (
+	Structure     int // TODO
+	StructureData interface {
+	} // TODO
+	ModStruct     int // TODO
+	ModStructData interface {
+	} // TODO
+	SimpleTypeDecl     int
+	SimpleTypeDeclData interface {
+	}
+	StructTypeDecl int
+	StructureList  []Structure
+)
+
+func NewStructure(structureData StructureData) Structure {
+	switch structureData.(type) {
+	case ModStruct:
+		return 0
+	default:
+		return -1 //TODO shouldn't happen, report some sort of error
+	}
+}
+
+func NewModStruct(msd ModStructData) ModStruct {
+	switch msd.(type) {
+	case SimpleTypeDecl:
+		return 0
+	case StructTypeDecl:
+		return 1
+	default:
+		return -1 //TODO shouldn't happen, report some sort of error
+	}
+}
+
+func NewSimpleTypeDecl(simpleTypeDeclData SimpleTypeDeclData) SimpleTypeDecl {
+	return 1
+}
