@@ -46,7 +46,7 @@ func compare_tokens(t *testing.T, strings []string, lex *Lexer) {
 }
 
 func TestLexStorage(t *testing.T) {
-	bytes := read_file("tests/storage_type", t)
+	bytes := read_file("../test_cases/storage_type", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
@@ -56,7 +56,7 @@ func TestLexStorage(t *testing.T) {
 }
 
 func TestLexInitStorage(t *testing.T) {
-	bytes := read_file("tests/init_storage", t)
+	bytes := read_file("../test_cases/init_storage", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
@@ -66,7 +66,7 @@ func TestLexInitStorage(t *testing.T) {
 }
 
 func TestLexSimpleEntry(t *testing.T) {
-	bytes := read_file("tests/simple_entry", t)
+	bytes := read_file("../test_cases/simple_entry", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
@@ -78,7 +78,7 @@ func TestLexSimpleEntry(t *testing.T) {
 }
 
 func TestLexFloat(t *testing.T) {
-	bytes := read_file("tests/float", t)
+	bytes := read_file("../test_cases/float", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
@@ -93,7 +93,7 @@ func TestLexFloat(t *testing.T) {
 }
 
 func TestNoInvalidsInFundMe(t *testing.T) {
-	bytes := read_file("tests/fundme", t)
+	bytes := read_file("../test_cases/fundme", t)
 	lex := NewLexer(bytes)
 
 	for {
@@ -107,14 +107,14 @@ func TestNoInvalidsInFundMe(t *testing.T) {
 }
 
 func TestLidUid(t *testing.T) {
-	bytes := read_file("tests/lid_uid", t)
+	bytes := read_file("../test_cases/lid_uid", t)
 	lex := NewLexer(bytes)
 	strings := []string{
 		LIDENT, LIDENT, UIDENT, UIDENT, LIDENT, LIDENT, EOF}
 	compare_tokens(t, strings, lex)
 }
 
-// TODO: make tests covering all of the below
+// TODO: make ../test_cases covering all of the below
 
 const (
 	COMMA      string = "comma"
