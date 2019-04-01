@@ -41,6 +41,16 @@ func (e BinOPExp) children() []Expression {
 	return e.c
 }
 
+type TodoExp struct{}
+
+func NewTodoExp() TodoExp {
+	return TodoExp{}
+}
+
+func (e TodoExp) children() []Expression {
+	return []Expression{}
+}
+
 func PrintExpression(exp Expression) {
 	switch exp.(type) {
 	case BinOPExp:

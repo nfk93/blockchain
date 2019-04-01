@@ -28,8 +28,9 @@ int         : 'i' 'n' 't' ;
 string      : 's' 't' 'r' 'i' 'n' 'g' ;
 false       : 'f' 'a' 'l' 's' 'e' ;
 true        : 't' 'r' 'u' 'e' ;
-percentage  : '%' ;
-let         : 'l' 'e' 't' ;
+letinit     : 'l' 'e' 't' '%' 'i' 'n' 'i' 't' ;
+letentry    : 'l' 'e' 't' '%' 'e' 'n' 't' 'r' 'y' ;
+let         : 'l' 'e' 't' ;  // has to go after the other lets
 in          : 'i' 'n' ;
 if          : 'i' 'f' ;
 then        : 't' 'h' 'e' 'n' ;
@@ -70,42 +71,40 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 << import "github.com/nfk93/blockchain/interpreter/ast" >>
 
-Toplevel    : Structure                                                             << ast.NewExpression() >> ;
+Toplevel    : Structure                                                             << ast.NewTodoExp() //>> ;
 
-Structure   : empty                                                                 << // TODO >> ;
+Structure   : empty                                                               << ast.NewTodoExp() // >> ;
 
-Exp         : lident                                                                << // TODO idexp >>
-            | uident dot lident                                                     << // TODO external lookup exp >>
-            | Lookup lident                                                         << // TODO lookupexp >>
-            | Lookup lident larrow Exp                                              << // TODO lookupexp >>
-            | if Exp then Exp                                                       << // TODO ifthen exp >>
-            | if Exp then Exp else Exp                                              << // TODO ifthenelse exp >>
-            | Exp semicolon Exp                                                     << // TODO seqexp >>
-            | Exp colon colon Exp                                                   << // TODO listconcat >>
-            | let Pattern eq Exp in Exp                                             << // TODO letexp >>
-            | Constant                                                              << // TODO litexp >> ;
+Exp         : lident                                                                << ast.NewTodoExp() // idexp >>
+            | uident dot lident                                                     << ast.NewTodoExp() // external lookup exp >>
+            | Lookup lident                                                         << ast.NewTodoExp() // lookupexp >>
+            | Lookup lident larrow Exp                                              << ast.NewTodoExp() // lookupexp >>
+            | if Exp then Exp                                                       << ast.NewTodoExp() // ifthen exp >>
+            | if Exp then Exp else Exp                                              << ast.NewTodoExp() // ifthenelse exp >>
+            | Exp semicolon Exp                                                     << ast.NewTodoExp() // seqexp >>
+            | Exp colon colon Exp                                                   << ast.NewTodoExp() // listconcat >>
+            | let Pattern eq Exp in Exp                                             << ast.NewTodoExp() // letexp >>
+            | Constant                                                              << ast.NewTodoExp() // litexp >> ;
 
-Lookup      : Lookup lident dot                                                     << /* TODO intermediate for lookup
-                                                                                          calls */ >>
-            | lident dot                                                            << // TODO see above >> ;
+Lookup      : Lookup lident dot                                                     << ast.NewTodoExp() // intermediate for lookup calls  >>
+            | lident dot                                                            << ast.NewTodoExp() // see above >> ;
 
-Pattern     : lident                                                                << // TODO param >>
-            | lparen PatternSeq rparen                                              << // TODO params >>
-            | lparen lident colon Type rparen                                       << // TODO typedparam >> ;
+Pattern     : lident                                                                << ast.NewTodoExp() // param >>
+            | lparen PatternSeq rparen                                              << ast.NewTodoExp() // params >>
+            | lparen lident colon Type rparen                                       << ast.NewTodoExp() // typedparam >> ;
 
-PatternSeq  : Pattern                                                               << /* TODO intermediate for pattern
-                                                                                          sequences */ >>
-            | PatternSeq comma PatternSeq                                           << // TODO see above >> ;
+PatternSeq  : Pattern                                                               << ast.NewTodoExp() // intermediate for pattern sequences  >>
+            | PatternSeq comma PatternSeq                                           << ast.NewTodoExp() // see above >> ;
 
-Type        : bool                                                                  << // TODO bool >>
-            | int                                                                   << // TODO int >>
-            | tez                                                                   << // TODO tez >>
-            | string                                                                << // TODO string >>
-            | keyhash                                                               << // TODO key_hash >>
-            | operation                                                             << // TODO operation >>
-            | Type list                                                             << // TODO list >>
-            | Type ast Type                                                         << // TODO tuple >>
-            | lident                                                                << // TODO declaredtype >> ;
+Type        : bool                                                                  << ast.NewTodoExp() // bool >>
+            | int                                                                   << ast.NewTodoExp() // int >>
+            | tez                                                                   << ast.NewTodoExp() // tez >>
+            | string                                                                << ast.NewTodoExp() // string >>
+            | keyhash                                                               << ast.NewTodoExp() // key_hash >>
+            | operation                                                             << ast.NewTodoExp() // operation >>
+            | Type list                                                             << ast.NewTodoExp() // list >>
+            | Type ast Type                                                         << ast.NewTodoExp() // tuple >>
+            | lident                                                                << ast.NewTodoExp() // declaredtype >> ;
 
 Constant    : keyhash
             | true
@@ -115,7 +114,7 @@ Constant    : keyhash
             | tez_lit
             | string_lit
             | lparen rparen
-            | lrbrack Constant rbrack ;
+            | lbrack Constant rbrack ;
 
 
 

@@ -60,7 +60,7 @@ func TestLexInitStorage(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, LIDENT, LIDENT, EQ, LBRACE, LIDENT, EQ, HASH, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON,
+		LETINIT, LIDENT, EQ, LBRACE, LIDENT, EQ, HASH, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON,
 		LIDENT, EQ, TEZ_LIT, SEMICOLON, RBRACE, EOF}
 	compare_tokens(t, strings, lex)
 }
@@ -70,7 +70,7 @@ func TestLexSimpleEntry(t *testing.T) {
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, LIDENT, LIDENT, LPAREN, LIDENT, COLON, KEYHASH, RPAREN, LPAREN, LIDENT, COLON, LIDENT, RPAREN, EQ, IF, LIDENT, DOT, LIDENT, GEQ,
+		LETENTRY, LIDENT, LPAREN, LIDENT, COLON, KEYHASH, RPAREN, LPAREN, LIDENT, COLON, LIDENT, RPAREN, EQ, IF, LIDENT, DOT, LIDENT, GEQ,
 		LIDENT, DOT, LIDENT, THEN, LET, LIDENT, EQ, LIDENT, DOT, LIDENT, LARROW, LIDENT, IN, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION,
 		LIST, RPAREN, COMMA, LIDENT, RPAREN, ELSE, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION, LIST, RPAREN, COMMA,
 		LIDENT, RPAREN, EOF}
@@ -139,7 +139,8 @@ const (
 	KEYHASH    string = "keyhash"
 	OPERATION  string = "operation"
 	LIST       string = "list"
-	PERC       string = "percentage"
+	LETINIT    string = "letinit"
+	LETENTRY   string = "letentry"
 	LET        string = "let"
 	IN         string = "in"
 	IF         string = "if"
