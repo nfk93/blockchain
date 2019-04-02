@@ -31,7 +31,7 @@ func TestReceiveBlock(t *testing.T) {
 	b.SignBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl)
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, State{})
 
 	blockChannel <- b
 
@@ -41,7 +41,7 @@ func TestReceiveBlock(t *testing.T) {
 	go func() {
 		for {
 			state := <-stateChannel
-			if state.ledger[p2] != 500 {
+			if state.Ledger[p2] != 500 {
 				t.Error("P2 does not own 500")
 			}
 			return
@@ -55,7 +55,7 @@ func TestReceiveBlock(t *testing.T) {
 func TestTreeBuild(t *testing.T) {
 	sk1, p1 := KeyGen(2048)
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl)
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, State{})
 
 	go func() {
 		for {
@@ -84,7 +84,7 @@ func TestFinalize(t *testing.T) {
 	b, s, f, br, tl := createChannels()
 
 	sk1, p1 := KeyGen(2048)
-	go StartTransactionLayer(b, s, f, br, tl)
+	go StartTransactionLayer(b, s, f, br, tl, State{})
 
 	_, p2 := KeyGen(2048)
 	t1 := CreateTransaction(p1, p2, 200, strconv.Itoa(0), sk1)
@@ -102,7 +102,7 @@ func TestFinalize(t *testing.T) {
 	for {
 
 		state := <-s
-		if state.ledger[p1] != -500 || state.ledger[p2] != 500 {
+		if state.Ledger[p1] != -500 || state.Ledger[p2] != 500 {
 			t.Error("Something went wrong! Not the right state..")
 		}
 		return
@@ -118,13 +118,13 @@ func TestForking(t *testing.T) {
 	_, p4 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl)
+	go StartTransactionLayer(b, s, f, br, tl, State{})
 
 	go func() {
 		for {
 			// we finalize block 4, p1 = -200, p2=0, p4=200
 			state := <-s
-			if state.ledger[p1] != -200 || state.ledger[p2] != 0 || state.ledger[p4] != 200 {
+			if state.Ledger[p1] != -200 || state.Ledger[p2] != 0 || state.Ledger[p4] != 200 {
 				t.Error("Bad luck! Branching did not succeed...")
 			}
 			return
@@ -175,7 +175,7 @@ func TestCreateNewBlock(t *testing.T) {
 	_, pk2 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl)
+	go StartTransactionLayer(b, s, f, br, tl, State{})
 
 	go func() {
 		for {
