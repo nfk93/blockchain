@@ -1,8 +1,9 @@
-package objects
+package consensus
 
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
+	. "github.com/nfk93/blockchain/objects"
 	"testing"
 )
 
@@ -33,7 +34,7 @@ func TestLeadershipElection(t *testing.T) {
 		Data{},
 		""}
 
-	if !someBlock.validateBlockProof() {
+	if !someBlock.ValidateBlockProof() {
 		t.Error("Block Proof couldn't verify...")
 	}
 

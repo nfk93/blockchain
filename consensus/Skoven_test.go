@@ -3,7 +3,6 @@ package consensus
 import (
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
-	"github.com/nfk93/blockchain/objects/genesisdata"
 	"strconv"
 	"testing"
 )
@@ -11,14 +10,14 @@ import (
 var transFromP2P chan Transaction
 var blockFromP2P chan Block
 var blockToP2P chan Block
-var genesis genesisdata.GenesisData
+var genesis GenesisData
 
 func resetMocksAndStart() {
 	transFromP2P = make(chan Transaction)
 	blockFromP2P = make(chan Block)
 	blockToP2P = make(chan Block)
-	genesis = genesisdata.GenesisData{}
-	StartConsensus(transFromP2P, blockFromP2P, blockToP2P)
+	genesis = GenesisData{}
+	StartConsensus(CreateChannelStruct())
 }
 
 func createTestBlock(t []Transaction, i int, parentHash string) Block {

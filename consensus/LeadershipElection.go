@@ -1,9 +1,10 @@
-package objects
+package consensus
 
 import (
 	"bytes"
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
+	. "github.com/nfk93/blockchain/objects"
 	"math"
 	"math/big"
 	"strconv"
@@ -35,7 +36,7 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 
 func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64) bool {
 
-	if !b.validateBlockProof() {
+	if !b.ValidateBlockProof() {
 		fmt.Println("Block Proof didn't validate!")
 		return false
 	}

@@ -80,7 +80,7 @@ func (b *Block) ValidateBlockSignature(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
-func (b Block) validateBlockProof() bool {
+func (b *Block) ValidateBlockProof() bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
 	buf.WriteString(b.BlockNonce.Nonce)
@@ -96,7 +96,7 @@ func (bl BlockNonce) validateBlockNonce() bool {
 
 func (b Block) ValidateBlock() (bool, string) {
 
-	if !b.validateBlockProof() {
+	if !b.ValidateBlockProof() {
 		return false, "Block Proof failed"
 	}
 
