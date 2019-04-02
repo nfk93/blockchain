@@ -71,7 +71,7 @@ func handleBlock(b o.Block) {
 
 func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
-	processGenesisData(b.BlockData.GenesisData)
+	//processGenesisData(b.BlockData.GenesisData)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
 }
@@ -185,7 +185,7 @@ func sendBranchToTL() {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
-	channels.BlockToTrans <- block
+	//channels.BlockToTrans <- block
 }
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight

@@ -7,15 +7,9 @@ import (
 	"testing"
 )
 
-var transFromP2P chan Transaction
-var blockFromP2P chan Block
-var blockToP2P chan Block
 var genesis GenesisData
 
 func resetMocksAndStart() {
-	transFromP2P = make(chan Transaction)
-	blockFromP2P = make(chan Block)
-	blockToP2P = make(chan Block)
 	genesis = GenesisData{}
 	StartConsensus(CreateChannelStruct())
 }
@@ -36,8 +30,8 @@ func createTestBlock(t []Transaction, i int, parentHash string) Block {
 }
 
 func createTestTransaction(ID int) Transaction {
-	sk1, pk1 := KeyGen(2000)
-	_, pk2 := KeyGen(2000)
+	sk1, pk1 := KeyGen(2048)
+	_, pk2 := KeyGen(2048)
 	trans := Transaction{pk1, pk2, 200, strconv.Itoa(ID), ""}
 	trans.SignTransaction(sk1)
 	return trans
@@ -53,8 +47,8 @@ func TestTree(t *testing.T) {
 	for i := 1; i < 10; i++ {
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
-		blockFromP2P <- block
-		transFromP2P <- trans
+		channels.BlockFromP2P <- block
+		channels.TransFromP2P <- trans
 		block = createTestBlock(transarr, i, block.CalculateBlockHash())
 	}
 }
@@ -66,8 +60,8 @@ func TestRollBack(t *testing.T) {
 	for i := 1; i < 10; i++ {
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
-		blockFromP2P <- block
-		transFromP2P <- trans
+		channels.BlockFromP2P <- block
+		channels.TransFromP2P <- trans
 		block = createTestBlock(transarr, i, block.CalculateBlockHash())
 	}
 
@@ -75,7 +69,7 @@ func TestRollBack(t *testing.T) {
 	for i := 1; i < 11; i++ {
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
-		blockFromP2P <- block
+		channels.BlockFromP2P <- block
 		block = createTestBlock(transarr, i+10, block.CalculateBlockHash())
 	}
 }
@@ -85,7 +79,7 @@ func TestBadBlock(t *testing.T) {
 	genesis := createTestBlock([]Transaction{}, 0, "")
 	b := createTestBlock([]Transaction{}, 5, genesis.CalculateBlockHash())
 	c := createTestBlock([]Transaction{}, 3, b.CalculateBlockHash())
-	blockFromP2P <- genesis
-	blockFromP2P <- b
-	blockFromP2P <- c
+	channels.BlockFromP2P <- genesis
+	channels.BlockFromP2P <- b
+	channels.BlockFromP2P <- c
 }

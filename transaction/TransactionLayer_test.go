@@ -19,7 +19,6 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		Data{Trans: t},
 		"",
 	}
-
 }
 
 func TestReceiveBlock(t *testing.T) {
