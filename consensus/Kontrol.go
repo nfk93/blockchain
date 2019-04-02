@@ -12,7 +12,7 @@ var currentSlot int
 var slotLock sync.RWMutex
 var currentStake int
 var currentNonce o.BlockNonce
-var hardness int
+var hardness float64
 var sk SecretKey
 var pk PublicKey
 
@@ -32,7 +32,7 @@ func runSlot() {
 }
 
 func processGenesisData(genesisData o.GenesisData) {
-
+	hardness = genesisData.Hardness
 }
 
 func finalize(slot int) {

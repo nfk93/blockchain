@@ -17,8 +17,9 @@ type Tree struct {
 	hardness      int
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, initialState State) {
 	tree := Tree{make(map[string]TLNode), "", "", 0}
+	//TODO set initial state to be the one given as parameter
 
 	// Process a block coming from the consensus layer
 	go func() {
