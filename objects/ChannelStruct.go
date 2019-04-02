@@ -8,7 +8,7 @@ type ChannelStruct struct {
 	StateFromTrans  chan State
 	FinalizeToTrans chan string
 	BlockFromTrans  chan Block
-	TransToTrans    chan []Transaction
+	TransToTrans    chan CreateBlockData
 }
 
 func CreateChannelStruct() ChannelStruct {
@@ -17,10 +17,10 @@ func CreateChannelStruct() ChannelStruct {
 	blockChannel3 := make(chan Block)
 	blockChannel4 := make(chan Block)
 	transChannel := make(chan Transaction)
-	transListChannel := make(chan []Transaction)
+	blockDataChannel := make(chan CreateBlockData)
 	stringChannel := make(chan string)
 	stateChannel := make(chan State)
 	return ChannelStruct{transChannel, blockChannel1,
 		blockChannel2, blockChannel3, stateChannel,
-		stringChannel, blockChannel4, transListChannel}
+		stringChannel, blockChannel4, blockDataChannel}
 }

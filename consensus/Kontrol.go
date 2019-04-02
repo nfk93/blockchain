@@ -3,11 +3,12 @@ package consensus
 import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/transaction"
 	"sync"
 	"time"
 )
 
-var slotLength int
+var slotLength time.Duration
 var currentSlot int
 var slotLock sync.RWMutex
 var currentStake int
@@ -23,7 +24,7 @@ func runSlot() {
 			finalize(currentSlot)
 		}
 		go drawLottery(currentSlot)
-		time.Sleep(time.Duration(slotLength) * time.Second)
+		time.Sleep(slotLength)
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
@@ -33,6 +34,9 @@ func runSlot() {
 
 func processGenesisData(genesisData o.GenesisData) {
 	hardness = genesisData.Hardness
+	transaction.StartTransactionLayer(channels.BlockToTrans,
+		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
+		channels.TransToTrans, genesisData.InitialState)
 }
 
 func finalize(slot int) {
