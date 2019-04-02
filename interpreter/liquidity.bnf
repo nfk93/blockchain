@@ -69,17 +69,18 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 /* Syntax Part */
 
-<< import "github.com/nfk93/blockchain/interpreter/ast" >>
+<< import "github.com/nfk93/blockchain/interpreter/ast"
+   import "github.com/nfk93/blockchain/interpreter/util" >>
 
-Toplevel    : Structure                                                             << ast.NewStructure($0) >>
-            | Toplevel Structure                                                    << ast.NewTodoExp() >> ;
+Toplevel    : Structure                                                             << ast.NewRoot($0) >>
+            | Toplevel Toplevel                                                     << ast.AppendRoot($0, $1) >> ;
 
 
-Structure   : ModStruct                                                             << ast.NewModStruct($0) // >>
+Structure   : ModStruct                                                             << >>
             | letinit Exp                                                           << ast.NewTodoExp() // >>
             | letentry lident Pattern Pattern eq Exp                                << ast.NewTodoExp() // >> ;
 
-ModStruct   : type lident eq Type                                                   << ast.NewSimpleTypeDecl($1, $3) // >>
+ModStruct   : type lident eq Type                                                   << ast.NewSimpleTypeDecl(util.ParseId($1), $3) // >>
             | type lident eq lbrack Struct rbrack                                   << ast.NewTodoExp() // >> ;
 
 Struct      : lident colon Type semicolon Struct                                    << ast.NewTodoExp() // >>
@@ -107,7 +108,7 @@ PatternSeq  : Pattern                                                           
             | PatternSeq comma PatternSeq                                           << ast.NewTodoExp() // see above >> ;
 
 Type        : bool                                                                  << ast.NewTodoExp() // bool >>
-            | int                                                                   << ast.NewTodoExp() // int >>
+            | int                                                                   << ast.INT, nil >>
             | tez                                                                   << ast.NewTodoExp() // tez >>
             | string                                                                << ast.NewTodoExp() // string >>
             | keyhash                                                               << ast.NewTodoExp() // key_hash >>

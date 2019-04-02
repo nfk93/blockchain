@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+	"github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"io/ioutil"
 	"testing"
@@ -14,9 +16,33 @@ func getLexer(filepath string, t *testing.T) *lexer.Lexer {
 	return lexer.NewLexer(dat)
 }
 
-func TestParseInttype(t *testing.T) {
+func testFile(t *testing.T, testpath string) {
 	parser := NewParser()
-	parser.Parse(getLexer("../test_cases/inttype", t))
+	a, _ := parser.Parse(getLexer(testpath, t))
+	e := a.(ast.Exp)
+	fmt.Println(e.String())
+	searchAstForErrorExps(t, e)
+}
+
+func TestParseInttype(t *testing.T) {
+	testFile(t, "../test_cases/inttype")
+}
+
+func TestParseTwoTypes(t *testing.T) {
+	testFile(t, "../test_cases/twotypes")
+}
+
+func searchAstForErrorExps(t *testing.T, e ast.Exp) {
+	switch e.(type) {
+	case ast.SimpleTypeDecl:
+	case ast.TopLevel:
+		e := e.(ast.TopLevel)
+		for _, v := range e.Roots {
+			searchAstForErrorExps(t, v)
+		}
+	default:
+		t.Error("Encountered unknown expression:", e.String())
+	}
 }
 
 /* func TestParseFundMe(t *testing.T) {
