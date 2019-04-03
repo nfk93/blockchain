@@ -5,12 +5,13 @@ import (
 	. "github.com/nfk93/blockchain/objects"
 	"strconv"
 	"testing"
+	"time"
 )
 
-var genesis GenesisData
+var genesis Block
 
 func resetMocksAndStart() {
-	genesis = GenesisData{}
+	genesis = createTestGenesisBlock(time.Duration(10), 0)
 	StartConsensus(CreateChannelStruct())
 }
 
@@ -29,6 +30,20 @@ func createTestBlock(t []Transaction, i int, parentHash string) Block {
 	return block
 }
 
+func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
+	gData := GenesisData{time.Now(), slotDuration,
+		BlockNonce{}, hardness, State{}}
+	return Block{0,
+		"",
+		PublicKey{},
+		"VALID",
+		BlockNonce{"42", "", pk},
+		"",
+		Data{Trans: []Transaction{}, GenesisData: gData},
+		"",
+	}
+}
+
 func createTestTransaction(ID int) Transaction {
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
@@ -43,8 +58,9 @@ func TestSmokeTest(t *testing.T) {
 
 func TestTree(t *testing.T) {
 	resetMocksAndStart()
-	block := createTestBlock([]Transaction{}, 0, "")
+	block := genesis
 	for i := 1; i < 10; i++ {
+		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
@@ -55,9 +71,9 @@ func TestTree(t *testing.T) {
 
 func TestRollBack(t *testing.T) {
 	resetMocksAndStart()
-	genesis := createTestBlock([]Transaction{}, 0, "")
 	block := genesis
 	for i := 1; i < 10; i++ {
+		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
@@ -67,6 +83,7 @@ func TestRollBack(t *testing.T) {
 
 	block = createTestBlock([]Transaction{}, 1, genesis.CalculateBlockHash())
 	for i := 1; i < 11; i++ {
+		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
@@ -76,9 +93,9 @@ func TestRollBack(t *testing.T) {
 
 func TestBadBlock(t *testing.T) {
 	resetMocksAndStart()
-	genesis := createTestBlock([]Transaction{}, 0, "")
 	b := createTestBlock([]Transaction{}, 5, genesis.CalculateBlockHash())
 	c := createTestBlock([]Transaction{}, 3, b.CalculateBlockHash())
+	time.Sleep(5 * slotLength)
 	channels.BlockFromP2P <- genesis
 	channels.BlockFromP2P <- b
 	channels.BlockFromP2P <- c

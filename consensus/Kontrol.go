@@ -3,7 +3,6 @@ package consensus
 import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
-	"github.com/nfk93/blockchain/transaction"
 	"sync"
 	"time"
 )
@@ -32,11 +31,20 @@ func runSlot() {
 	}
 }
 
+func getCurrentSlot() int {
+	slotLock.RLock()
+	defer slotLock.RUnlock()
+	return currentSlot
+}
+
 func processGenesisData(genesisData o.GenesisData) {
+	// TODO  -  Use GenesisTime when going away from two-phase implementation
 	hardness = genesisData.Hardness
-	transaction.StartTransactionLayer(channels.BlockToTrans,
-		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-		channels.TransToTrans, genesisData.InitialState)
+	slotLength = genesisData.SlotDuration
+	go runSlot()
+	//transaction.StartTransactionLayer(channels.BlockToTrans,
+	//	channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
+	//	channels.TransToTrans, genesisData.InitialState)
 }
 
 func finalize(slot int) {

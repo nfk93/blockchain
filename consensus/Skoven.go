@@ -71,7 +71,7 @@ func handleBlock(b o.Block) {
 
 func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
-	//processGenesisData(b.BlockData.GenesisData)
+	processGenesisData(b.BlockData.GenesisData)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
 }
@@ -215,9 +215,7 @@ func isLegalExtension(b o.Block) bool {
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
-	slotLock.Lock()
-	defer slotLock.Unlock()
-	if b.Slot > currentSlot { //We do not accept early blocks
+	if b.Slot > getCurrentSlot() { //We do not accept early blocks
 		return false
 	}
 	return true
