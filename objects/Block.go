@@ -38,19 +38,6 @@ type Data struct {
 	GenesisData GenesisData
 }
 
-func CreateNewBlockNonce(nonce BlockNonce, slot int, sk SecretKey, pk PublicKey) BlockNonce {
-	var buf bytes.Buffer
-	buf.WriteString("NONCE")
-	buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
-	buf.WriteString(strconv.Itoa(slot))
-
-	newNonceString := buf.String()
-	newNonce := HashSHA(newNonceString)
-	signature := Sign(string(newNonce), sk)
-
-	return BlockNonce{newNonce, signature, pk}
-}
-
 func CreateNewBlock(blockData CreateBlockData, parent string, nonce BlockNonce, translist []Transaction) Block {
 	validNonce := nonce.validateBlockNonce()
 	if !validNonce {

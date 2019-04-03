@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
+	. "github.com/nfk93/blockchain/transaction"
 	"testing"
 )
 

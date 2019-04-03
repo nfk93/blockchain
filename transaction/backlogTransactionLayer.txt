@@ -33,7 +33,11 @@ Gas?
 
 
 Use hash of blocks in gap to create the nonce
-How is the threshold and draw value calculated
+Ok - How is the threshold and draw value calculated
+
+remove hack initialization of Last Finalized from StartTransactionLayer
+
+
 
 
 BlockNonce are created randomly.

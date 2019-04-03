@@ -1,8 +1,10 @@
 package transaction
 
 import (
+	"bytes"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
+	"strconv"
 )
 
 type TLNode struct {
@@ -14,33 +16,44 @@ type Tree struct {
 	treeMap       map[string]TLNode
 	head          string
 	lastFinalized string
-	hardness      int
+	currentNonce  BlockNonce
+	hardness      float64
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData) {
-	tree := Tree{make(map[string]TLNode), "", "", 0}
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
+	tree := Tree{make(map[string]TLNode), "", "", BlockNonce{}, 0.0}
 
-	// Process a block coming from the consensus layer
+	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
+			if b.Slot == 0 { // TODO: REMOVE when we have a proper initialization of GENESIS block / data
+				tree.lastFinalized = b.CalculateBlockHash()
+				tree.currentNonce = b.BlockNonce
+			}
 			tree.processBlock(b)
 		}
 	}()
 
-	// Finalize a given block
+	// Finalize a given NodeBlock
 	go func() {
 		for {
 			finalize := <-finalizeChan
-			tree.lastFinalized = finalize
-			stateReturn <- tree.treeMap[finalize].state
+			if finalizedNode, ok := tree.treeMap[finalize]; ok {
+				tree.lastFinalized = finalize
+				tree.currentNonce = CreateNewBlockNonce(finalize, tree, finalizedNode.block.Slot, sk, finalizedNode.block.BakerID)
+				stateReturn <- finalizedNode.state
+			} else {
+				stateReturn <- State{}
+			}
 		}
 	}()
 
-	// A new block should be created from the transactions in transList
+	// A new NodeBlock should be created from the transactions in transList
 	for {
 		newBlockData := <-newBlockChan
-		blockReturn <- tree.createNewBlock(newBlockData)
+		newBlock := tree.createNewBlock(newBlockData)
+		blockReturn <- newBlock
 	}
 }
 
@@ -52,9 +65,6 @@ func (t *Tree) processBlock(b Block) {
 		s.Ledger = make(map[PublicKey]int)
 	}
 
-	// Update head
-	t.head = b.CalculateBlockHash()
-
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
@@ -64,6 +74,9 @@ func (t *Tree) processBlock(b Block) {
 
 	// Create new node in the tree
 	t.createNewNode(b, s)
+
+	// Update head
+	t.head = b.CalculateBlockHash()
 }
 
 func (t *Tree) createNewNode(b Block, s State) {
@@ -71,20 +84,22 @@ func (t *Tree) createNewNode(b Block, s State) {
 	t.treeMap[b.CalculateBlockHash()] = n
 }
 
-func CreateGenesis() Block {
+func CreateTestGenesis() Block {
+	sk, pk := KeyGen(2048)
 	genBlock := Block{0,
 		"",
 		PublicKey{},
 		"",
-		BlockNonce{},
+		BlockNonce{"GENESIS", Sign("GENESIS", sk), pk},
 		"",
 		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
 		""}
 
+	genBlock.LastFinalized = genBlock.CalculateBlockHash()
 	return genBlock
 }
 
-func (t Tree) createNewBlock(blockData CreateBlockData) Block {
+func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 
@@ -99,13 +114,26 @@ func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	prevBlockNonce := t.treeMap[t.lastFinalized].block.BlockNonce
-
-	newBlockNonce := CreateNewBlockNonce(prevBlockNonce, blockData.SlotNo, blockData.Sk, blockData.Pk)
-
-	b := CreateNewBlock(blockData, t.head, newBlockNonce, addedTransactions)
+	b := CreateNewBlock(blockData, t.head, t.treeMap[t.lastFinalized].block.BlockNonce, addedTransactions)
 
 	return b
+}
+
+func CreateNewBlockNonce(finalizeThisBlock string, t Tree, slot int, sk SecretKey, pk PublicKey) BlockNonce {
+
+	blockToFinalize := t.treeMap[finalizeThisBlock].block
+
+	var buf bytes.Buffer
+	buf.WriteString("NONCE")
+	buf.WriteString(previousStatesAsString(blockToFinalize, t))
+	//buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
+	buf.WriteString(strconv.Itoa(slot))
+
+	newNonceString := buf.String()
+	newNonce := HashSHA(newNonceString)
+	signature := Sign(string(newNonce), sk)
+
+	return BlockNonce{newNonce, signature, pk}
 }
 
 // Helpers
@@ -122,4 +150,18 @@ func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
 		newMap[key] = value
 	}
 	return newMap
+}
+
+func previousStatesAsString(currentBlock Block, t Tree) string {
+	var buf bytes.Buffer
+
+	currentBlock = t.treeMap[t.head].block
+
+	parentBlock := currentBlock.ParentPointer
+	for currentBlock.LastFinalized != parentBlock {
+		buf.WriteString(string(t.treeMap[parentBlock].state.StateAsString()))
+		parentBlock = t.treeMap[parentBlock].block.ParentPointer
+	}
+
+	return buf.String()
 }
