@@ -18,7 +18,12 @@ func getLexer(filepath string, t *testing.T) *lexer.Lexer {
 
 func testFile(t *testing.T, testpath string) {
 	parser := NewParser()
-	a, _ := parser.Parse(getLexer(testpath, t))
+	a, err := parser.Parse(getLexer(testpath, t))
+	if err != nil {
+		fmt.Println(err.Error())
+		t.Fail()
+		return
+	}
 	e := a.(ast.Exp)
 	fmt.Println(e.String())
 	searchAstForErrorExps(t, e)
@@ -30,6 +35,10 @@ func TestParseInttype(t *testing.T) {
 
 func TestParseTwoTypes(t *testing.T) {
 	testFile(t, "../test_cases/twotypes")
+}
+
+func TestParseBasicEntry(t *testing.T) {
+	testFile(t, "../test_cases/increment_storage")
 }
 
 func searchAstForErrorExps(t *testing.T, e ast.Exp) {

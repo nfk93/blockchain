@@ -43,8 +43,8 @@ func NewBinOpExp(left, right, oper Operation) (BinOPExp, error) {
 
 type TodoExp struct{}
 
-func NewTodoExp() (*TodoExp, error) {
-	return &TodoExp{}, nil
+func NewTodoExp() (Exp, error) {
+	return TodoExp{}, nil
 }
 
 func (e TodoExp) String() string {
@@ -104,10 +104,10 @@ func AppendRoot(e1, e2 interface{}) (Exp, error) {
 			}
 			return TopLevel{append(e1.Roots, e2.Roots...)}, nil
 		default:
-			return fail("Toplevel error, node is not a root")
+			return fail(fmt.Sprintf("Toplevel error, encountered non-root expression %T", e2))
 		}
 	default:
-		return fail("Toplevel error, node is not a root")
+		return fail(fmt.Sprintf("Toplevel error, encountered non-root expression %T", e2))
 	}
 }
 

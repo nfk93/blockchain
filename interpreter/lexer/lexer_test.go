@@ -162,5 +162,6 @@ const (
 	BOOL       string = "bool"
 	STRING     string = "string"
 	INT        string = "int"
+	SLASH      string = "slash"
 	EOF        string = "$"
 )
