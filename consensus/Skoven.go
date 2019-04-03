@@ -185,7 +185,7 @@ func sendBranchToTL() {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
-	//channels.BlockToTrans <- block
+	channels.BlockToTrans <- block
 }
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight

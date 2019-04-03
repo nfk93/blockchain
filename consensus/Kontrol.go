@@ -3,6 +3,7 @@ package consensus
 import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/transaction"
 	"sync"
 	"time"
 )
@@ -27,7 +28,6 @@ func runSlot() {
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
-
 	}
 }
 
@@ -42,9 +42,9 @@ func processGenesisData(genesisData o.GenesisData) {
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
 	go runSlot()
-	//transaction.StartTransactionLayer(channels.BlockToTrans,
-	//	channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-	//	channels.TransToTrans, genesisData.InitialState)
+	go transaction.StartTransactionLayer(channels.BlockToTrans,
+		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
+		channels.TransToTrans, genesisData.InitialState)
 }
 
 func finalize(slot int) {
@@ -60,7 +60,6 @@ func drawLottery(slot int) {
 	//if winner {
 
 	//}
-
 }
 
 func computeTransactions() o.Block { //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
