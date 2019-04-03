@@ -1,14 +1,10 @@
 
-
-
 OK - What is a node
 OK - tree structure of nodes
 OK  - store global state for every block
 OK - receiving blocks
 OK - handling blocks
 OK - Update/create new node from parent state
-NO - create hash of state
-NO - create hash of Note
 OK - Where to store/use hash of a node, to keep it for later use(next blocks parent)
 OK - Use parent ledger instead of creating a new
 OK - returning global states
@@ -18,30 +14,30 @@ ok - Finalization
    ok - return the state of a block
 ok - parent hash
 
+Ok - Write tests for forking/branching
+OK - Write method to create a block given a set of transactions
+
+OK - Use hash of blocks in gap to create the nonce
+Ok - How is the threshold and draw value calculated
+
+OK - BlockNonce are created randomly.
+OK - BlockNonce should be updated on finalization
+
+OK - Clean NewBlockData
+
+
+
 - Do validation for transaction in add transaction
     - Comment in the check for sender balance
 
-- Genesis hash skal ikke kunne rammes af hashing functionen -> is now nil
+- Genesis hash skal ikke kunne rammes af hashing functionen
 - Create correct GenesisData
 
+- remove hack initialization of Last Finalized from StartTransactionLayer
+- Don't create your own genesis, unless you ARE genesis
+- Gas?
 
 
-Ok - Write tests for forking/branching
-OK - Write method to create a block given a set of transactions
-Don't create your own genesis, unless you ARE genesis
-Gas?
-
-
-Use hash of blocks in gap to create the nonce
-Ok - How is the threshold and draw value calculated
-
-remove hack initialization of Last Finalized from StartTransactionLayer
-
-
-OK - BlockNonce are created randomly.
-BlockNonce should be updated on finalization
-
-Clean NewBlockData
 
 
 
