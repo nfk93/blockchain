@@ -67,21 +67,6 @@ func (tl *TransLayer) CreateNewBlock(data CreateBlockData) Block {
 
 }
 
-func CreateTestGenesis() Block {
-	sk, pk := KeyGen(2048)
-	genBlock := Block{0,
-		"",
-		PublicKey{},
-		"",
-		BlockNonce{"GENESIS", Sign("GENESIS", sk), pk},
-		"",
-		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
-		""}
-
-	genBlock.LastFinalized = genBlock.CalculateBlockHash()
-	return genBlock
-}
-
 func (t *Tree) processBlock(b Block) {
 	s := State{}
 	s.ParentHash = b.ParentPointer

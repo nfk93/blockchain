@@ -39,11 +39,15 @@ OK - Clean NewBlockData
 
 - Get tests back running
 - TEST, TEST, TEST!!
+- Add tests for AddTransaction in state_test
+- Check if Transaction is a duplicate?
 
 - How does Leadership election access variables in Kontrol?
 
 
 
+
+- Block Done
 
 
 
