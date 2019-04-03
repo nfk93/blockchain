@@ -26,7 +26,7 @@ OK - BlockNonce should be updated on finalization
 OK - Clean NewBlockData
 
 
-
+- Proper validation of everything (blocks -> OK, nonce, proofs, etc.)
 - Do validation for transaction in add transaction
     - Comment in the check for sender balance
 
@@ -36,6 +36,13 @@ OK - Clean NewBlockData
 - remove hack initialization of Last Finalized from StartTransactionLayer
 - Don't create your own genesis, unless you ARE genesis
 - Gas?
+
+- Get tests back running
+- TEST, TEST, TEST!!
+
+- How does Leadership election access variables in Kontrol?
+
+
 
 
 

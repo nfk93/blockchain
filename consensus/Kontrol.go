@@ -16,6 +16,7 @@ var currentNonce o.BlockNonce
 var hardness float64
 var sk SecretKey
 var pk PublicKey
+var tl transaction.TransLayer
 
 func runSlot() {
 	currentSlot = 1
@@ -42,12 +43,11 @@ func processGenesisData(genesisData o.GenesisData) {
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
 	go runSlot()
-	go transaction.StartTransactionLayer(channels.BlockToTrans,
-		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-		channels.TransToTrans, sk, genesisData.InitialState)
+	tl = transaction.StartTransactionLayer(sk, o.State{})
 }
 
 func finalize(slot int) {
+	tl.FinalizeBlock("SomeBlockHash???") //TODO: Insert proper blockhash of block to be finalized
 
 }
 

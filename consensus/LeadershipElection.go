@@ -5,12 +5,13 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
+	. "github.com/nfk93/blockchain/transaction"
 	"math"
 	"math/big"
 	"strconv"
 )
 
-func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicKey, yourStake int, systemStake int, slot int) (bool, string) {
+func CalculateDraw(bnonce BlockNonce, pk PublicKey, slot int, s State) (bool, string) {
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
 	drawBuf.WriteString(bnonce.Nonce)
@@ -18,7 +19,7 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 
 	draw := Sign(drawBuf.String(), sk)
 
-	intermediateBlock := Block{slot,
+	transportBlock := Block{slot,
 		"",
 		pk,
 		draw,
@@ -27,16 +28,16 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 		Data{},
 		""}
 
-	if ValidateDrawValue(intermediateBlock, yourStake, systemStake, hardness) {
+	if ValidateDraw(transportBlock, s) {
 		return true, draw
 	}
 	return false, ""
 
 }
 
-func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64) bool {
+func ValidateDraw(b Block, currentState State) bool {
 
-	if !b.ValidateBlockDrawSignature() {
+	if !validateDrawSignature(b) {
 		fmt.Println("Block Proof didn't validate!")
 		return false
 	}
@@ -50,7 +51,8 @@ func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 
-	percentOfTotalStake := float64(yourStake) / float64(systemStake)
+	blockCreatorsStake := currentState.Ledger[b.BakerID]
+	percentOfTotalStake := float64(blockCreatorsStake) / float64(currentState.TotalSystemStake())
 	phiFunc := float64(1) - math.Pow(float64(1)-hardness, float64(percentOfTotalStake))
 	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(hashVal.BitLen())), nil)
 
@@ -65,4 +67,13 @@ func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64
 
 	return false
 
+}
+
+func validateDrawSignature(b Block) bool {
+	var buf bytes.Buffer
+	buf.WriteString("LEADERSHIP_ELECTION")
+	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(strconv.Itoa(b.Slot))
+
+	return Verify(buf.String(), b.Draw, b.BakerID)
 }

@@ -40,3 +40,12 @@ func (s State) StateAsString() string {
 
 	return buf.String()
 }
+
+func (s State) TotalSystemStake() int {
+
+	totalStake := 0
+	for _, stake := range s.Ledger {
+		totalStake += stake
+	}
+	return totalStake //TODO: Test
+}
