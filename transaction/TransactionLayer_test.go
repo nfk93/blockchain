@@ -208,7 +208,7 @@ func TestRuns(t *testing.T) {
 	_, pk2 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, sk1)
+	go StartTransactionLayer(b, s, f, br, tl, sk1, State{})
 
 	go func() {
 		for {

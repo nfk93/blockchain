@@ -21,7 +21,7 @@ type Tree struct {
 	hardness      float64
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey, state State) {
 	tree := Tree{make(map[string]TLNode), "", "", BlockNonce{}, 0.0}
 
 	// Process a NodeBlock coming from the consensus layer

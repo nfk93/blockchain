@@ -44,7 +44,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	go runSlot()
 	go transaction.StartTransactionLayer(channels.BlockToTrans,
 		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-		channels.TransToTrans, genesisData.InitialState)
+		channels.TransToTrans, sk, genesisData.InitialState)
 }
 
 func finalize(slot int) {

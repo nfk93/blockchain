@@ -4,7 +4,6 @@ import (
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
-	. "github.com/nfk93/blockchain/transaction"
 	"testing"
 )
 
@@ -16,9 +15,9 @@ func TestLeadershipElection(t *testing.T) {
 	slot := 3
 	hardness := 0.9
 
-	nonce := BlockNonce{"8556", "Something", pk}
+	blockNonce := BlockNonce{"8556", "Something", pk}
 
-	blockNonce := CreateNewBlockNonce(nonce, slot, sk, pk)
+	//blockNonce := CreateNewBlockNonce(nonce, slot, sk, pk)
 
 	b, draw := CalculateDraw(blockNonce, hardness, sk, pk, yourStake, systemStake, slot)
 
@@ -54,7 +53,7 @@ func TestHardness(t *testing.T) {
 
 	for i := 0; i < rounds; i++ {
 
-		nonce = CreateNewBlockNonce(nonce, i, sk, pk)
+		//nonce = CreateNewBlockNonce(nonce, i, sk, pk)
 
 		b, _ := CalculateDraw(nonce, hardness, sk, pk, yourStake, systemStake, i)
 		if b {
