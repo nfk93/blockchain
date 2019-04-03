@@ -41,7 +41,7 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 			finalize := <-finalizeChan
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
 				tree.lastFinalized = finalize
-				tree.currentNonce = CreateNewBlockNonce(finalize, tree, finalizedNode.block.Slot, sk, finalizedNode.block.BakerID)
+				tree.currentNonce = tree.CreateNewBlockNonce(finalize, finalizedNode.block.Slot, sk, finalizedNode.block.BakerID)
 				stateReturn <- finalizedNode.state
 			} else {
 				stateReturn <- State{}
@@ -114,18 +114,18 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	b := CreateNewBlock(blockData, t.head, t.treeMap[t.lastFinalized].block.BlockNonce, addedTransactions)
+	b := CreateNewBlock(blockData, t.head, t.currentNonce, addedTransactions)
 
 	return b
 }
 
-func CreateNewBlockNonce(finalizeThisBlock string, t Tree, slot int, sk SecretKey, pk PublicKey) BlockNonce {
+func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk SecretKey, pk PublicKey) BlockNonce {
 
 	blockToFinalize := t.treeMap[finalizeThisBlock].block
 
 	var buf bytes.Buffer
 	buf.WriteString("NONCE")
-	buf.WriteString(previousStatesAsString(blockToFinalize, t))
+	buf.WriteString(previousStatesAsString(blockToFinalize, *t))
 	//buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
 	buf.WriteString(strconv.Itoa(slot))
 

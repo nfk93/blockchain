@@ -38,10 +38,10 @@ Ok - How is the threshold and draw value calculated
 remove hack initialization of Last Finalized from StartTransactionLayer
 
 
+OK - BlockNonce are created randomly.
+BlockNonce should be updated on finalization
 
-
-BlockNonce are created randomly.
-
+Clean NewBlockData
 
 
 

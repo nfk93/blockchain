@@ -35,7 +35,7 @@ func TestLeadershipElection(t *testing.T) {
 		Data{},
 		""}
 
-	if !someBlock.ValidateBlockProof() {
+	if !someBlock.ValidateBlockDrawSignature() {
 		t.Error("Block Proof couldn't verify...")
 	}
 

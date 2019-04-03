@@ -36,7 +36,7 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 
 func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64) bool {
 
-	if !b.ValidateBlockProof() {
+	if !b.ValidateBlockDrawSignature() {
 		fmt.Println("Block Proof didn't validate!")
 		return false
 	}
@@ -45,7 +45,7 @@ func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64
 	valBuf.WriteString(b.BlockNonce.Nonce)
 	valBuf.WriteString(strconv.Itoa(b.Slot))
 	valBuf.WriteString(b.BakerID.String())
-	valBuf.WriteString(b.BlockProof)
+	valBuf.WriteString(b.Draw)
 
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)

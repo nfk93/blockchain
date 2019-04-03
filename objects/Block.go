@@ -11,7 +11,7 @@ type Block struct {
 	Slot          int
 	ParentPointer string    //a hash of parent block
 	BakerID       PublicKey //
-	BlockProof    string
+	Draw          string
 	BlockNonce    BlockNonce
 	LastFinalized string //hash of last finalized block
 	BlockData     Data
@@ -67,13 +67,13 @@ func (b *Block) ValidateBlockSignature(pk PublicKey) bool {
 	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
 }
 
-func (b *Block) ValidateBlockProof() bool {
+func (b *Block) ValidateBlockDrawSignature() bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
 	buf.WriteString(b.BlockNonce.Nonce)
 	buf.WriteString(strconv.Itoa(b.Slot))
 
-	return Verify(buf.String(), b.BlockProof, b.BakerID)
+	return Verify(buf.String(), b.Draw, b.BakerID)
 }
 
 func (bl BlockNonce) validateBlockNonce() bool {
@@ -83,7 +83,7 @@ func (bl BlockNonce) validateBlockNonce() bool {
 
 func (b Block) ValidateBlock() (bool, string) {
 
-	if !b.ValidateBlockProof() {
+	if !b.ValidateBlockDrawSignature() {
 		return false, "Block Proof failed"
 	}
 
@@ -113,7 +113,7 @@ func buildBlockStringToSign(b Block) string {
 	buf.WriteString(b.ParentPointer)
 	buf.WriteString(b.BakerID.N.String())
 	buf.WriteString(b.BakerID.E.String())
-	buf.WriteString(b.BlockProof)
+	buf.WriteString(b.Draw)
 	buf.WriteString(b.BlockNonce.Nonce)
 	buf.WriteString(b.LastFinalized)
 	buf.WriteString(b.BlockData.DataString())
