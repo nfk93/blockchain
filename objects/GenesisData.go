@@ -5,7 +5,7 @@ import (
 )
 
 type GenesisData struct {
-	GenesisTime  time.Duration
+	GenesisTime  time.Time
 	SlotDuration time.Duration
 	Nonce        BlockNonce
 	Hardness     float64

@@ -215,9 +215,7 @@ func isLegalExtension(b o.Block) bool {
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
-	slotLock.Lock()
-	defer slotLock.Unlock()
-	if b.Slot > currentSlot { //We do not accept early blocks
+	if b.Slot > getCurrentSlot() { //We do not accept early blocks
 		return false
 	}
 	return true

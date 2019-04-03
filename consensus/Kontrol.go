@@ -3,16 +3,17 @@ package consensus
 import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/transaction"
 	"sync"
 	"time"
 )
 
-var slotLength int
+var slotLength time.Duration
 var currentSlot int
 var slotLock sync.RWMutex
 var currentStake int
 var currentNonce o.BlockNonce
-var hardness int
+var hardness float64
 var sk SecretKey
 var pk PublicKey
 
@@ -23,16 +24,27 @@ func runSlot() {
 			finalize(currentSlot)
 		}
 		go drawLottery(currentSlot)
-		time.Sleep(time.Duration(slotLength) * time.Second)
+		time.Sleep(slotLength)
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
-
 	}
 }
 
-func processGenesisData(genesisData o.GenesisData) {
+func getCurrentSlot() int {
+	slotLock.RLock()
+	defer slotLock.RUnlock()
+	return currentSlot
+}
 
+func processGenesisData(genesisData o.GenesisData) {
+	// TODO  -  Use GenesisTime when going away from two-phase implementation
+	hardness = genesisData.Hardness
+	slotLength = genesisData.SlotDuration
+	go runSlot()
+	go transaction.StartTransactionLayer(channels.BlockToTrans,
+		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
+		channels.TransToTrans, genesisData.InitialState)
 }
 
 func finalize(slot int) {
@@ -48,7 +60,6 @@ func drawLottery(slot int) {
 	//if winner {
 
 	//}
-
 }
 
 func computeTransactions() o.Block { //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
