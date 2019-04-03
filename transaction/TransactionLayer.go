@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"bytes"
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"strconv"
@@ -32,6 +33,7 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 				tree.currentNonce = b.BlockNonce
 			}
 			tree.processBlock(b)
+			fmt.Println(tree.treeMap[tree.head].state.Ledger[b.BakerID])
 		}
 	}()
 
@@ -114,9 +116,18 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	b := CreateNewBlock(blockData, t.head, t.currentNonce, addedTransactions)
+	b := Block{blockData.SlotNo,
+		t.head,
+		blockData.Pk,
+		blockData.Draw,
+		t.currentNonce,
+		t.lastFinalized,
+		Data{addedTransactions, GenesisData{}},
+		""}
 
+	b.SignBlock(blockData.Sk)
 	return b
+
 }
 
 func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk SecretKey, pk PublicKey) BlockNonce {
@@ -126,7 +137,6 @@ func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk Secret
 	var buf bytes.Buffer
 	buf.WriteString("NONCE")
 	buf.WriteString(previousStatesAsString(blockToFinalize, *t))
-	//buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
 	buf.WriteString(strconv.Itoa(slot))
 
 	newNonceString := buf.String()

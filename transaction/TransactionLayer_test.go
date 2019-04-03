@@ -197,14 +197,14 @@ func TestCreateNewBlock(t *testing.T) {
 		transList = append(transList, t1)
 	}
 
-	newBlockData := CreateBlockData{transList, sk1, pk1, 2, genBlock.CalculateBlockHash(), ""}
+	newBlockData := CreateBlockData{transList, sk1, pk1, 2, ""}
 
 	tl <- newBlockData
 
 	time.Sleep(500)
 }
 
-func TestPreviousStatesAsString(t *testing.T) {
+func TestRuns(t *testing.T) {
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
 
@@ -217,35 +217,22 @@ func TestPreviousStatesAsString(t *testing.T) {
 		}
 	}()
 
-	//go func() {
-	//	count := 0
-	//	for {
-	//		newBlock := <-br
-	//		b <- newBlock
-	//		count += 1
-	//		if count == 3{
-	//			time.Sleep(1000)
-	//			f <- newBlock.CalculateBlockHash()
-	//		}
-	//	}
-	//}()
-
 	genBlock := CreateTestGenesis()
 	b <- genBlock
 	time.Sleep(300)
 
 	var transList []Transaction
 	for i := 0; i < 2; i++ {
-		t1 := CreateTransaction(pk1, pk2, (i*100)+1, "ID"+strconv.Itoa(i), sk1)
+		t1 := CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)
 		transList = append(transList, t1)
 	}
 
 	for i := 0; i < 40; i++ {
-		newBlockData := CreateBlockData{transList, sk1, pk1, i + 1, genBlock.CalculateBlockHash(), ""}
+		newBlockData := CreateBlockData{transList, sk1, pk1, i + 1, ""}
 		tl <- newBlockData
 		newBlock := <-br
 		b <- newBlock
-		time.Sleep(100)
+		time.Sleep(1000)
 		if i != 0 && i%10 == 9 {
 			time.Sleep(1000)
 			f <- newBlock.CalculateBlockHash()

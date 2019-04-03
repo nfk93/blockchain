@@ -2,7 +2,6 @@ package objects
 
 import (
 	"bytes"
-	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	"strconv"
 )
@@ -23,7 +22,6 @@ type CreateBlockData struct {
 	Sk        SecretKey
 	Pk        PublicKey
 	SlotNo    int
-	LastFinal string
 	Draw      string
 }
 
@@ -36,24 +34,6 @@ type BlockNonce struct {
 type Data struct {
 	Trans       []Transaction
 	GenesisData GenesisData
-}
-
-func CreateNewBlock(blockData CreateBlockData, parent string, nonce BlockNonce, translist []Transaction) Block {
-	validNonce := nonce.validateBlockNonce()
-	if !validNonce {
-		fmt.Println("Couldn't create block! Nonce is not verified!")
-		return Block{}
-	}
-	b := Block{blockData.SlotNo,
-		parent,
-		blockData.Pk,
-		blockData.Draw,
-		nonce,
-		blockData.LastFinal,
-		Data{translist, GenesisData{}},
-		""}
-	b.SignBlock(blockData.Sk)
-	return b
 }
 
 //Signing of Blocks
