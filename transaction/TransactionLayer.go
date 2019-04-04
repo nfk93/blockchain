@@ -141,9 +141,9 @@ func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk Secret
 
 	newNonceString := buf.String()
 	newNonce := HashSHA(newNonceString)
-	signature := Sign(string(newNonce), sk)
-
-	return BlockNonce{newNonce, signature, pk}
+	bn := BlockNonce{newNonce, "", pk}
+	bn.SignBlockNonce(sk)
+	return bn
 }
 
 // Helpers

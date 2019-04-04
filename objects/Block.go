@@ -7,14 +7,14 @@ import (
 )
 
 type Block struct {
-	Slot          int
-	ParentPointer string    //a hash of parent block
-	BakerID       PublicKey //
-	Draw          string
-	BlockNonce    BlockNonce
-	LastFinalized string //hash of last finalized block
-	BlockData     Data
-	Signature     string
+	Slot           int
+	ParentPointer  string    //a hash of parent block
+	BakerID        PublicKey //
+	Draw           string
+	BlockNonce     BlockNonce
+	LastFinalized  string //hash of last finalized block
+	BlockData      Data
+	BlockSignature string
 }
 
 type CreateBlockData struct {
@@ -36,46 +36,38 @@ type Data struct {
 	GenesisData GenesisData
 }
 
-//Signing of Blocks
+//Signing functions
 func (b *Block) SignBlock(sk SecretKey) {
 	m := buildBlockStringToSign(*b)
-	b.Signature = Sign(m, sk)
+	b.BlockSignature = Sign(m, sk)
+}
+
+func (bl *BlockNonce) SignBlockNonce(sk SecretKey) {
+
+	bl.Signature = Sign(bl.Nonce, sk)
 }
 
 // Validation functions
-func (b *Block) ValidateBlockSignature(pk PublicKey) bool {
-	return Verify(buildBlockStringToSign(*b), b.Signature, pk)
-}
-
-func (b *Block) ValidateBlockDrawSignature() bool {
-	var buf bytes.Buffer
-	buf.WriteString("LEADERSHIP_ELECTION")
-	buf.WriteString(b.BlockNonce.Nonce)
-	buf.WriteString(strconv.Itoa(b.Slot))
-
-	return Verify(buf.String(), b.Draw, b.BakerID)
-}
-
-func (bl BlockNonce) validateBlockNonce() bool {
-
-	return Verify(bl.Nonce, bl.Signature, bl.Pk)
-}
-
 func (b Block) ValidateBlock() (bool, string) {
-
-	if !b.ValidateBlockDrawSignature() {
-		return false, "Block Proof failed"
-	}
 
 	if !b.BlockNonce.validateBlockNonce() {
 		return false, "Block Nonce validation failed"
 	}
 
-	if !b.ValidateBlockSignature(b.BakerID) {
-		return false, "Block Signature validation failed"
+	if !b.ValidateBlockSignature() {
+		return false, "Block BlockSignature validation failed"
 	}
 
 	return true, ""
+}
+
+func (b Block) ValidateBlockSignature() bool {
+	return Verify(buildBlockStringToSign(b), b.BlockSignature, b.BakerID)
+}
+
+func (bl BlockNonce) validateBlockNonce() bool {
+
+	return Verify(bl.Nonce, bl.Signature, bl.Pk)
 }
 
 // Helpers

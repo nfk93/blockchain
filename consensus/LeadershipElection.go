@@ -36,7 +36,7 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 
 func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64) bool {
 
-	if !b.ValidateBlockDrawSignature() {
+	if !b.ValidateBlockSignature() {
 		fmt.Println("Block Proof didn't validate!")
 		return false
 	}
@@ -65,4 +65,13 @@ func ValidateDrawValue(b Block, yourStake int, systemStake int, hardness float64
 
 	return false
 
+}
+
+func validateDrawSignature(b Block) bool {
+	var buf bytes.Buffer
+	buf.WriteString("LEADERSHIP_ELECTION")
+	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(strconv.Itoa(b.Slot))
+
+	return Verify(buf.String(), b.Draw, b.BakerID)
 }
