@@ -20,7 +20,6 @@ func main() {
 	var addr = flag.String("a", "", "address to connect to (if not set, start own network)")
 	var port = flag.String("p", "65000", "port to be used for p2p (default=65000)")
 	flag.Parse()
-
 	secretKey, publicKey = crypto.KeyGen(2048)
 	p2p_transactionIn := make(chan objects.Transaction)
 	channels := objects.CreateChannelStruct()

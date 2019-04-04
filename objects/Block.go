@@ -85,7 +85,6 @@ func (b *Block) ValidateBlockProof() bool {
 	buf.WriteString("LEADERSHIP_ELECTION")
 	buf.WriteString(b.BlockNonce.Nonce)
 	buf.WriteString(strconv.Itoa(b.Slot))
-
 	return Verify(buf.String(), b.BlockProof, b.BakerID)
 }
 
