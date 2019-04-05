@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/transaction"
@@ -21,7 +22,7 @@ var lastFinalizedLedger map[PublicKey]int
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	for {
-		if (currentSlot)%100 == 0 {
+		if (currentSlot)%10 == 0 {
 			finalize(currentSlot)
 		}
 		go drawLottery(currentSlot)
@@ -67,6 +68,7 @@ func finalize(slot int) {
 
 func updateStake() {
 	state := <-channels.StateFromTrans
+	fmt.Println(state)
 	lastFinalizedLedger = state.Ledger
 }
 

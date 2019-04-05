@@ -78,6 +78,7 @@ func handleBlock(b o.Block) {
 func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
 	blocks.add(b)
 	processGenesisData(b.BlockData.GenesisData)
+	sendBlockToTL(b)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
 }
