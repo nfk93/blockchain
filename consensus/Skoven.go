@@ -64,7 +64,7 @@ func handleBlock(b o.Block) {
 		handleGenesisBlock(b)
 		return
 	}
-	if !b.validateBlockSignature(b.BakerID) || !verifyDraw(b) { // TODO: Should maybe use b.ValidateBlock
+	if !b.ValidateBlock() || !verifyDraw(b) { // TODO: Should maybe use b.ValidateBlock
 		return
 	}
 	addBlock(b)

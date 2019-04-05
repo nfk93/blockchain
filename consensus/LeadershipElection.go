@@ -10,12 +10,12 @@ import (
 	"strconv"
 )
 
-func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicKey, yourStake int, systemStake int, slot int) (bool, string) {
+func CalculateDraw(nonce string, hardness float64, sk SecretKey, pk PublicKey, yourStake int, systemStake int, slot int) (bool, string) {
 
 	// Creates the draw signature
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
-	drawBuf.WriteString(bnonce.Nonce)
+	drawBuf.WriteString(nonce)
 	drawBuf.WriteString(strconv.Itoa(slot))
 	draw := Sign(drawBuf.String(), sk)
 
@@ -24,10 +24,11 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 		"",
 		pk,
 		draw,
-		bnonce,
+		nonce,
 		"",
 		Data{},
 		""}
+	intermediateBlock.SignBlock(sk)
 
 	// Checks if the value of the draw exceeds the threshold.
 	// If so it returns the draw else it return an empty string.
@@ -39,8 +40,8 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 
 func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) bool {
 
-	if valid, msg := b.ValidateBlock(); !valid {
-		fmt.Println(msg)
+	if !b.ValidateBlock() {
+		fmt.Println("Block didn't validate")
 		return false
 	}
 
@@ -52,7 +53,7 @@ func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) boo
 	// Calculates the draw value
 	var valBuf bytes.Buffer
 	valBuf.WriteString("LEADERSHIP_ELECTION")
-	valBuf.WriteString(b.BlockNonce.Nonce)
+	valBuf.WriteString(b.BlockNonce)
 	valBuf.WriteString(strconv.Itoa(b.Slot))
 	valBuf.WriteString(b.BakerID.String())
 	valBuf.WriteString(b.Draw)
@@ -78,7 +79,7 @@ func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) boo
 func validateDrawSignature(b Block) bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
-	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(b.BlockNonce)
 	buf.WriteString(strconv.Itoa(b.Slot))
 
 	return Verify(buf.String(), b.Draw, b.BakerID)

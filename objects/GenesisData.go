@@ -10,7 +10,7 @@ import (
 type GenesisData struct {
 	GenesisTime  time.Time
 	SlotDuration time.Duration
-	Nonce        BlockNonce
+	Nonce        string
 	Hardness     float64
 	InitialState State
 	// TODO: fill with more stuff?
@@ -23,11 +23,20 @@ func NewGenesisData(publicKey crypto.PublicKey, secretKey crypto.SecretKey, slot
 	if err != nil {
 		log.Fatal("oops") // TODO shouldn't happen, but maybe make realistic error handling
 	}
-	blocknonce := BlockNonce{string(nonce), "", publicKey}
-	blocknonce.SignBlockNonce(secretKey)
 	if hardness <= 0 || hardness >= 1 {
 		return GenesisData{}, errors.Errorf("Hardness must be between 0 and 1")
 	} else {
-		return GenesisData{time, slotDuration, blocknonce, hardness, state}, nil
+		return GenesisData{time, slotDuration, string(nonce), hardness, state}, nil
 	}
+}
+
+func CreateTestGenesis() Block {
+	return Block{0,
+		"",
+		crypto.PublicKey{},
+		"",
+		"",
+		"",
+		Data{},
+		""}
 }

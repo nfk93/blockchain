@@ -11,24 +11,19 @@ type Block struct {
 	ParentPointer  string    //a hash of parent block
 	BakerID        PublicKey //
 	Draw           string
-	BlockNonce     BlockNonce
+	BlockNonce     string
 	LastFinalized  string //hash of last finalized block
 	BlockData      Data
 	BlockSignature string
 }
 
 type CreateBlockData struct {
-	TransList []Transaction
-	Sk        SecretKey
-	Pk        PublicKey
-	SlotNo    int
-	Draw      string
-}
-
-type BlockNonce struct {
-	Nonce     string
-	Signature string
-	Pk        PublicKey
+	TransList  []Transaction
+	Sk         SecretKey
+	Pk         PublicKey
+	SlotNo     int
+	Draw       string
+	BlockNonce string
 }
 
 type Data struct {
@@ -42,32 +37,10 @@ func (b *Block) SignBlock(sk SecretKey) {
 	b.BlockSignature = Sign(m, sk)
 }
 
-func (bl *BlockNonce) SignBlockNonce(sk SecretKey) {
-
-	bl.Signature = Sign(bl.Nonce, sk)
-}
-
 // Validation functions
-func (b Block) ValidateBlock() (bool, string) {
 
-	if !b.BlockNonce.validateBlockNonce() {
-		return false, "Block Nonce validation failed"
-	}
-
-	if !b.validateBlockSignature() {
-		return false, "Block BlockSignature validation failed"
-	}
-
-	return true, ""
-}
-
-func (b Block) validateBlockSignature() bool {
+func (b Block) ValidateBlock() bool {
 	return Verify(buildBlockStringToSign(b), b.BlockSignature, b.BakerID)
-}
-
-func (bl BlockNonce) validateBlockNonce() bool {
-
-	return Verify(bl.Nonce, bl.Signature, bl.Pk)
 }
 
 // Helpers
@@ -86,7 +59,7 @@ func buildBlockStringToSign(b Block) string {
 	buf.WriteString(b.BakerID.N.String())
 	buf.WriteString(b.BakerID.E.String())
 	buf.WriteString(b.Draw)
-	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(b.BlockNonce)
 	buf.WriteString(b.LastFinalized)
 	buf.WriteString(b.BlockData.DataString())
 	return buf.String()
@@ -94,16 +67,4 @@ func buildBlockStringToSign(b Block) string {
 
 func (b *Block) CalculateBlockHash() string {
 	return HashSHA(buildBlockStringToSign(*b))
-}
-
-func GetTestBlock() Block {
-	_, pk := KeyGen(256)
-	return Block{42,
-		"",
-		pk,
-		"VALID",
-		BlockNonce{"42", "", pk},
-		"",
-		Data{},
-		""}
 }

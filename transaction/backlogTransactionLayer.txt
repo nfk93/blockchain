@@ -54,4 +54,7 @@ OK - Clean NewBlockData
 
 
 
+SPøRG:
+why using a blocknonce in stead of hashing previous states or blocks
+
 

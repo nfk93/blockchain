@@ -18,7 +18,7 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 	b.SignBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, sk1, State{})
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, sk1)
 
 	blockChannel <- b
 
@@ -42,14 +42,14 @@ func TestForking(t *testing.T) {
 	_, p4 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, sk1, State{})
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
 	go func() {
 		for {
 			// we finalize block 4, p1 = -200, p2=0, p4=200
 			state := <-s
 			if state.Ledger[p1] != -200 || state.Ledger[p2] != 0 || state.Ledger[p4] != 200 {
-				t.Error("Bad luck! Branching did not succeed...")
+				t.Error("Bad luck! Branching did not succeed")
 			}
 			return
 		}
@@ -98,7 +98,7 @@ func TestCreateNewBlock(t *testing.T) {
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, sk1, State{})
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
 	genBlock := CreateTestGenesis()
 	b <- genBlock
@@ -109,12 +109,12 @@ func TestCreateNewBlock(t *testing.T) {
 		t1 := CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)
 		transList = append(transList, t1)
 	}
-	newBlockData := CreateBlockData{transList, sk1, pk1, 2, ""}
+	newBlockData := CreateBlockData{transList, sk1, pk1, 2, "", ""}
 
 	tl <- newBlockData
 	newBlock := <-br
-	if valid, msg := newBlock.ValidateBlock(); !valid {
-		t.Error(msg)
+	if !newBlock.ValidateBlock() {
+		t.Error("Block validation failed")
 	}
 
 }
@@ -124,7 +124,7 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 	_, pk2 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, sk1, State{})
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
 	go func() {
 		for {
@@ -143,7 +143,7 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 	}
 
 	for i := 0; i < 40; i++ {
-		newBlockData := CreateBlockData{transList, sk1, pk1, i + 1, ""}
+		newBlockData := CreateBlockData{transList, sk1, pk1, i + 1, "", ""}
 		tl <- newBlockData
 		newBlock := <-br
 		b <- newBlock
@@ -172,7 +172,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		strconv.Itoa(i),
 		pk,
 		"VALID",
-		BlockNonce{"42", "", pk},
+		"42",
 		"",
 		Data{Trans: t},
 		"",
