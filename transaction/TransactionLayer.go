@@ -20,16 +20,18 @@ type Tree struct {
 	hardness      float64
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey, state State) {
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
 	tree := Tree{make(map[string]TLNode), "", "", BlockNonce{}, 0.0}
 
 	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
-			if b.Slot == 0 { // TODO: REMOVE when we have a proper initialization of GENESIS block / data
+			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.currentNonce = b.BlockNonce
+
+				//TODO: Initialize GenesisData correct
 			}
 			tree.processBlock(b)
 		}
