@@ -74,7 +74,7 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
    import "github.com/nfk93/blockchain/interpreter/util" >>
 
 Toplevel    : Structure                                                             << ast.NewRoot($0) >>
-            | Toplevel Toplevel                                                     << ast.AppendRoot($0, $1) >> ;
+            | Structure Toplevel                                                    << ast.AppendRoots($0, $1) >> ;
 
 
 Structure   : ModStruct                                                             << >>

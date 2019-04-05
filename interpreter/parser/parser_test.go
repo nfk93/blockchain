@@ -37,6 +37,10 @@ func TestParseTwoTypes(t *testing.T) {
 	testFile(t, "../test_cases/twotypes")
 }
 
+func TestParseThreeTypes(t *testing.T) {
+	testFile(t, "../test_cases/threetypes")
+}
+
 func TestParseBasicEntry(t *testing.T) {
 	testFile(t, "../test_cases/increment_storage")
 }

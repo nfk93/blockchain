@@ -80,7 +80,8 @@ func NewRoot(e interface{}) (Exp, error) {
 	case SimpleTypeDecl:
 		return TopLevel{[]Exp{e.(Exp)}}, nil
 	default:
-		return fail(fmt.Sprintf("Toplevel error, New root can't be type %T", e))
+		ex, _ := fail(fmt.Sprintf("Toplevel error, New root can't be type %T", e))
+		return TopLevel{[]Exp{ex.(Exp)}}, nil
 	}
 }
 
@@ -92,22 +93,13 @@ func (e TopLevel) String() string {
 	return str + "\n])"
 }
 
-func AppendRoot(e1, e2 interface{}) (Exp, error) {
-	switch e1.(type) {
+func AppendRoots(e1, e2 interface{}) (Exp, error) {
+	switch e2.(type) {
 	case TopLevel:
-		e1 := e1.(TopLevel)
-		switch e2.(type) {
-		case TopLevel:
-			e2 := e2.(TopLevel)
-			if len(e2.Roots) != 1 {
-				return fail("Toplevel error, too many Roots encountered")
-			}
-			return TopLevel{append(e1.Roots, e2.Roots...)}, nil
-		default:
-			return fail(fmt.Sprintf("Toplevel error, encountered non-root expression %T", e2))
-		}
+		e2 := e2.(TopLevel)
+		return TopLevel{append([]Exp{e1.(Exp)}, e2.Roots...)}, nil
 	default:
-		return fail(fmt.Sprintf("Toplevel error, encountered non-root expression %T", e2))
+		return fail(fmt.Sprintf("TopLevel is not a TopLevel expression"))
 	}
 }
 
