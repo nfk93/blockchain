@@ -1,7 +1,9 @@
 package objects
 
 import (
-	. "github.com/nfk93/blockchain/crypto"
+	"github.com/nfk93/blockchain/crypto"
+	"github.com/pkg/errors"
+	"log"
 	"time"
 )
 
@@ -14,17 +16,18 @@ type GenesisData struct {
 	// TODO: fill with more stuff?
 }
 
-func CreateTestGenesis() Block {
-	sk, pk := KeyGen(2048)
-	genBlock := Block{0,
-		"",
-		PublicKey{},
-		"",
-		BlockNonce{"GENESIS", Sign("GENESIS", sk), pk},
-		"",
-		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
-		""}
-
-	genBlock.LastFinalized = genBlock.CalculateBlockHash()
-	return genBlock
+func NewGenesisData(publicKey crypto.PublicKey, secretKey crypto.SecretKey, slotDuration time.Duration, hardness float64) (GenesisData, error) {
+	time := time.Now()
+	state := NewInitialState(publicKey)
+	nonce, err := crypto.GenerateRandomBytes(24)
+	if err != nil {
+		log.Fatal("oops") // TODO shouldn't happen, but maybe make realistic error handling
+	}
+	blocknonce := BlockNonce{string(nonce), "", publicKey}
+	blocknonce.SignBlockNonce(secretKey)
+	if hardness <= 0 || hardness >= 1 {
+		return GenesisData{}, errors.Errorf("Hardness must be between 0 and 1")
+	} else {
+		return GenesisData{time, slotDuration, blocknonce, hardness, state}, nil
+	}
 }

@@ -15,14 +15,14 @@ func resetMocksAndStart() {
 	StartConsensus(CreateChannelStruct())
 }
 
-func createTestBlock(t []Transaction, i int, parentHash string) Block {
+func createTestBlock(t []Transaction, i int, parentHash string, finalHash string) Block {
 	sk, pk := KeyGen(2000)
 	block := Block{i,
 		parentHash,
 		pk,
 		"VALID",
 		BlockNonce{"42", "", pk},
-		"",
+		finalHash,
 		Data{Trans: t},
 		"",
 	}
@@ -65,7 +65,7 @@ func TestTree(t *testing.T) {
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
 		channels.TransFromP2P <- trans
-		block = createTestBlock(transarr, i, block.CalculateBlockHash())
+		block = createTestBlock(transarr, i, block.CalculateBlockHash(), genesis.CalculateBlockHash())
 	}
 }
 
@@ -78,23 +78,23 @@ func TestRollBack(t *testing.T) {
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
 		channels.TransFromP2P <- trans
-		block = createTestBlock(transarr, i, block.CalculateBlockHash())
+		block = createTestBlock(transarr, i, block.CalculateBlockHash(), genesis.CalculateBlockHash())
 	}
 
-	block = createTestBlock([]Transaction{}, 1, genesis.CalculateBlockHash())
+	block = createTestBlock([]Transaction{}, 1, genesis.CalculateBlockHash(), genesis.CalculateBlockHash())
 	for i := 1; i < 11; i++ {
 		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []Transaction{trans}
 		channels.BlockFromP2P <- block
-		block = createTestBlock(transarr, i+10, block.CalculateBlockHash())
+		block = createTestBlock(transarr, i+10, block.CalculateBlockHash(), genesis.CalculateBlockHash())
 	}
 }
 
 func TestBadBlock(t *testing.T) {
 	resetMocksAndStart()
-	b := createTestBlock([]Transaction{}, 5, genesis.CalculateBlockHash())
-	c := createTestBlock([]Transaction{}, 3, b.CalculateBlockHash())
+	b := createTestBlock([]Transaction{}, 5, genesis.CalculateBlockHash(), genesis.CalculateBlockHash())
+	c := createTestBlock([]Transaction{}, 3, b.CalculateBlockHash(), genesis.CalculateBlockHash())
 	time.Sleep(5 * slotLength)
 	channels.BlockFromP2P <- genesis
 	channels.BlockFromP2P <- b

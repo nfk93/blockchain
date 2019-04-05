@@ -35,7 +35,6 @@ func CalculateDraw(bnonce BlockNonce, hardness float64, sk SecretKey, pk PublicK
 		return true, draw
 	}
 	return false, ""
-
 }
 
 func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) bool {
@@ -74,7 +73,6 @@ func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) boo
 	}
 
 	return false
-
 }
 
 func validateDrawSignature(b Block) bool {

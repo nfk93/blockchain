@@ -16,12 +16,13 @@ var currentNonce o.BlockNonce
 var hardness float64
 var sk SecretKey
 var pk PublicKey
+var lastFinalizedLedger map[PublicKey]int
 
-func runSlot() {
+func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	for {
 		if (currentSlot)%100 == 0 {
-			finalize(currentSlot)
+			//finalize(currentSlot)
 		}
 		go drawLottery(currentSlot)
 		time.Sleep(slotLength)
@@ -41,6 +42,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	// TODO  -  Use GenesisTime when going away from two-phase implementation
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
+	lastFinalizedLedger = genesisData.InitialState.Ledger
 	go runSlot()
 	go transaction.StartTransactionLayer(channels.BlockToTrans,
 		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
@@ -48,11 +50,24 @@ func processGenesisData(genesisData o.GenesisData) {
 }
 
 func finalize(slot int) {
-
+	finalLock.Lock()
+	defer finalLock.Unlock()
+	head := blocks.get(currentHead)
+	for {
+		if head.Slot <= slot {
+			finalHash := head.CalculateBlockHash()
+			lastFinalized = finalHash
+			go updateStake()
+			channels.FinalizeToTrans <- finalHash
+			break
+		}
+		head = blocks.get(head.ParentPointer)
+	}
 }
 
 func updateStake() {
-
+	state := <-channels.StateFromTrans
+	lastFinalizedLedger = state.Ledger
 }
 
 func drawLottery(slot int) {

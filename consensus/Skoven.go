@@ -10,6 +10,7 @@ var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
 var blockToTL chan o.Block
 var tLock sync.RWMutex
+var finalLock sync.RWMutex
 var blocks skov
 var badBlocks map[string]bool
 var currentHead string
@@ -101,7 +102,6 @@ func comparePathWeight(b o.Block) {
 		if rollback(b) {
 			currentHead = b.CalculateBlockHash()
 			currentLength = l
-			sendBranchToTL()
 		}
 	}
 }
@@ -118,15 +118,16 @@ func rollback(newHead o.Block) bool {
 	for {
 		transactionsUnused(head)
 		head = blocks.get(head.ParentPointer)
-		if head.CalculateBlockHash() == lastFinalized {
+		if head.CalculateBlockHash() == newHead.LastFinalized {
 			break
 		}
 	}
 	var newBranch []o.Block
+	head = newHead
 	for {
-		newBranch = append(newBranch, newHead)
-		newHead = blocks.get(newHead.ParentPointer)
-		if newHead.CalculateBlockHash() == lastFinalized {
+		newBranch = append(newBranch, head)
+		head = blocks.get(head.ParentPointer)
+		if head.CalculateBlockHash() == newHead.LastFinalized {
 			break
 		}
 	}
@@ -140,6 +141,8 @@ func rollback(newHead o.Block) bool {
 	}
 	if !noBadBlocks {
 		unusedTransactions = oldUnusedTransmap //If rollback involved invalid blocks, we return to the old map
+	} else {
+		sendBranchToTL(newBranch)
 	}
 	return noBadBlocks
 }
@@ -178,9 +181,10 @@ func transactionsUsed(b o.Block) bool {
 }
 
 //Used after a rollback to send the branch of the new head to the transaction layer
-func sendBranchToTL() {
-
-	//TODO
+func sendBranchToTL(branch []o.Block) {
+	for i := len(branch) - 1; i >= 0; i-- {
+		sendBlockToTL(branch[i])
+	}
 }
 
 //Used to send a new head to the transaction layer
