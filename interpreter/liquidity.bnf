@@ -73,33 +73,33 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 << import "github.com/nfk93/blockchain/interpreter/ast"
    import "github.com/nfk93/blockchain/interpreter/util" >>
 
-Toplevel    : Structure                                                             << ast.NewRoot($0) >>
-            | Structure Toplevel                                                    << ast.AppendRoots($0, $1) >> ;
+Toplevel    : Structure                                         << ast.NewRoot($0) >>
+            | Structure Toplevel                                << ast.AppendRoots($0, $1) >> ;
 
 
-Structure   : ModStruct                                                             << >>
-            | letinit Exp                                                           << ast.NewTodoExp() >>
-            | letentry lident Pattern Pattern eq Exp                                << ast.NewTodoExp() // >> ;
+Structure   : ModStruct                                         << >>
+            | letinit Exp                                       << ast.NewTodoExp() >>
+            | letentry lident Pattern Pattern eq Exp            << ast.NewEntryExpression(util.ParseId($1), $2, $3, $5) // >> ;
 
-ModStruct   : type lident eq Type                                                   << ast.NewSimpleTypeDecl(util.ParseId($1), $3) // >>
-            | type lident eq lbrack Struct rbrack                                   << ast.NewTodoExp() // >> ;
+ModStruct   : type lident eq Type                               << ast.NewSimpleTypeDecl(util.ParseId($1), $3) // >>
+            | type lident eq lbrack Struct rbrack               << ast.NewTodoExp() // >> ;
 
-Struct      : lident colon Type semicolon Struct                                    << ast.NewTodoExp() // >>
-            | lident colon Type semicolon                                           << ast.NewTodoExp() // >> ;
+Struct      : lident colon Type semicolon Struct                << ast.NewTodoExp() // >>
+            | lident colon Type semicolon                       << ast.NewTodoExp() // >> ;
 
-Exp         : lident                                                                << ast.NewTodoExp() // idexp >>
-            | uident dot lident                                                     << ast.NewTodoExp() // external lookup exp >>
-            | Lookup lident                                                         << ast.NewTodoExp() // lookupexp >>
-            | Lookup lident larrow Exp                                              << ast.NewTodoExp() // lookupexp >>
-            | if Exp then Exp else Exp                                              << ast.NewTodoExp() // ifthenelse exp >>
-            | if Exp then Exp                                                       << ast.NewTodoExp() // ifthen exp >>
-            | Exp semicolon Exp                                                     << ast.NewTodoExp() // seqexp >>
-            | Exp colon colon Exp                                                   << ast.NewTodoExp() // listconcat >>
-            | let Pattern eq Exp in Exp                                             << ast.NewTodoExp() // letexp >>
-            | lparen Tuple rparen                                                   << ast.NewTodoExp() // tupleexp >>
-            | lparen Exp colon Type rparen                                          << ast.NewTodoExp() // annotatedExp >>
-            | Exp Binop Exp                                                         << ast.NewTodoExp() // BinopExp >>
-            | Constant                                                              << ast.NewTodoExp() // litexp >> ;
+Exp         : lident                                            << ast.NewTodoExp() // idexp >>
+            | uident dot lident                                 << ast.NewTodoExp() // external lookup exp >>
+            | Lookup lident                                     << ast.NewTodoExp() // lookupexp >>
+            | Lookup lident larrow Exp                          << ast.NewTodoExp() // lookupexp >>
+            | if Exp then Exp else Exp                          << ast.NewTodoExp() // ifthenelse exp >>
+            | if Exp then Exp                                   << ast.NewTodoExp() // ifthen exp >>
+            | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >>
+            | Exp colon colon Exp                               << ast.NewTodoExp() // listconcat >>
+            | let Pattern eq Exp in Exp                         << ast.NewTodoExp() // letexp >>
+            | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
+            | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
+            | Exp Binop Exp                                     << ast.NewTodoExp() // BinopExp >>
+            | Constant                                          << ast.NewTodoExp() // litexp >> ;
 
 Binop       : plus
             | minus
@@ -112,43 +112,45 @@ Binop       : plus
             | lt
             | gt ;
 
-Tuple       : Exp comma Exp                                                         << ast.NewTodoExp() // tuple >>
-            | Exp comma Tuple                                                       << ast.NewTodoExp() // tuple of tuple >> ;
+Tuple       : Exp comma Exp                                     << ast.NewTodoExp() // tuple >>
+            | Exp comma Tuple                                   << ast.NewTodoExp() // tuple of tuple >> ;
 
-Lookup      : Lookup lident dot                                                     << ast.NewTodoExp() // intermediate for lookup calls  >>
-            | lident dot                                                            << ast.NewTodoExp() // see above >> ;
+Lookup      : Lookup lident dot                                 << ast.NewTodoExp() // intermediate for lookup calls  >>
+            | lident dot                                        << ast.NewTodoExp() // see above >> ;
 
-Pattern     : lident                                                                << ast.NewTodoExp() // param >>
-            | lparen rparen                                                         << ast.NewTodoExp() // noparams >>
-            | lparen PatternSeq rparen                                              << ast.NewTodoExp() // params >>
-            | lparen lident colon Type rparen                                       << ast.NewTodoExp() >> ;
+Pattern     : lparen rparen                                     << ast.NewEmptyPattern() >>
+            | lparen Paramlist rparen                           << ast.NewPattern($1) >>
+            | Param                                             << ast.NewPattern($0) >> ;
 
-PatternSeq  : Pattern                                                               << ast.NewTodoExp() // intermediate for pattern sequences  >>
-            | PatternSeq comma PatternSeq                                           << ast.NewTodoExp() // see above >> ;
+Param       : lident                                            << ast.NewParam(util.ParseId($0)) // param >>
+            | lparen lident colon Type rparen                   << ast.NewAnnoParam(util.ParseId($1), $3) // typeanno param >> ;
+            
+Paramlist   : Param comma Paramlist                             << ast.AppendParams($0, $2)>>
+            | Param                                             << ast.NewParamList($0)>> ;
 
-Type        : bool                                                                  << ast.NewTodoExp() // bool >>
-            | int                                                                   << ast.INT, nil >>
-            | tez                                                                   << ast.NewTodoExp() // tez >>
-            | string                                                                << ast.NewTodoExp() // string >>
-            | keyhash                                                               << ast.NewTodoExp() // key_hash >>
-            | operation                                                             << ast.NewTodoExp() // operation >>
-            | Type list                                                             << ast.NewTodoExp() // list >>
-            | Type ast Type                                                         << ast.NewTodoExp() // tuple >>
-            | lident                                                                << ast.NewTodoExp() // declaredtype >> ;
+Type        : bool                                              << ast.NewTodoExp() // bool >>
+            | int                                               << ast.INT, nil >>
+            | tez                                               << ast.NewTodoExp() // tez >>
+            | string                                            << ast.NewTodoExp() // string >>
+            | keyhash                                           << ast.NewTodoExp() // key_hash >>
+            | operation                                         << ast.NewTodoExp() // operation >>
+            | Type list                                         << ast.NewTodoExp() // list >>
+            | Type ast Type                                     << ast.NewTodoExp() // tuple >>
+            | lident                                            << ast.NewTodoExp() // declaredtype >> ;
 
-Constant    : keyhash                                                               << ast.NewTodoExp() >>
-            | true                                                                  << ast.NewTodoExp() >>
-            | false                                                                 << ast.NewTodoExp() >>
-            | int_lit                                                               << ast.NewTodoExp() >>
-            | float_lit                                                             << ast.NewTodoExp() >>
-            | tez_lit                                                               << ast.NewTodoExp() >>
-            | string_lit                                                            << ast.NewTodoExp() >>
-            | lparen rparen                                                         << ast.NewTodoExp() >>
-            | lbrack rbrack                                                         << ast.NewTodoExp() >>
-            | lbrack Array rbrack                                                   << ast.NewTodoExp() >> ;
+Constant    : keyhash                                           << ast.NewTodoExp() >>
+            | true                                              << ast.NewTodoExp() >>
+            | false                                             << ast.NewTodoExp() >>
+            | int_lit                                           << ast.NewTodoExp() >>
+            | float_lit                                         << ast.NewTodoExp() >>
+            | tez_lit                                           << ast.NewTodoExp() >>
+            | string_lit                                        << ast.NewTodoExp() >>
+            | lparen rparen                                     << ast.NewTodoExp() >>
+            | lbrack rbrack                                     << ast.NewTodoExp() >>
+            | lbrack Array rbrack                               << ast.NewTodoExp() >> ;
 
-Array       : Exp                                                                   << ast.NewTodoExp() >>
-            | Array semicolon Exp                                                   << ast.NewTodoExp() >> ;
+Array       : Exp                                               << ast.NewTodoExp() >>
+            | Array semicolon Exp                               << ast.NewTodoExp() >> ;
 
 
 

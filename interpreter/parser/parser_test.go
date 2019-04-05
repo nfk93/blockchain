@@ -53,6 +53,9 @@ func searchAstForErrorExps(t *testing.T, e ast.Exp) {
 		for _, v := range e.Roots {
 			searchAstForErrorExps(t, v)
 		}
+	case ast.EntryExpression:
+		e := e.(ast.EntryExpression)
+		searchAstForErrorExps(t, e.Body)
 	default:
 		t.Error("Encountered unknown expression:", e.String())
 	}
