@@ -10,6 +10,12 @@ type State struct {
 	ParentHash string
 }
 
+func NewInitialState(key PublicKey) State {
+	ledger := make(map[PublicKey]int)
+	ledger[key] = 1000000 // 1 mil
+	return State{ledger, ""}
+}
+
 func (s *State) AddTransaction(t Transaction) {
 	//TODO: Handle checks of legal transactions
 

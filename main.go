@@ -7,24 +7,31 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/p2p"
+	"log"
+	"time"
 )
 
-var p2p_blockIn chan objects.Block
-var p2p_blockOut chan objects.Block
-var p2p_transactionIn chan objects.Transaction
-var p2p_transactionOut chan objects.Transaction
+var channels objects.ChannelStruct
 var secretKey crypto.SecretKey
 var publicKey crypto.PublicKey
 
+var slotduration *int
+var hardness *float64
+var newNetwork *bool
+
 func main() {
-	var addr = flag.String("a", "", "address to connect to (if not set, start own network)")
-	var port = flag.String("p", "65000", "port to be used for p2p (default=65000)")
+	var addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
+	var port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
+	slotduration = flag.Int("slot_duration", int(time.Second*10), "Specify the slot length (default=10sec)")
+	hardness = flag.Float64("hardness", 0.90, "Specify hardness (default=0.90)")
+	newNetwork = flag.Bool("new_network", false, "Set this flag to true if you want to start a new network")
 	flag.Parse()
+
 	secretKey, publicKey = crypto.KeyGen(2048)
-	p2p_transactionIn := make(chan objects.Transaction)
-	channels := objects.CreateChannelStruct()
-	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, p2p_transactionIn, channels.TransFromP2P)
+	channels = objects.CreateChannelStruct()
+	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
 	consensus.StartConsensus(channels)
+
 	cliLoop()
 }
 
@@ -35,16 +42,33 @@ func cliLoop() {
 		fmt.Print(">")
 
 		fmt.Scanln(&commandline)
-		if commandline == "-n" {
-			p2p.PrintNetworkList()
-		} else if commandline == "-send-test-block" {
+		switch commandline {
+		case "-h":
 			fmt.Println("NOT IMPLEMENTED")
-		} else if commandline == "-send-test-trans" {
-			p2p_transactionIn <- objects.Transaction{publicKey, publicKey, 123, "id1", "sign1"}
-		} else if commandline == "-trans" {
+		case "-n":
+			p2p.PrintNetworkList()
+		case "-send-test-block":
+			fmt.Println("NOT IMPLEMENTED")
+		case "-send-test-trans":
+			channels.TransClientInput <- objects.Transaction{publicKey, publicKey, 123, "id1", "sign1"}
+		case "-trans":
 			p2p.PrintTransHashList()
-		} else if commandline == "-peers" {
+		case "-peers":
 			p2p.PrintPeers()
+		case "-start_network":
+			if *newNetwork {
+				genesisdata, err := objects.NewGenesisData(publicKey, secretKey, time.Duration(*slotduration), *hardness)
+				if err != nil {
+					log.Fatal(err)
+				}
+				genesisblock := objects.Block{Slot: 0, BlockData: objects.Data{GenesisData: genesisdata}}
+				channels.BlockFromP2P <- genesisblock
+				channels.BlockToP2P <- genesisblock
+			} else {
+				fmt.Println("Only the network founder can start the network!")
+			}
+		default:
+			fmt.Println(commandline, "is not a known command. Type -h for help")
 		}
 	}
 }

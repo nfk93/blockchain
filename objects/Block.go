@@ -33,6 +33,10 @@ type BlockNonce struct {
 	Pk        PublicKey
 }
 
+func (b *BlockNonce) SignBlockNonce(sk SecretKey) {
+	// TODO
+}
+
 type Data struct {
 	Trans       []Transaction
 	GenesisData GenesisData
