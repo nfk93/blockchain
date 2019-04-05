@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"bytes"
-	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"strconv"
@@ -33,7 +32,6 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 				tree.currentNonce = b.BlockNonce
 			}
 			tree.processBlock(b)
-			fmt.Println(tree.treeMap[tree.head].state.Ledger[b.BakerID])
 		}
 	}()
 
@@ -84,21 +82,6 @@ func (t *Tree) processBlock(b Block) {
 func (t *Tree) createNewNode(b Block, s State) {
 	n := TLNode{b, s}
 	t.treeMap[b.CalculateBlockHash()] = n
-}
-
-func CreateTestGenesis() Block {
-	sk, pk := KeyGen(2048)
-	genBlock := Block{0,
-		"",
-		PublicKey{},
-		"",
-		BlockNonce{"GENESIS", Sign("GENESIS", sk), pk},
-		"",
-		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
-		""}
-
-	genBlock.LastFinalized = genBlock.CalculateBlockHash()
-	return genBlock
 }
 
 func (t *Tree) createNewBlock(blockData CreateBlockData) Block {

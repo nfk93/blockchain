@@ -54,14 +54,14 @@ func (b Block) ValidateBlock() (bool, string) {
 		return false, "Block Nonce validation failed"
 	}
 
-	if !b.ValidateBlockSignature() {
+	if !b.validateBlockSignature() {
 		return false, "Block BlockSignature validation failed"
 	}
 
 	return true, ""
 }
 
-func (b Block) ValidateBlockSignature() bool {
+func (b Block) validateBlockSignature() bool {
 	return Verify(buildBlockStringToSign(b), b.BlockSignature, b.BakerID)
 }
 
