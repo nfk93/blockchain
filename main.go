@@ -24,7 +24,7 @@ func main() {
 	p2p_transactionIn := make(chan objects.Transaction)
 	channels := objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, p2p_transactionIn, channels.TransFromP2P)
-	consensus.StartConsensus(channels)
+	consensus.StartConsensus(channels, publicKey, secretKey)
 	cliLoop()
 }
 

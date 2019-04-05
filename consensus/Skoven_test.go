@@ -11,12 +11,13 @@ import (
 var genesis Block
 
 func resetMocksAndStart() {
+	sk, pk := KeyGen(2048)
 	genesis = createTestGenesisBlock(time.Duration(10), 0)
-	StartConsensus(CreateChannelStruct())
+	StartConsensus(CreateChannelStruct(), pk, sk)
 }
 
 func createTestBlock(t []Transaction, i int, parentHash string, finalHash string) Block {
-	sk, pk := KeyGen(2000)
+	sk, pk := KeyGen(2048)
 	block := Block{i,
 		parentHash,
 		pk,

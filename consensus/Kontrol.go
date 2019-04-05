@@ -22,7 +22,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 	currentSlot = 1
 	for {
 		if (currentSlot)%100 == 0 {
-			//finalize(currentSlot)
+			finalize(currentSlot)
 		}
 		go drawLottery(currentSlot)
 		time.Sleep(slotLength)

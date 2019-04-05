@@ -81,7 +81,6 @@ func CreateGenesis() Block {
 		"",
 		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
 		""}
-
 	return genBlock
 }
 

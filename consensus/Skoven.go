@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"sync"
 )
@@ -19,7 +20,9 @@ var lastFinalized string
 var testDrawVal int //Remove when implementing proper calculateDrawVal
 var channels o.ChannelStruct
 
-func StartConsensus(channelStruct o.ChannelStruct) {
+func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey) {
+	pk = pkey
+	sk = skey
 	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
