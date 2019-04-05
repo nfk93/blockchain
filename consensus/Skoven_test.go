@@ -33,7 +33,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 
 func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
 	gData := GenesisData{time.Now(), slotDuration,
-		"", hardness, State{}}
+		"", hardness, State{make(map[PublicKey]int), ""}}
 	return Block{0,
 		"",
 		PublicKey{},
@@ -100,4 +100,36 @@ func TestBadBlock(t *testing.T) {
 	channels.BlockFromP2P <- genesis
 	channels.BlockFromP2P <- b
 	channels.BlockFromP2P <- c
+}
+
+func TestInteraction(t *testing.T) {
+
+	resetMocksAndStart()
+	genesis.BlockData.GenesisData.InitialState.Ledger[pk] = 1000000 //1 Million
+
+	genHash := genesis.CalculateBlockHash()
+	sk2, pk2 := KeyGen(2048)
+	sk3, pk3 := KeyGen(2048)
+
+	// Block 1, Grow from Genesis
+	t1 := CreateTransaction(pk, pk2, 200, "t1", sk)
+	block1 := createTestBlock([]Transaction{t1}, 1, genHash, genHash)
+	block1.SignBlock(sk)
+	channels.BlockFromP2P <- block1
+	time.Sleep(slotLength)
+
+	// Block 2, Grow from Block 1
+	t2 := CreateTransaction(pk2, pk3, 100, "t2", sk2)
+	block2 := createTestBlock([]Transaction{t2}, 2, block1.CalculateBlockHash(), genHash)
+	block2.SignBlock(sk2)
+	channels.BlockFromP2P <- block2
+	time.Sleep(slotLength)
+
+	// Block 3, Grow from Block 2
+	t3 := CreateTransaction(pk3, pk, 50, "t3", sk3)
+	block3 := createTestBlock([]Transaction{t3}, 3, block2.CalculateBlockHash(), genHash)
+	block3.SignBlock(sk3)
+	channels.BlockFromP2P <- block3
+	time.Sleep(slotLength)
+
 }
