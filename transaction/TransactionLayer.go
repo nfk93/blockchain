@@ -29,7 +29,7 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 			b := <-blockInput
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.lastFinalized = b.CalculateBlockHash()
-
+				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				// TODO: Initialize GenesisData correct
 			}
 			tree.processBlock(b)
