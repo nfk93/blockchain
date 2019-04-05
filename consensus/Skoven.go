@@ -19,10 +19,12 @@ var currentLength int
 var lastFinalized string
 var testDrawVal int //Remove when implementing proper calculateDrawVal
 var channels o.ChannelStruct
+var isVerbose bool
 
-func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey) {
+func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose bool) {
 	pk = pkey
 	sk = skey
+	isVerbose = verbose
 	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
@@ -208,7 +210,7 @@ func updateHead(b o.Block) {
 	} else {
 		comparePathWeight(b)
 	}
-	fmt.Println(blocks.get(currentHead).Slot) //Used for testing purposes
+	log() //Used for testing purposes
 }
 
 // Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block
@@ -250,6 +252,12 @@ func calculateDraw(b o.Block) int {
 func verifyDraw(b o.Block) bool {
 	// *TODO
 	return true
+}
+
+func log() {
+	if isVerbose {
+		fmt.Println(blocks.get(currentHead).Slot)
+	}
 }
 
 type skov struct {

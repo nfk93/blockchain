@@ -12,8 +12,8 @@ var genesis Block
 
 func resetMocksAndStart() {
 	sk, pk := KeyGen(2048)
-	genesis = createTestGenesisBlock(time.Duration(10), 0)
-	StartConsensus(CreateChannelStruct(), pk, sk)
+	genesis = createTestGenesisBlock(time.Duration(10)*time.Second, 0)
+	StartConsensus(CreateChannelStruct(), pk, sk, true)
 }
 
 func createTestBlock(t []Transaction, i int, parentHash string, finalHash string) Block {
