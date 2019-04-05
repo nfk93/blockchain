@@ -7,19 +7,16 @@ import (
 	"testing"
 )
 
+// Should not always succeed
 func TestLeadershipElection(t *testing.T) {
 	var sk, pk = KeyGen(2048)
 
-	yourStake := 20
+	yourStake := 200
 	systemStake := 300
 	slot := 3
 	hardness := 0.9
 
-	nonce := BlockNonce{"8556", "Something", pk}
-
-	blockNonce := CreateNewBlockNonce(nonce, slot, sk, pk)
-
-	b, draw := CalculateDraw(blockNonce, hardness, sk, pk, yourStake, systemStake, slot)
+	b, draw := CalculateDraw("8556", hardness, sk, pk, yourStake, systemStake, slot)
 
 	if !b {
 		t.Error("Draw didn't exceed Hardness...")
@@ -29,12 +26,13 @@ func TestLeadershipElection(t *testing.T) {
 		"",
 		pk,
 		draw,
-		blockNonce,
+		"8556",
 		"",
 		Data{},
 		""}
+	someBlock.SignBlock(sk)
 
-	if !someBlock.ValidateBlockProof() {
+	if !someBlock.ValidateBlock() {
 		t.Error("Block Proof couldn't verify...")
 	}
 
@@ -42,7 +40,6 @@ func TestLeadershipElection(t *testing.T) {
 
 func TestHardness(t *testing.T) {
 
-	nonce := BlockNonce{"8556", "Something", PublicKey{}}
 	winCounter := 0
 	rounds := 1000
 	var sk, pk = KeyGen(2048)
@@ -53,9 +50,9 @@ func TestHardness(t *testing.T) {
 
 	for i := 0; i < rounds; i++ {
 
-		nonce = CreateNewBlockNonce(nonce, i, sk, pk)
+		//nonce = CreateNewBlockNonce(nonce, i, sk, pk)
 
-		b, _ := CalculateDraw(nonce, hardness, sk, pk, yourStake, systemStake, i)
+		b, _ := CalculateDraw("8556", hardness, sk, pk, yourStake, systemStake, i)
 		if b {
 			winCounter += 1
 		}

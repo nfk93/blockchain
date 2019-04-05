@@ -22,7 +22,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 		parentHash,
 		pk,
 		"VALID",
-		BlockNonce{"42", "", pk},
+		"42",
 		finalHash,
 		Data{Trans: t},
 		"",
@@ -33,12 +33,12 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 
 func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
 	gData := GenesisData{time.Now(), slotDuration,
-		BlockNonce{}, hardness, State{}}
+		"", hardness, State{}}
 	return Block{0,
 		"",
 		PublicKey{},
 		"VALID",
-		BlockNonce{"42", "", pk},
+		"42",
 		"",
 		Data{Trans: []Transaction{}, GenesisData: gData},
 		"",

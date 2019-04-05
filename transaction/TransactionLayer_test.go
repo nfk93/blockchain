@@ -9,19 +9,7 @@ import (
 	"time"
 )
 
-func createBlock(t []Transaction, i int, pk PublicKey) Block {
-	return Block{i + 1,
-		strconv.Itoa(i),
-		pk,
-		"VALID",
-		BlockNonce{"42", "", pk},
-		"",
-		Data{Trans: t},
-		"",
-	}
-}
-
-func TestReceiveBlock(t *testing.T) {
+func TestReceiveAndFinalizeBlock(t *testing.T) {
 	sk1, p1 := KeyGen(2048)
 	_, p2 := KeyGen(2048)
 	t1 := CreateTransaction(p1, p2, 200, "ID112", sk1)
@@ -30,83 +18,20 @@ func TestReceiveBlock(t *testing.T) {
 	b.SignBlock(sk1)
 
 	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, State{})
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, sk1)
 
 	blockChannel <- b
 
 	time.Sleep(3000)
 	finalChannel <- b.CalculateBlockHash()
 
-	go func() {
-		for {
-			state := <-stateChannel
-			if state.Ledger[p2] != 500 {
-				t.Error("P2 does not own 500")
-			}
-			return
-		}
-	}()
-
-	blockChannel <- b
-
-}
-
-func TestTreeBuild(t *testing.T) {
-	sk1, p1 := KeyGen(2048)
-	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, State{})
-
-	go func() {
-		for {
-			state := <-stateChannel
-			fmt.Println("state ", state)
-		}
-
-	}()
-
-	for i := 0; i < 5; i++ {
-
-		_, p2 := KeyGen(2048)
-		t1 := CreateTransaction(p1, p2, 200, strconv.Itoa(i), sk1)
-		t2 := CreateTransaction(p1, p2, 300, strconv.Itoa(i+1), sk1)
-		b := createBlock([]Transaction{t1, t2}, i, p1)
-		b.SignBlock(sk1)
-
-		blockChannel <- b
-	}
-
-	time.Sleep(200)
-
-}
-
-func TestFinalize(t *testing.T) {
-	b, s, f, br, tl := createChannels()
-
-	sk1, p1 := KeyGen(2048)
-	go StartTransactionLayer(b, s, f, br, tl, State{})
-
-	_, p2 := KeyGen(2048)
-	t1 := CreateTransaction(p1, p2, 200, strconv.Itoa(0), sk1)
-	t2 := CreateTransaction(p1, p2, 300, strconv.Itoa(0+1), sk1)
-	block := createBlock([]Transaction{t1, t2}, 0, p1)
-	block.SignBlock(sk1)
-
-	b <- block
-
-	// Needs a bit of time for processing the block before finalizing it
-	time.Sleep(100)
-
-	f <- block.CalculateBlockHash()
-
 	for {
-
-		state := <-s
+		state := <-stateChannel
 		if state.Ledger[p1] != -500 || state.Ledger[p2] != 500 {
 			t.Error("Something went wrong! Not the right state..")
 		}
 		return
 	}
-
 }
 
 func TestForking(t *testing.T) {
@@ -117,14 +42,14 @@ func TestForking(t *testing.T) {
 	_, p4 := KeyGen(2048)
 
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, State{})
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
 	go func() {
 		for {
 			// we finalize block 4, p1 = -200, p2=0, p4=200
 			state := <-s
 			if state.Ledger[p1] != -200 || state.Ledger[p2] != 0 || state.Ledger[p4] != 200 {
-				t.Error("Bad luck! Branching did not succeed...")
+				t.Error("Bad luck! Branching did not succeed")
 			}
 			return
 		}
@@ -172,37 +97,67 @@ func TestCreateNewBlock(t *testing.T) {
 
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
-
 	b, s, f, br, tl := createChannels()
-	go StartTransactionLayer(b, s, f, br, tl, State{})
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
-	go func() {
-		for {
-			newBlock := <-br
-			for i, tran := range newBlock.BlockData.Trans {
-
-				fmt.Println(i, tran)
-			}
-		}
-	}()
-
-	genBlock := CreateGenesis()
+	genBlock := CreateTestGenesis()
 	b <- genBlock
 	time.Sleep(300)
 
 	var transList []Transaction
 	for i := 0; i < 20; i++ {
-		t1 := CreateTransaction(pk1, pk2, i*100, "ID"+strconv.Itoa(i), sk1)
+		t1 := CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)
+		transList = append(transList, t1)
+	}
+	newBlockData := CreateBlockData{transList, sk1, pk1, 2, "", ""}
+
+	tl <- newBlockData
+	newBlock := <-br
+	if !newBlock.ValidateBlock() {
+		t.Error("Block validation failed")
+	}
+
+}
+
+func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of blocks that you can debug on the transactionLayer
+	sk1, pk1 := KeyGen(2048)
+	_, pk2 := KeyGen(2048)
+
+	b, s, f, br, tl := createChannels()
+	go StartTransactionLayer(b, s, f, br, tl, sk1)
+
+	go func() {
+		for {
+			fmt.Println(<-s)
+		}
+	}()
+
+	genBlock := CreateTestGenesis()
+	b <- genBlock
+	time.Sleep(300)
+
+	var transList []Transaction
+	for i := 0; i < 2; i++ {
+		t1 := CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)
 		transList = append(transList, t1)
 	}
 
-	newBlockData := CreateBlockData{transList, sk1, pk1, 2, genBlock.CalculateBlockHash(), ""}
+	for i := 0; i < 40; i++ {
+		newBlockData := CreateBlockData{transList, sk1, pk1, i + 1, "", ""}
+		tl <- newBlockData
+		newBlock := <-br
+		b <- newBlock
+		time.Sleep(1000)
+		if i != 0 && i%10 == 9 {
+			time.Sleep(1000)
+			f <- newBlock.CalculateBlockHash()
+		}
 
-	tl <- newBlockData
+	}
 
-	time.Sleep(500)
 }
 
+// Helpers
 func createChannels() (chan Block, chan State, chan string, chan Block, chan CreateBlockData) {
 	blockChannel := make(chan Block)
 	stateReturn := make(chan State)
@@ -210,4 +165,16 @@ func createChannels() (chan Block, chan State, chan string, chan Block, chan Cre
 	blockReturn := make(chan Block)
 	transList := make(chan CreateBlockData)
 	return blockChannel, stateReturn, finalizeChannel, blockReturn, transList
+}
+
+func createBlock(t []Transaction, i int, pk PublicKey) Block {
+	return Block{i + 1,
+		strconv.Itoa(i),
+		pk,
+		"VALID",
+		"42",
+		"",
+		Data{Trans: t},
+		"",
+	}
 }

@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 )
@@ -14,34 +15,46 @@ type Tree struct {
 	treeMap       map[string]TLNode
 	head          string
 	lastFinalized string
-	hardness      int
+	hardness      float64
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, initialState State) {
-	tree := Tree{make(map[string]TLNode), "", "", 0}
-	//TODO set initial state to be the one given as parameter
+var tree Tree
 
-	// Process a block coming from the consensus layer
+func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
+	tree = Tree{make(map[string]TLNode), "", "", 0.0}
+
+	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
+			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
+				tree.lastFinalized = b.CalculateBlockHash()
+				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
+				// TODO: Initialize GenesisData correct
+			}
 			tree.processBlock(b)
 		}
 	}()
 
-	// Finalize a given block
+	// Finalize a given NodeBlock
 	go func() {
 		for {
 			finalize := <-finalizeChan
-			tree.lastFinalized = finalize
-			stateReturn <- tree.treeMap[finalize].state
+			if finalizedNode, ok := tree.treeMap[finalize]; ok {
+				tree.lastFinalized = finalize
+				stateReturn <- finalizedNode.state
+			} else {
+				fmt.Println("Couldn't finalize")
+				stateReturn <- State{}
+			}
 		}
 	}()
 
-	// A new block should be created from the transactions in transList
+	// A new NodeBlock should be created from the transactions in transList
 	for {
 		newBlockData := <-newBlockChan
-		blockReturn <- tree.createNewBlock(newBlockData)
+		newBlock := tree.createNewBlock(newBlockData)
+		blockReturn <- newBlock
 	}
 }
 
@@ -53,9 +66,6 @@ func (t *Tree) processBlock(b Block) {
 		s.Ledger = make(map[PublicKey]int)
 	}
 
-	// Update head
-	t.head = b.CalculateBlockHash()
-
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
@@ -65,6 +75,9 @@ func (t *Tree) processBlock(b Block) {
 
 	// Create new node in the tree
 	t.createNewNode(b, s)
+
+	// Update head
+	t.head = b.CalculateBlockHash()
 }
 
 func (t *Tree) createNewNode(b Block, s State) {
@@ -72,19 +85,7 @@ func (t *Tree) createNewNode(b Block, s State) {
 	t.treeMap[b.CalculateBlockHash()] = n
 }
 
-func CreateGenesis() Block {
-	genBlock := Block{0,
-		"",
-		PublicKey{},
-		"",
-		BlockNonce{},
-		"",
-		Data{[]Transaction{}, GenesisData{}}, //TODO: GENESISDATA should be proper created
-		""}
-	return genBlock
-}
-
-func (t Tree) createNewBlock(blockData CreateBlockData) Block {
+func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 
@@ -99,13 +100,18 @@ func (t Tree) createNewBlock(blockData CreateBlockData) Block {
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	prevBlockNonce := t.treeMap[t.lastFinalized].block.BlockNonce
+	b := Block{blockData.SlotNo,
+		t.head,
+		blockData.Pk,
+		blockData.Draw,
+		blockData.BlockNonce,
+		t.lastFinalized,
+		Data{addedTransactions, GenesisData{}},
+		""}
 
-	newBlockNonce := CreateNewBlockNonce(prevBlockNonce, blockData.SlotNo, blockData.Sk, blockData.Pk)
-
-	b := CreateNewBlock(blockData, t.head, newBlockNonce, addedTransactions)
-
+	b.SignBlock(blockData.Sk)
 	return b
+
 }
 
 // Helpers
@@ -123,3 +129,32 @@ func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
 	}
 	return newMap
 }
+
+//func PreviousStatesAsString(currentBlock Block) string {
+//	var buf bytes.Buffer
+//
+//	currentBlock = tree.treeMap[tree.head].block
+//
+//	parentBlock := currentBlock.ParentPointer
+//	for currentBlock.LastFinalized != parentBlock {
+//		buf.WriteString(string(tree.treeMap[parentBlock].state.StateAsString()))
+//		parentBlock = tree.treeMap[parentBlock].block.ParentPointer
+//	}
+//
+//	return buf.String()
+//}
+//func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk SecretKey, pk PublicKey) BlockNonce {
+//
+//	blockToFinalize := t.treeMap[finalizeThisBlock].block
+//
+//	var buf bytes.Buffer
+//	buf.WriteString("NONCE")
+//	buf.WriteString(PreviousStatesAsString(blockToFinalize))
+//	buf.WriteString(strconv.Itoa(slot))
+//
+//	newNonceString := buf.String()
+//	newNonce := HashSHA(newNonceString)
+//	bn := BlockNonce{newNonce, "", pk}
+//	bn.SignBlockNonce(sk)
+//	return bn
+//}

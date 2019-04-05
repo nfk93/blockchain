@@ -12,7 +12,7 @@ var slotLength time.Duration
 var currentSlot int
 var slotLock sync.RWMutex
 var currentStake int
-var currentNonce o.BlockNonce
+var currentNonce string
 var hardness float64
 var sk SecretKey
 var pk PublicKey
@@ -46,7 +46,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	go runSlot()
 	go transaction.StartTransactionLayer(channels.BlockToTrans,
 		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-		channels.TransToTrans, genesisData.InitialState)
+		channels.TransToTrans, sk)
 }
 
 func finalize(slot int) {
