@@ -26,6 +26,8 @@ OK - BlockNonce should be updated on finalization
 OK - Clean NewBlockData
 
 
+- Proper initialisation of initial state in genesis block
+
 - Proper validation of everything (blocks -> OK, nonce, proofs, etc.)
 - Do validation for transaction in add transaction
     - Comment in the check for sender balance
@@ -40,7 +42,6 @@ OK - Clean NewBlockData
 - Get tests back running
 - TEST, TEST, TEST!!
 - Add tests for AddTransaction in state_test
-- Check if Transaction is a duplicate?
 
 - Only first instance of genesis should be accepted
     - Check ParentHash for Genesis
@@ -52,9 +53,5 @@ OK - Clean NewBlockData
 - Leadership election is not tested
 
 
-
-
-SPøRG:
-why using a blocknonce in stead of hashing previous states or blocks
 
 
