@@ -18,19 +18,20 @@ var publicKey crypto.PublicKey
 var slotduration *int
 var hardness *float64
 var newNetwork *bool
+var genesisBlock objects.Block
 
 func main() {
 	var addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	var port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", int(time.Second*10), "Specify the slot length (default=10sec)")
 	hardness = flag.Float64("hardness", 0.90, "Specify hardness (default=0.90)")
-	newNetwork = flag.Bool("new_network", false, "Set this flag to true if you want to start a new network")
+	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	flag.Parse()
 
 	secretKey, publicKey = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
-	consensus.StartConsensus(channels)
+	consensus.StartConsensus(channels, publicKey, secretKey, true)
 
 	cliLoop()
 }
@@ -48,7 +49,8 @@ func cliLoop() {
 		case "-n":
 			p2p.PrintNetworkList()
 		case "-send-test-block":
-			fmt.Println("NOT IMPLEMENTED")
+			channels.BlockToP2P <- objects.Block{1, genesisBlock.CalculateBlockHash(), publicKey,
+				"", "", genesisBlock.CalculateBlockHash(), objects.Data{}, ""}
 		case "-send-test-trans":
 			channels.TransClientInput <- objects.Transaction{publicKey, publicKey, 123, "id1", "sign1"}
 		case "-trans":

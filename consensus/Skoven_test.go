@@ -12,7 +12,7 @@ var genesis Block
 
 func resetMocksAndStart() {
 	sk, pk := KeyGen(2048)
-	genesis = createTestGenesisBlock(time.Duration(10)*time.Second, 0)
+	genesis = createTestGenesisBlock(time.Duration(1)*time.Second, 0)
 	StartConsensus(CreateChannelStruct(), pk, sk, true)
 }
 
@@ -135,5 +135,29 @@ func TestInteraction(t *testing.T) {
 	block3.BakerID = pk3
 	block3.SignBlock(sk3)
 	channels.BlockFromP2P <- block3
-	time.Sleep(slotLength * 10)
+
+	// Block 4, Grow from block1
+	t4 := CreateTransaction(pk, pk2, 2000, "t4", sk)
+	block4 := createTestBlock([]Transaction{t4}, 4, block1.CalculateBlockHash(), genHash)
+	block4.BakerID = pk
+	block4.SignBlock(sk)
+	channels.BlockFromP2P <- block4
+	time.Sleep(slotLength)
+
+	// Block 5, Grow from Block 4
+	t5 := CreateTransaction(pk2, pk3, 1000, "t5", sk2)
+	block5 := createTestBlock([]Transaction{t5}, 5, block4.CalculateBlockHash(), genHash)
+	block5.BakerID = pk2
+	block5.SignBlock(sk2)
+	channels.BlockFromP2P <- block5
+	time.Sleep(slotLength)
+
+	// Block 6, Grow from Block 5
+	t6 := CreateTransaction(pk3, pk, 500, "t6", sk3)
+	block6 := createTestBlock([]Transaction{t6}, 6, block5.CalculateBlockHash(), genHash)
+	block6.BakerID = pk3
+	block6.SignBlock(sk3)
+	channels.BlockFromP2P <- block6
+
+	time.Sleep(slotLength * 8)
 }
