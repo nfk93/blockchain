@@ -21,7 +21,7 @@ rparen      : ')' ;
 colon       : ':' ;
 semicolon   : ';' ;
 ast         : '*' ;
-keyhash     : 'k' 'e' 'y' '_' 'h' 'a' 's' 'h' ;
+key         : 'k' 'e' 'y' ;
 operation   : 'o' 'p' 'e' 'r' 'a' 't' 'i' 'o' 'n' ;
 list        : 'l' 'i' 's' 't' ;
 bool        : 'b' 'o' 'o' 'l' ;
@@ -37,11 +37,11 @@ if          : 'i' 'f' ;
 then        : 't' 'h' 'e' 'n' ;
 else        : 'e' 'l' 's' 'e' ;
 type        : 't' 'y' 'p' 'e' ;
-tez         : 't' 'e' 'z' ;
+koin        : 'k' 'o' 'i' 'n' ;
 
 /* TODO: make sure hashes without capital letters can be distinguished from ids */
 _b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
-hash        : 'k' 'o' 'i' 'n' _b58char { _b58char } ;
+key_lit     : 'k' 'n' '1' _b58char { _b58char } ;
 
 /* id's are all minor case in liquidity, starting with a letter */
 _idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;
@@ -53,8 +53,8 @@ string_lit  : '"' {.} '"' ;
 
 _digit      : '0'-'9' ;
 _amount     : _digit { _digit } ;
-tez_lit     : _amount 't' 'z' ;
-int_lit     : _digit { _digit } ;
+koin_lit     : _amount 'k' 'n' ;
+int_lit     : {'-'} _digit { _digit } ;
 float_lit   : _digit { _digit } '.' { _digit } ;
 
 /* This must go below float detection, for obvious reasons */
@@ -99,7 +99,7 @@ Exp         : lident                                            << ast.NewTodoEx
             | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewTodoExp() // BinopExp >>
-            | Constant                                          << ast.NewTodoExp() // litexp >> ;
+            | Constant                                          << >> ;
 
 Binop       : plus
             | minus
@@ -130,20 +130,20 @@ Paramlist   : Param comma Paramlist                             << ast.AppendPar
 
 Type        : bool                                              << ast.NewTodoExp() // bool >>
             | int                                               << ast.INT, nil >>
-            | tez                                               << ast.NewTodoExp() // tez >>
+            | koin                                              << ast.NewTodoExp() // tez >>
             | string                                            << ast.NewTodoExp() // string >>
-            | keyhash                                           << ast.NewTodoExp() // key_hash >>
+            | key                                               << ast.NewTodoExp() // key_hash >>
             | operation                                         << ast.NewTodoExp() // operation >>
             | Type list                                         << ast.NewTodoExp() // list >>
             | Type ast Type                                     << ast.NewTodoExp() // tuple >>
             | lident                                            << ast.NewTodoExp() // declaredtype >> ;
 
-Constant    : keyhash                                           << ast.NewTodoExp() >>
-            | true                                              << ast.NewTodoExp() >>
-            | false                                             << ast.NewTodoExp() >>
-            | int_lit                                           << ast.NewTodoExp() >>
-            | float_lit                                         << ast.NewTodoExp() >>
-            | tez_lit                                           << ast.NewTodoExp() >>
+Constant    : key_lit                                           << ast.NewKeyLit(util.ParseKey($0)) >>
+            | true                                              << ast.NewBoolLit(true) >>
+            | false                                             << ast.NewBoolLit(false) >>
+            | int_lit                                           << ast.NewIntLit(util.ParseInt($0)) >>
+            | float_lit                                         << ast.NewFloatLit(util.ParseFloat($0)) >>
+            | koin_lit                                          << ast.NewTodoExp() >>
             | string_lit                                        << ast.NewTodoExp() >>
             | lparen rparen                                     << ast.NewTodoExp() >>
             | lbrack rbrack                                     << ast.NewTodoExp() >>

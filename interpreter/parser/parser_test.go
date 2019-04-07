@@ -41,8 +41,12 @@ func TestParseThreeTypes(t *testing.T) {
 	testFile(t, "../test_cases/threetypes")
 }
 
-func TestParseBasicEntry(t *testing.T) {
+func TestParseIncrementStorage(t *testing.T) {
 	testFile(t, "../test_cases/increment_storage")
+}
+
+func TestParseSimpleEntry(t *testing.T) {
+	testFile(t, "../test_cases/simple_entry")
 }
 
 func searchAstForErrorExps(t *testing.T, e ast.Exp) {

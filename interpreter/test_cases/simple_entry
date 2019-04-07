@@ -1,9 +1,25 @@
-let%entry main
-    (parameter : key_hash)
-    (storage : storage) =
+(* THIS SHOULD PASS PARSE BUT NOT TYPECHECK *)
 
-  if storage.amount_raised >= storage.funding_goal then
-    let storage = storage.amount_raised <- amount in
-    ( ([] : operation list), storage)
-  else
-    ( ([] : operation list), storage)
+let%entry entry_1 () () = kn1AakPZJN112233
+
+let%entry entry_2 () () = true
+
+let%entry entry_3 () () = false
+
+let%entry entry_4 () () = 5.21312342
+
+let%entry entry_5 () () = 123151
+
+let%entry entry_6 () () = -444
+
+let%entry entry_7 () () = 0090
+
+let%entry entry_8 () () = 5
+
+let%entry entry_9 () () = 5
+
+let%entry entry_10 () () = 5
+
+let%entry entry_11 () () = 5
+
+let%entry entry_12 () () = 5

@@ -16,12 +16,14 @@ const (
 	STRING Type = iota
 	INT
 	FLOAT
+	KEYHASH
 )
 
 var typeCodeToString = map[Type]string{
-	STRING: "string",
-	INT:    "int",
-	FLOAT:  "float"}
+	STRING:  "string",
+	INT:     "int",
+	FLOAT:   "float",
+	KEYHASH: "keyhash"}
 
 type TypeOption struct {
 	opt bool
@@ -187,6 +189,74 @@ func (p Pattern) String() string {
 		res = res + fmt.Sprintf("%s)", par.String())
 		return res
 	}
+}
+
+/* KeyLit */
+type KeyLit struct {
+	key string
+}
+
+func (k KeyLit) String() string {
+	return fmt.Sprintf("KeyLit(key: %s)", k.key)
+}
+
+func NewKeyLit(key []byte) (Exp, error) {
+	actualkey := string(key)[3:]
+	if checkKey(key) {
+		return KeyLit{actualkey}, nil
+	} else {
+		err := "key is not valid"
+		return ErrorExpression{err}, errors.Errorf(err)
+	}
+}
+
+func checkKey(key []byte) bool {
+	// TODO: check if this is an actual base 58 key, i.e. has the right characters and such
+	return true
+}
+
+/* BoolLit */
+type BoolLit struct {
+	val bool
+}
+
+func (b BoolLit) String() string {
+	return fmt.Sprintf("BoolLit(val: %t)", b.val)
+}
+
+func NewBoolLit(val bool) (Exp, error) {
+	return BoolLit{val}, nil
+}
+
+/* IntLit */
+type IntLit struct {
+	val int64
+}
+
+func (i IntLit) String() string {
+	return fmt.Sprintf("IntLit(val: %d)", i.val)
+}
+
+func NewIntLit(val int64) (Exp, error) {
+	return IntLit{val}, nil
+}
+
+/* FloatLit */
+type FloatLit struct {
+	val float64
+}
+
+func (f FloatLit) String() string {
+	return fmt.Sprintf("FloatLit(val: %e)", f.val)
+}
+
+func NewFloatLit(val float64) (Exp, error) {
+	return FloatLit{val}, nil
+}
+
+/* Tez Lit */
+type TezLit struct {
+	val float64
 }
 
 // ---------------------------
