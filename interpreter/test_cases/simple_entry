@@ -14,12 +14,22 @@ let%entry entry_6 () () = -444
 
 let%entry entry_7 () () = 0090
 
-let%entry entry_8 () () = 5
+let%entry entry_8 () () = 1132kn
 
-let%entry entry_9 () () = 5
+let%entry entry_9 () () = "Hello there"
 
-let%entry entry_10 () () = 5
+let%entry entry_10 () () = "General Kenobi"
 
-let%entry entry_11 () () = 5
+let%entry entry_11 () () = ()
 
-let%entry entry_12 () () = 5
+let%entry entry_12 () () = []
+
+let%entry entry_13 () () = "asd" :: ["asddd"]
+
+let%entry entry_16 () () = "heya" :: ["hi"; "yo"]
+
+let%entry entry_14 () () = [12]
+
+let%entry entry_15 () () = ["hey"; 123; 15kn]
+
+let%entry entry_16 () () = [12; 13; 15]

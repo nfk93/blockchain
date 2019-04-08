@@ -22,3 +22,13 @@ func ParseInt(i interface{}) int64 {
 	integer, _ := strconv.ParseInt(string(i.(*token.Token).Lit), 10, 64)
 	return integer
 }
+
+func ParseString(str interface{}) string {
+	return string(str.(*token.Token).Lit)
+}
+
+func ParseKoin(kn interface{}) int64 {
+	knstr := string(kn.(*token.Token).Lit)
+	knval, _ := strconv.ParseInt(knstr[:len(knstr)-2], 10, 64)
+	return knval
+}

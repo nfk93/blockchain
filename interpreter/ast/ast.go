@@ -254,9 +254,91 @@ func NewFloatLit(val float64) (Exp, error) {
 	return FloatLit{val}, nil
 }
 
-/* Tez Lit */
-type TezLit struct {
-	val float64
+/* Koin Lit */
+type KoinLit struct {
+	val int64
+}
+
+func (k KoinLit) String() string {
+	return fmt.Sprintf("KoinLit(val: %d)", k.val)
+}
+
+func NewKoinLit(koins int64) (Exp, error) {
+	if koins <= 0 {
+		err := "koin literal can't have negative value"
+		return ErrorExpression{err}, nil
+	} else {
+		return KoinLit{koins}, nil
+	}
+}
+
+/* String Lit */
+type StringLit struct {
+	val string
+}
+
+func (s StringLit) String() string {
+	return fmt.Sprintf("StringLit(val: %s)", s.val)
+}
+
+func NewStringLit(str string) (Exp, error) {
+	return StringLit{str}, nil
+}
+
+/* Unit Lit */
+type UnitLit struct{}
+
+func (u UnitLit) String() string {
+	return fmt.Sprintf("UnitLit")
+}
+
+func NewUnitLit() (Exp, error) {
+	return UnitLit{}, nil
+}
+
+/* List Lit TODO: Refactor to use head and tail instead? */
+type ListLit struct {
+	typ  Type
+	list []Exp
+}
+
+func (l ListLit) String() string {
+	if len(l.list) == 0 {
+		return fmt.Sprintf("ListLit(list: [], typ: %s)", typeCodeToString[l.typ])
+	} else {
+		res := "ListLit(list: "
+		var e Exp
+		list := l.list
+		for len(list) > 1 {
+			e, list = list[0], list[1:]
+			res = res + fmt.Sprintf("%s, ", e.String())
+		}
+		e = list[0]
+		res = res + fmt.Sprintf("%s)", e.String())
+		return res
+	}
+}
+
+// TODO: derive types
+func NewListLit(exp interface{}) (Exp, error) {
+	return ListLit{-1, //TODO
+		[]Exp{exp.(Exp)}}, nil
+}
+
+func NewEmptyList() (Exp, error) {
+	return ListLit{-1, //TODO
+		[]Exp{}}, nil
+}
+
+// TODO: check that listtype matches exp type
+func AppendList(exp1, exp2 interface{}) (Exp, error) {
+	lst1 := exp1.(ListLit)
+	lst2 := exp2.(ListLit)
+	return ListLit{lst1.typ, append(lst1.list, lst2.list...)}, nil
+}
+
+func PrependList(exp, list interface{}) (Exp, error) {
+	return TodoExp{}, nil
 }
 
 // ---------------------------

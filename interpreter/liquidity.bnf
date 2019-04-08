@@ -94,7 +94,7 @@ Exp         : lident                                            << ast.NewTodoEx
             | if Exp then Exp else Exp                          << ast.NewTodoExp() // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewTodoExp() // ifthen exp >>
             | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >>
-            | Exp colon colon Exp                               << ast.NewTodoExp() // listconcat >>
+            | Exp colon colon Exp                               << ast.PrependList($0, $3) // >>
             | let Pattern eq Exp in Exp                         << ast.NewTodoExp() // letexp >>
             | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
@@ -143,14 +143,14 @@ Constant    : key_lit                                           << ast.NewKeyLit
             | false                                             << ast.NewBoolLit(false) >>
             | int_lit                                           << ast.NewIntLit(util.ParseInt($0)) >>
             | float_lit                                         << ast.NewFloatLit(util.ParseFloat($0)) >>
-            | koin_lit                                          << ast.NewTodoExp() >>
-            | string_lit                                        << ast.NewTodoExp() >>
-            | lparen rparen                                     << ast.NewTodoExp() >>
-            | lbrack rbrack                                     << ast.NewTodoExp() >>
-            | lbrack Array rbrack                               << ast.NewTodoExp() >> ;
+            | koin_lit                                          << ast.NewKoinLit(util.ParseKoin($0)) >>
+            | string_lit                                        << ast.NewStringLit(util.ParseString($0)) >>
+            | lparen rparen                                     << ast.NewUnitLit() >>
+            | lbrack rbrack                                     << ast.NewEmptyList() >>
+            | lbrack Array rbrack                               << >> ;
 
-Array       : Exp                                               << ast.NewTodoExp() >>
-            | Array semicolon Exp                               << ast.NewTodoExp() >> ;
+Array       : Exp                                               << ast.NewListLit($0) >>
+            | Array semicolon Exp                               << ast.AppendList($0, $2) >> ;
 
 
 
