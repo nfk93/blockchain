@@ -31,8 +31,9 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				// TODO: Initialize GenesisData correct
+			} else {
+				tree.processBlock(b)
 			}
-			tree.processBlock(b)
 		}
 	}()
 
