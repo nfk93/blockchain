@@ -30,9 +30,11 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
-				// TODO: Initialize GenesisData correct
+			} else if len(tree.treeMap) > 0 {
+				tree.processBlock(b)
+			} else {
+				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
 			}
-			tree.processBlock(b)
 		}
 	}()
 

@@ -26,27 +26,24 @@ OK - BlockNonce should be updated on finalization
 OK - Clean NewBlockData
 
 
-- Proper initialisation of initial state in genesis block
+OK - Proper initialisation of initial state in genesis block
 
 - Proper validation of everything (blocks -> OK, nonce, proofs, etc.)
-- Do validation for transaction in add transaction
-    - Comment in the check for sender balance
+OK - Do validation for transaction in add transaction
+    OK - Comment in the check for sender balance
 
-- Genesis hash skal ikke kunne rammes af hashing functionen
-- Create correct GenesisData
+OK - Genesis hash skal ikke kunne rammes af hashing functionen
+OK - Create correct GenesisData
 
 - remove hack initialization of Last Finalized from StartTransactionLayer
-- Don't create your own genesis, unless you ARE genesis
 - Gas?
 
-- Get tests back running
+OK - Get tests back running
 - TEST, TEST, TEST!!
 - Add tests for AddTransaction in state_test
 
-- Only first instance of genesis should be accepted
-    - Check ParentHash for Genesis
-
-- How does Leadership election access variables in Kontrol?
+OK - Only first instance of genesis should be accepted
+    OK - Check ParentHash for Genesis
 
 
 - Blocks are done
