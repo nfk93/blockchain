@@ -24,26 +24,22 @@ OK - BlockNonce are created randomly.
 OK - BlockNonce should be updated on finalization
 
 OK - Clean NewBlockData
-
-
 OK - Proper initialisation of initial state in genesis block
-
-- Proper validation of everything (blocks -> OK, nonce, proofs, etc.)
 OK - Do validation for transaction in add transaction
     OK - Comment in the check for sender balance
-
 OK - Genesis hash skal ikke kunne rammes af hashing functionen
 OK - Create correct GenesisData
-
-- remove hack initialization of Last Finalized from StartTransactionLayer
-- Gas?
-
+OK - remove hack initialization of Last Finalized from StartTransactionLayer
 OK - Get tests back running
+OK - Only first instance of genesis should be accepted
+    OK - Check ParentHash for Genesis
+
+
+- Proper validation of everything (blocks -> OK, nonce, proofs, etc.)
+- Gas?
 - TEST, TEST, TEST!!
 - Add tests for AddTransaction in state_test
 
-OK - Only first instance of genesis should be accepted
-    OK - Check ParentHash for Genesis
 
 
 - Blocks are done
