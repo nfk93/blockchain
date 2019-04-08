@@ -43,20 +43,24 @@ func TestVerifyBlockFAIL(t *testing.T) {
 	if block.ValidateBlock() {
 		t.Error("Should have failed on BlockSignature Validation")
 	}
-
 }
 
-//func TestVerifyBlockSignature(t *testing.T) {
-//	var sk, pk = KeyGen(2048)
-//
-//	b := GetTestBlock()
-//	b.SignBlock(sk)
-//
-//	if !b.validateBlockSignature(pk) {
-//		t.Error("Block Failed")
-//	}
-//
-//}
+func TestBlockNonce(t *testing.T) {
+	sk, pk := KeyGen(2048)
+	leadershipNonce := "011101101"
+	blockNonce := CreateNewBlockNonce(leadershipNonce, sk, 1)
+	block := Block{1,
+		"",
+		pk,
+		"",
+		blockNonce,
+		"",
+		Data{},
+		""}
+	if !block.validateBlockNonce(leadershipNonce) {
+		t.Error("Nonce validation failed")
+	}
+}
 
 //func TestCreateAndVerifyNonce(t *testing.T) {
 //	var sk, pk = KeyGen(2048)
