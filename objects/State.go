@@ -33,7 +33,6 @@ func (s *State) AddTransaction(t Transaction) {
 		fmt.Println("Not enough money on senders account")
 		return
 	}
-
 	s.Ledger[t.To] += t.Amount
 	s.Ledger[t.From] -= t.Amount
 }

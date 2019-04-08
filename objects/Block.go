@@ -69,26 +69,23 @@ func (b *Block) CalculateBlockHash() string {
 	return HashSHA(buildBlockStringToSign(*b))
 }
 
-func CreateNewBlockNonce(nonce BlockNonce, slot int, sk SecretKey, pk PublicKey) BlockNonce {
+func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot int) BlockNonce {
 	var buf bytes.Buffer
-	buf.WriteString("NONCE")
-	buf.WriteString(nonce.Nonce) //Old block nonce //TODO: Should also contain new states
+	buf.WriteString("NONCE") //Old block nonce
+	buf.WriteString(leadershipNonce)
 	buf.WriteString(strconv.Itoa(slot))
-
 	newNonceString := buf.String()
-	newNonce := HashSHA(newNonceString)
-	signature := Sign(string(newNonce), sk)
-
-	return BlockNonce{newNonce, signature, pk}
+	proof := Sign(newNonceString, sk)
+	newNonce := HashSHA(proof)
+	return BlockNonce{newNonce, proof}
 }
 
 type BlockNonce struct {
-	Nonce     string
-	Signature string
-	Pk        PublicKey
+	Nonce string
+	Proof string
 }
 
-func (bl BlockNonce) validateBlockNonce() bool {
-
-	return Verify(bl.Nonce, bl.Signature, bl.Pk)
+func (b *Block) validateBlockNonce() bool {
+	return false
+	//return Verify(bl.Nonce, bl.Signature, bl.Pk)
 }
