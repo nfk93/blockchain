@@ -12,7 +12,7 @@ func TestVerifyBlock(t *testing.T) {
 		"",
 		pk,
 		"",
-		"8556",
+		BlockNonce{},
 		"",
 		Data{},
 		""}
@@ -33,7 +33,7 @@ func TestVerifyBlockFAIL(t *testing.T) {
 		"",
 		pk,
 		"",
-		"8556",
+		BlockNonce{},
 		"",
 		Data{},
 		""}

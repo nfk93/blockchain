@@ -35,7 +35,7 @@ func CreateTestGenesis() Block {
 		"",
 		crypto.PublicKey{},
 		"",
-		"",
+		BlockNonce{},
 		"",
 		Data{},
 		""}

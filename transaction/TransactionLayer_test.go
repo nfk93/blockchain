@@ -172,7 +172,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		strconv.Itoa(i),
 		pk,
 		"VALID",
-		"42",
+		BlockNonce{},
 		"",
 		Data{Trans: t},
 		"",
