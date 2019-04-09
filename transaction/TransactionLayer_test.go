@@ -21,17 +21,17 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 
 	t1 := CreateTransaction(p1, p2, 200, "ID112", sk1)
 	t2 := CreateTransaction(p1, p2, 300, "ID222", sk1)
-	b := createBlock([]Transaction{t1, t2}, 0, p1)
-	b.SignBlock(sk1)
+	tl <- CreateBlockData{[]Transaction{t1, t2}, sk1, p1, 1, "", BlockNonce{}}
+	b := <-br
 
 	blockChannel <- b
 
-	time.Sleep(3000)
+	time.Sleep(time.Second * 3)
 	finalChannel <- b.CalculateBlockHash()
 
 	for {
 		state := <-stateChannel
-		if state.Ledger[p1] != -500 || state.Ledger[p2] != 500 {
+		if state.Ledger[p1] != 999500 || state.Ledger[p2] != 500 {
 			t.Error("Something went wrong! Not the right state..")
 		}
 		return
@@ -67,14 +67,14 @@ func TestForking(t *testing.T) {
 	tl <- CreateBlockData{[]Transaction{t1}, sk1, p1, 1, "", BlockNonce{}}
 	block1 := <-br
 	b <- block1
-	time.Sleep(100)
+	time.Sleep(time.Millisecond * 300)
 
 	// Block 2 - grow from block 1
 	t2 := CreateTransaction(p1, p2, 200, strconv.Itoa(2), sk1)
 	tl <- CreateBlockData{[]Transaction{t2}, sk1, p1, 2, "", BlockNonce{}}
 	block2 := <-br
 	b <- block2
-	time.Sleep(100)
+	time.Sleep(time.Millisecond * 100)
 
 	// Block 3 - grow from block 1
 	t3 := CreateTransaction(p1, p3, 300, strconv.Itoa(3), sk1)
@@ -91,9 +91,9 @@ func TestForking(t *testing.T) {
 
 	//Finalizing to get states from TL
 	// Needs a bit of time for processing the block before finalizing it
-	time.Sleep(1000)
+	time.Sleep(time.Millisecond * 1000)
 	f <- block4.CalculateBlockHash()
-	time.Sleep(1000)
+	time.Sleep(time.Millisecond * 1000)
 
 }
 
@@ -106,7 +106,7 @@ func TestCreateNewBlock(t *testing.T) {
 
 	genBlock := CreateTestGenesis(pk1)
 	b <- genBlock
-	time.Sleep(300)
+	time.Sleep(time.Millisecond * 300)
 
 	var transList []Transaction
 	for i := 0; i < 20; i++ {
@@ -138,7 +138,7 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 
 	genBlock := CreateTestGenesis(pk1)
 	b <- genBlock
-	time.Sleep(300)
+	time.Sleep(time.Millisecond * 300)
 
 	var transList []Transaction
 	for i := 0; i < 2; i++ {
@@ -151,9 +151,9 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 		tl <- newBlockData
 		newBlock := <-br
 		b <- newBlock
-		time.Sleep(1000)
+		time.Sleep(time.Millisecond * 1000)
 		if i != 0 && i%10 == 9 {
-			time.Sleep(1000)
+			time.Sleep(time.Millisecond * 1000)
 			f <- newBlock.CalculateBlockHash()
 		}
 
@@ -171,15 +171,15 @@ func createChannels() (chan Block, chan State, chan string, chan Block, chan Cre
 	return blockChannel, stateReturn, finalizeChannel, blockReturn, transList
 }
 
-func createBlock(t []Transaction, i int, pk PublicKey) Block {
-	return Block{i + 1,
-		strconv.Itoa(i),
-		pk,
-		"VALID",
-		BlockNonce{},
-		"",
-		Data{Trans: t},
-		"",
-		"",
-	}
-}
+//func createBlock(t []Transaction, i int, pk PublicKey) Block {
+//	return Block{i + 1,
+//		strconv.Itoa(i),
+//		pk,
+//		"VALID",
+//		BlockNonce{},
+//		"",
+//		Data{Trans: t},
+//		"",
+//		"",
+//	}
+//}
