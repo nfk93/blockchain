@@ -26,6 +26,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 		finalHash,
 		Data{Trans: t},
 		"",
+		"",
 	}
 	block.SignBlock(sk)
 	return block
@@ -41,6 +42,7 @@ func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block 
 		BlockNonce{},
 		"",
 		Data{Trans: []Transaction{}, GenesisData: gData},
+		"",
 		"",
 	}
 }

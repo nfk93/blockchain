@@ -31,10 +31,10 @@ func (s *State) AddTransaction(t Transaction) {
 		return
 	}
 
-	//	if s.Ledger[t.From] < t.Amount {
-	//		fmt.Println("Not enough money on senders account")
-	//		return
-	//	}
+	if s.Ledger[t.From] < t.Amount {
+		fmt.Println("Not enough money on senders account")
+		return
+	}
 	s.Ledger[t.To] += t.Amount
 	s.Ledger[t.From] -= t.Amount
 }
