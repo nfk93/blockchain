@@ -10,12 +10,11 @@ import (
 	"strconv"
 )
 
-func CalculateDraw(nonce string, hardness float64, sk SecretKey, pk PublicKey, yourStake int, systemStake int, slot int) (bool, string) {
-
+func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk PublicKey, bakerStake int, systemStake int, slot int) (bool, string) {
 	// Creates the draw signature
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
-	drawBuf.WriteString(nonce)
+	drawBuf.WriteString(leadershipNonce)
 	drawBuf.WriteString(strconv.Itoa(slot))
 	draw := Sign(drawBuf.String(), sk)
 
@@ -24,7 +23,7 @@ func CalculateDraw(nonce string, hardness float64, sk SecretKey, pk PublicKey, y
 		"",
 		pk,
 		draw,
-		nonce,
+		BlockNonce{},
 		"",
 		Data{},
 		"",
@@ -33,20 +32,20 @@ func CalculateDraw(nonce string, hardness float64, sk SecretKey, pk PublicKey, y
 
 	// Checks if the value of the draw exceeds the threshold.
 	// If so it returns the draw else it return an empty string.
-	if ValidateDraw(intermediateBlock, yourStake, systemStake, hardness) {
+	if ValidateDraw(intermediateBlock, leadershipNonce, bakerStake, systemStake, hardness) {
 		return true, draw
 	}
 	return false, ""
 }
 
-func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) bool {
+func ValidateDraw(b Block, leadershipNonce string, bakerStake int, systemStake int, hardness float64) bool {
 
 	if !b.ValidateBlock() {
 		fmt.Println("Block didn't validate")
 		return false
 	}
 
-	if !validateDrawSignature(b) {
+	if !validateDrawSignature(b, leadershipNonce) {
 		fmt.Println("Draw signature didn't validate...")
 		return false
 	}
@@ -54,15 +53,14 @@ func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) boo
 	// Calculates the draw value
 	var valBuf bytes.Buffer
 	valBuf.WriteString("LEADERSHIP_ELECTION")
-	valBuf.WriteString(b.BlockNonce)
+	valBuf.WriteString(leadershipNonce)
 	valBuf.WriteString(strconv.Itoa(b.Slot))
-	valBuf.WriteString(b.BakerID.String())
-	valBuf.WriteString(b.Draw)
+
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 
 	// Calculates the threshold
-	percentOfTotalStake := float64(yourStake) / float64(systemStake)
+	percentOfTotalStake := float64(bakerStake) / float64(systemStake)
 	phiFunc := float64(1) - math.Pow(float64(1)-hardness, float64(percentOfTotalStake))
 	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(hashVal.BitLen())), nil)
 	threshold := new(big.Int)
@@ -77,11 +75,10 @@ func ValidateDraw(b Block, yourStake int, systemStake int, hardness float64) boo
 	return false
 }
 
-func validateDrawSignature(b Block) bool {
+func validateDrawSignature(b Block, leadershipNonce string) bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
-	buf.WriteString(b.BlockNonce)
+	buf.WriteString(leadershipNonce)
 	buf.WriteString(strconv.Itoa(b.Slot))
-
 	return Verify(buf.String(), b.Draw, b.BakerID)
 }

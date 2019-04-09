@@ -11,7 +11,7 @@ type Block struct {
 	ParentPointer  string    //a hash of parent block
 	BakerID        PublicKey //
 	Draw           string
-	BlockNonce     string
+	BlockNonce     BlockNonce
 	LastFinalized  string //hash of last finalized block
 	BlockData      Data
 	StateHash      string
@@ -60,7 +60,8 @@ func buildBlockStringToSign(b Block) string {
 	buf.WriteString(b.BakerID.N.String())
 	buf.WriteString(b.BakerID.E.String())
 	buf.WriteString(b.Draw)
-	buf.WriteString(b.BlockNonce)
+	buf.WriteString(b.BlockNonce.Nonce)
+	buf.WriteString(b.BlockNonce.Proof)
 	buf.WriteString(b.LastFinalized)
 	buf.WriteString(b.BlockData.DataString())
 	buf.WriteString(b.StateHash)
@@ -87,7 +88,12 @@ type BlockNonce struct {
 	Proof string
 }
 
-func (b *Block) validateBlockNonce() bool {
-	return false
-	//return Verify(bl.Nonce, bl.Signature, bl.Pk)
+func (b *Block) validateBlockNonce(leadershipNonce string) bool {
+	var buf bytes.Buffer
+	buf.WriteString("NONCE") //Old block nonce
+	buf.WriteString(leadershipNonce)
+	buf.WriteString(strconv.Itoa(b.Slot))
+	correctSignature := Verify(buf.String(), b.BlockNonce.Proof, b.BakerID)
+	correctNonce := HashSHA(b.BlockNonce.Proof) == b.BlockNonce.Nonce
+	return correctSignature && correctNonce
 }
