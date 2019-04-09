@@ -15,13 +15,12 @@ type Tree struct {
 	treeMap       map[string]TLNode
 	head          string
 	lastFinalized string
-	hardness      float64
 }
 
 var tree Tree
 
 func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
-	tree = Tree{make(map[string]TLNode), "", "", 0.0}
+	tree = Tree{make(map[string]TLNode), "", ""}
 
 	// Process a NodeBlock coming from the consensus layer
 	go func() {
@@ -30,8 +29,11 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
+				tree.head = b.CalculateBlockHash()
 			} else if len(tree.treeMap) > 0 {
-				tree.processBlock(b)
+				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
+					tree.processBlock(b)
+				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
 			}
@@ -75,11 +77,17 @@ func (t *Tree) processBlock(b Block) {
 		}
 	}
 
-	// Create new node in the tree
-	t.createNewNode(b, s)
+	// Verify our new state matches the state of the block creator to ensure he has also done the same work
+	if s.VerifyStateHash(b.StateHash, b.BakerID) {
+		// Create new node in the tree
+		t.createNewNode(b, s)
 
-	// Update head
-	t.head = b.CalculateBlockHash()
+		// Update head
+		t.head = b.CalculateBlockHash()
+	} else {
+		fmt.Println("Proof of work didn't verify. Block is therefore not processed!")
+	}
+
 }
 
 func (t *Tree) createNewNode(b Block, s State) {
@@ -90,7 +98,7 @@ func (t *Tree) createNewNode(b Block, s State) {
 func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
-
+	s.ParentHash = t.head
 	var addedTransactions []Transaction
 
 	noOfTrans := len(blockData.TransList)
@@ -109,6 +117,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		blockData.BlockNonce,
 		t.lastFinalized,
 		Data{addedTransactions, GenesisData{}},
+		s.CreateStateHash(blockData.Sk),
 		""}
 
 	b.SignBlock(blockData.Sk)

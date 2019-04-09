@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
+	"sort"
+	"strconv"
 )
 
 type State struct {
@@ -39,10 +41,32 @@ func (s *State) AddTransaction(t Transaction) {
 
 func (s State) StateAsString() string {
 	var buf bytes.Buffer
-	for _, account := range s.Ledger {
-		buf.WriteString(string(account))
+
+	sortedLedger := make(map[string]int)
+
+	keys := make([]string, 0, len(s.Ledger))
+	for k := range s.Ledger {
+		sortedLedger[k.String()] = s.Ledger[k]
+		keys = append(keys, k.String())
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		buf.WriteString(k)
+		buf.WriteString(strconv.Itoa(sortedLedger[k]))
 	}
 	buf.WriteString(s.ParentHash)
 
 	return buf.String()
+}
+
+func (s *State) CreateStateHash(sk SecretKey) string {
+
+	return Sign(HashSHA(s.StateAsString()), sk)
+
+}
+
+func (s State) VerifyStateHash(sig string, pk PublicKey) bool {
+
+	return Verify(HashSHA(s.StateAsString()), sig, pk)
 }
