@@ -11,12 +11,12 @@ import (
 func TestLeadershipElection(t *testing.T) {
 	var sk, pk = KeyGen(2048)
 
-	yourStake := 200
-	systemStake := 300
+	//yourStake := 200
+	//systemStake := 300
 	slot := 3
 	hardness := 0.9
 
-	b, draw := CalculateDraw("8556", hardness, sk, pk, yourStake, systemStake, slot)
+	b, draw := CalculateDraw("8556", hardness, sk, pk, slot)
 
 	if !b {
 		t.Error("Draw didn't exceed Hardness...")
@@ -45,15 +45,15 @@ func TestHardness(t *testing.T) {
 	rounds := 1000
 	var sk, pk = KeyGen(2048)
 
-	yourStake := 15000000
-	systemStake := 30000000
+	//yourStake := 15000000
+	//systemStake := 30000000
 	hardness := 0.98
 
 	for i := 0; i < rounds; i++ {
 
 		//nonce = CreateNewBlockNonce(nonce, i, sk, pk)
 
-		b, _ := CalculateDraw("8556", hardness, sk, pk, yourStake, systemStake, i)
+		b, _ := CalculateDraw("8556", hardness, sk, pk, i)
 		if b {
 			winCounter += 1
 		}

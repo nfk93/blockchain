@@ -19,6 +19,7 @@ var hardness float64
 var sk SecretKey
 var pk PublicKey
 var lastFinalizedLedger map[PublicKey]int
+var ledgerLock sync.RWMutex
 var leadershipNonce string
 var leadershipLock sync.RWMutex
 
@@ -74,12 +75,14 @@ func finalize(slot int) { //TODO add generation of new leadershipNonce
 
 func updateStake() {
 	state := <-channels.StateFromTrans
+	ledgerLock.Lock()
+	defer ledgerLock.Unlock()
 	fmt.Println(state)
 	lastFinalizedLedger = state.Ledger
 }
 
 func drawLottery(slot int) {
-	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, currentStake, systemStake, slot)
+	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, slot)
 	if winner {
 		fmt.Println("We won slot " + strconv.Itoa(slot))
 		generateBlock(draw, slot)
@@ -103,4 +106,10 @@ func sendBlock() {
 	block := <-channels.BlockFromTrans
 	channels.BlockFromP2P <- block // TODO change this when using P2P
 	//channels.BlockToP2P <- block
+}
+
+func getLotteryPower(pk PublicKey) float64 {
+	ledgerLock.RLock()
+	defer ledgerLock.RUnlock()
+	return float64(lastFinalizedLedger[pk]) / float64(systemStake)
 }

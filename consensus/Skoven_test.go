@@ -172,7 +172,6 @@ func TestBlockGeneration(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		channels.TransFromP2P <- CreateTransaction(pk, pk2, 50, "t"+strconv.Itoa(i), sk)
 	}
-
 	time.Sleep(slotLength * 50)
 
 }

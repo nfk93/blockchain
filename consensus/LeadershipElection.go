@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk PublicKey, bakerStake int, systemStake int, slot int) (bool, string) {
+func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk PublicKey, slot int) (bool, string) {
 	// Creates the draw signature
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
@@ -32,13 +32,13 @@ func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk Pu
 
 	// Checks if the value of the draw exceeds the threshold.
 	// If so it returns the draw else it return an empty string.
-	if ValidateDraw(intermediateBlock, leadershipNonce, bakerStake, systemStake, hardness) {
+	if ValidateDraw(intermediateBlock, leadershipNonce, hardness) {
 		return true, draw
 	}
 	return false, ""
 }
 
-func ValidateDraw(b Block, leadershipNonce string, bakerStake int, systemStake int, hardness float64) bool {
+func ValidateDraw(b Block, leadershipNonce string, hardness float64) bool {
 
 	if !b.ValidateBlock() {
 		fmt.Println("Block didn't validate")
@@ -60,9 +60,8 @@ func ValidateDraw(b Block, leadershipNonce string, bakerStake int, systemStake i
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 
 	// Calculates the threshold
-	percentOfTotalStake := float64(bakerStake) / float64(systemStake)
-	phiFunc := float64(1) - math.Pow(float64(1)-hardness, float64(percentOfTotalStake))
-	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(hashVal.BitLen())), nil)
+	phiFunc := float64(1) - math.Pow(float64(1)-hardness, getLotteryPower(b.BakerID))
+	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(256)), nil)
 	threshold := new(big.Int)
 	new(big.Float).Mul(big.NewFloat(float64(phiFunc)), new(big.Float).SetInt(multFactor)).Int(threshold)
 
