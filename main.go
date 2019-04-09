@@ -49,8 +49,7 @@ func cliLoop() {
 		case "-n":
 			p2p.PrintNetworkList()
 		case "-send-test-block":
-			channels.BlockToP2P <- objects.Block{1, genesisBlock.CalculateBlockHash(), publicKey,
-				"", "", genesisBlock.CalculateBlockHash(), objects.Data{}, ""}
+			fmt.Println("Not Implemented")
 		case "-send-test-trans":
 			channels.TransClientInput <- objects.Transaction{publicKey, publicKey, 123, "id1", "sign1"}
 		case "-trans":

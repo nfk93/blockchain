@@ -23,7 +23,7 @@ type CreateBlockData struct {
 	Pk         PublicKey
 	SlotNo     int
 	Draw       string
-	BlockNonce string
+	BlockNonce BlockNonce
 }
 
 type Data struct {

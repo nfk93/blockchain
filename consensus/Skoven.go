@@ -9,7 +9,6 @@ import (
 
 var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
-var blockToTL chan o.Block
 var tLock sync.RWMutex
 var finalLock sync.RWMutex
 var blocks skov
@@ -259,6 +258,18 @@ func log() {
 	if isVerbose {
 		fmt.Println(blocks.get(currentHead).Slot)
 	}
+}
+
+func getUnusedTransactions() []o.Transaction {
+	tLock.Lock()
+	defer tLock.Unlock()
+	trans := make([]o.Transaction, len(unusedTransactions))
+	i := 0
+	for k := range unusedTransactions {
+		trans[i] = transactions[k]
+		i++
+	}
+	return trans
 }
 
 type skov struct {

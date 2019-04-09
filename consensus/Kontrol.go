@@ -5,6 +5,7 @@ import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/transaction"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -13,17 +14,19 @@ var slotLength time.Duration
 var currentSlot int
 var slotLock sync.RWMutex
 var currentStake int
-var currentNonce string
+var systemStake int
 var hardness float64
 var sk SecretKey
 var pk PublicKey
 var lastFinalizedLedger map[PublicKey]int
+var leadershipNonce string
+var leadershipLock sync.RWMutex
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	for {
-		if (currentSlot)%10 == 0 {
-			finalize(currentSlot)
+		if (currentSlot)%20 == 0 {
+			finalize(currentSlot - 10)
 		}
 		go drawLottery(currentSlot)
 		time.Sleep(slotLength)
@@ -44,13 +47,16 @@ func processGenesisData(genesisData o.GenesisData) {
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
 	lastFinalizedLedger = genesisData.InitialState.Ledger
+	leadershipNonce = genesisData.Nonce
+	currentStake = lastFinalizedLedger[pk]
+	systemStake = currentStake * 10 // TODO actually calculate the stake in the system somehow
 	go runSlot()
 	go transaction.StartTransactionLayer(channels.BlockToTrans,
 		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
 		channels.TransToTrans, sk)
 }
 
-func finalize(slot int) {
+func finalize(slot int) { //TODO add generation of new leadershipNonce
 	finalLock.Lock()
 	defer finalLock.Unlock()
 	head := blocks.get(currentHead)
@@ -73,19 +79,28 @@ func updateStake() {
 }
 
 func drawLottery(slot int) {
-	//winner, draw := o.CalculateDraw(currentNonce, hardness, sk, pk, currentStake, slot)
-	//if winner {
-
-	//}
+	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, currentStake, systemStake, slot)
+	if winner {
+		fmt.Println("We won slot " + strconv.Itoa(slot))
+		generateBlock(draw, slot)
+	}
 }
 
-func computeTransactions() o.Block { //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
+//Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
+func generateBlock(draw string, slot int) {
+	blockData := o.CreateBlockData{
+		getUnusedTransactions(),
+		sk,
+		pk,
+		slot,
+		draw,
+		o.CreateNewBlockNonce(leadershipNonce, sk, slot)}
+	channels.TransToTrans <- blockData
+	go sendBlock()
+}
 
-	/* TODO
-	   for {
-	   	block := <-blockFromTL
-	   	return block
-	   }
-	*/
-	return o.Block{}
+func sendBlock() {
+	block := <-channels.BlockFromTrans
+	channels.BlockFromP2P <- block // TODO change this when using P2P
+	//channels.BlockToP2P <- block
 }

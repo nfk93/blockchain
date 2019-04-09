@@ -12,7 +12,7 @@ var genesis Block
 
 func resetMocksAndStart() {
 	sk, pk := KeyGen(2048)
-	genesis = createTestGenesisBlock(time.Duration(1)*time.Second, 0)
+	genesis = createTestGenesisBlock(time.Duration(1)*time.Second, 0.9)
 	StartConsensus(CreateChannelStruct(), pk, sk, true)
 }
 
@@ -33,7 +33,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 
 func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
 	gData := GenesisData{time.Now(), slotDuration,
-		"", hardness, State{make(map[PublicKey]int), ""}}
+		"1001001010100100010101", hardness, State{make(map[PublicKey]int), ""}}
 	return Block{0,
 		"",
 		PublicKey{},
@@ -159,5 +159,18 @@ func TestInteraction(t *testing.T) {
 	block6.SignBlock(sk3)
 	channels.BlockFromP2P <- block6
 
-	time.Sleep(slotLength * 8)
+	time.Sleep(slotLength * 18)
+}
+
+func TestBlockGeneration(t *testing.T) {
+	resetMocksAndStart()
+	genesis.BlockData.GenesisData.InitialState.Ledger[pk] = 1000000 //1 Million
+	channels.BlockFromP2P <- genesis
+	_, pk2 := KeyGen(2048)
+	for i := 0; i < 10; i++ {
+		channels.TransFromP2P <- CreateTransaction(pk, pk2, 50, "t"+strconv.Itoa(i), sk)
+	}
+
+	time.Sleep(slotLength * 50)
+
 }

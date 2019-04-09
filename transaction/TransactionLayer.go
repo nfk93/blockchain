@@ -106,7 +106,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		t.head,
 		blockData.Pk,
 		blockData.Draw,
-		blockData.BlockNonce,
+		BlockNonce{},
 		t.lastFinalized,
 		Data{addedTransactions, GenesisData{}},
 		""}

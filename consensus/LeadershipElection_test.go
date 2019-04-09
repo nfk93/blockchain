@@ -26,7 +26,7 @@ func TestLeadershipElection(t *testing.T) {
 		"",
 		pk,
 		draw,
-		"8556",
+		BlockNonce{},
 		"",
 		Data{},
 		""}
