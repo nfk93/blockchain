@@ -46,43 +46,43 @@ func TestForking(t *testing.T) {
 
 	go func() {
 		for {
-			// we finalize block 4, p1 = -200, p2=0, p4=200
+			// we finalize block 4, p1 = 999600, p2=0, p4=400
 			state := <-s
-			if state.Ledger[p1] != -200 || state.Ledger[p2] != 0 || state.Ledger[p4] != 200 {
+			if state.Ledger[p1] != 999600 || state.Ledger[p2] != 0 || state.Ledger[p4] != 400 {
 				t.Error("Bad luck! Branching did not succeed")
 			}
 			return
 		}
 	}()
 
+	GenBlock := CreateTestGenesis(p1)
+
+	b <- GenBlock
 	// Block 1, Grow from Genesis
-	t1 := CreateTransaction(p1, p1, 200, strconv.Itoa(1), sk1)
-	block1 := createBlock([]Transaction{t1}, 0, p1)
-	block1.SignBlock(sk1)
+	t1 := CreateTransaction(p1, p4, 200, strconv.Itoa(1), sk1)
+	tl <- CreateBlockData{[]Transaction{t1}, sk1, p1, 1, "", ""}
+	block1 := <-br
 	b <- block1
 	time.Sleep(100)
 
 	// Block 2 - grow from block 1
 	t2 := CreateTransaction(p1, p2, 200, strconv.Itoa(2), sk1)
-	block2 := createBlock([]Transaction{t2}, 1, p1)
-	block2.ParentPointer = block1.CalculateBlockHash()
-	block1.SignBlock(sk1)
+	tl <- CreateBlockData{[]Transaction{t2}, sk1, p1, 2, "", ""}
+	block2 := <-br
 	b <- block2
 	time.Sleep(100)
 
 	// Block 3 - grow from block 1
 	t3 := CreateTransaction(p1, p3, 200, strconv.Itoa(3), sk1)
-	block3 := createBlock([]Transaction{t3}, 2, p1)
-	block3.ParentPointer = block1.CalculateBlockHash()
-	block1.SignBlock(sk1)
+	tl <- CreateBlockData{[]Transaction{t3}, sk1, p1, 3, "", ""}
+	block3 := <-br
 	b <- block3
 	time.Sleep(100)
 
 	// Block 4 - grow from block 2
 	t4 := CreateTransaction(p2, p4, 200, strconv.Itoa(4), sk2)
-	block4 := createBlock([]Transaction{t4}, 3, p2)
-	block4.ParentPointer = block2.CalculateBlockHash()
-	block1.SignBlock(sk2)
+	tl <- CreateBlockData{[]Transaction{t4}, sk2, p2, 4, "", ""}
+	block4 := <-br
 	b <- block4
 
 	//Finalizing to get states from TL
@@ -100,7 +100,7 @@ func TestCreateNewBlock(t *testing.T) {
 	b, s, f, br, tl := createChannels()
 	go StartTransactionLayer(b, s, f, br, tl, sk1)
 
-	genBlock := CreateTestGenesis()
+	genBlock := CreateTestGenesis(pk1)
 	b <- genBlock
 	time.Sleep(300)
 
@@ -132,7 +132,7 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 		}
 	}()
 
-	genBlock := CreateTestGenesis()
+	genBlock := CreateTestGenesis(pk1)
 	b <- genBlock
 	time.Sleep(300)
 
@@ -175,6 +175,7 @@ func createBlock(t []Transaction, i int, pk PublicKey) Block {
 		BlockNonce{},
 		"",
 		Data{Trans: t},
+		"",
 		"",
 	}
 }

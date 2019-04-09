@@ -14,6 +14,7 @@ type Block struct {
 	BlockNonce     BlockNonce
 	LastFinalized  string //hash of last finalized block
 	BlockData      Data
+	StateHash      string
 	BlockSignature string
 }
 
@@ -63,6 +64,7 @@ func buildBlockStringToSign(b Block) string {
 	buf.WriteString(b.BlockNonce.Proof)
 	buf.WriteString(b.LastFinalized)
 	buf.WriteString(b.BlockData.DataString())
+	buf.WriteString(b.StateHash)
 	return buf.String()
 }
 

@@ -16,7 +16,7 @@ type GenesisData struct {
 	// TODO: fill with more stuff?
 }
 
-func NewGenesisData(publicKey crypto.PublicKey, secretKey crypto.SecretKey, slotDuration time.Duration, hardness float64) (GenesisData, error) {
+func NewGenesisData(publicKey crypto.PublicKey, slotDuration time.Duration, hardness float64) (GenesisData, error) {
 	time := time.Now()
 	state := NewInitialState(publicKey)
 	nonce, err := crypto.GenerateRandomBytes(24)
@@ -30,13 +30,17 @@ func NewGenesisData(publicKey crypto.PublicKey, secretKey crypto.SecretKey, slot
 	}
 }
 
-func CreateTestGenesis() Block {
+func CreateTestGenesis(pk crypto.PublicKey) Block {
+
+	data, _ := NewGenesisData(pk, time.Duration(10), 0.9)
+
 	return Block{0,
 		"",
 		crypto.PublicKey{},
 		"",
 		BlockNonce{},
 		"",
-		Data{},
+		Data{[]Transaction{}, data},
+		"",
 		""}
 }
