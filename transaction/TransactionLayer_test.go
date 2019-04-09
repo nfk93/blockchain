@@ -12,13 +12,17 @@ import (
 func TestReceiveAndFinalizeBlock(t *testing.T) {
 	sk1, p1 := KeyGen(2048)
 	_, p2 := KeyGen(2048)
+
+	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
+	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, sk1)
+
+	GenBlock := CreateTestGenesis(p1)
+	blockChannel <- GenBlock
+
 	t1 := CreateTransaction(p1, p2, 200, "ID112", sk1)
 	t2 := CreateTransaction(p1, p2, 300, "ID222", sk1)
 	b := createBlock([]Transaction{t1, t2}, 0, p1)
 	b.SignBlock(sk1)
-
-	blockChannel, stateChannel, finalChannel, br, tl := createChannels()
-	go StartTransactionLayer(blockChannel, stateChannel, finalChannel, br, tl, sk1)
 
 	blockChannel <- b
 
@@ -56,8 +60,8 @@ func TestForking(t *testing.T) {
 	}()
 
 	GenBlock := CreateTestGenesis(p1)
-
 	b <- GenBlock
+
 	// Block 1, Grow from Genesis
 	t1 := CreateTransaction(p1, p4, 400, strconv.Itoa(1), sk1)
 	tl <- CreateBlockData{[]Transaction{t1}, sk1, p1, 1, "", BlockNonce{}}

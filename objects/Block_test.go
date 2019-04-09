@@ -15,6 +15,7 @@ func TestVerifyBlock(t *testing.T) {
 		BlockNonce{},
 		"",
 		Data{},
+		"",
 		""}
 
 	block.SignBlock(sk)
@@ -36,6 +37,7 @@ func TestVerifyBlockFAIL(t *testing.T) {
 		BlockNonce{},
 		"",
 		Data{},
+		"",
 		""}
 
 	block.SignBlock(sk2)
@@ -56,6 +58,7 @@ func TestBlockNonce(t *testing.T) {
 		blockNonce,
 		"",
 		Data{},
+		"",
 		""}
 	if !block.validateBlockNonce(leadershipNonce) {
 		t.Error("Nonce validation failed")

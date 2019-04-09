@@ -58,7 +58,7 @@ func cliLoop() {
 			p2p.PrintPeers()
 		case "-start_network":
 			if *newNetwork {
-				genesisdata, err := objects.NewGenesisData(publicKey, secretKey, time.Duration(*slotduration), *hardness)
+				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
 				if err != nil {
 					log.Fatal(err)
 				}

@@ -27,18 +27,23 @@ type CreateBlockData struct {
 	BlockNonce BlockNonce
 }
 
+type BlockNonce struct {
+	Nonce string
+	Proof string
+}
+
 type Data struct {
 	Trans       []Transaction
 	GenesisData GenesisData
 }
+
+// Validation functions
 
 //Signing functions
 func (b *Block) SignBlock(sk SecretKey) {
 	m := buildBlockStringToSign(*b)
 	b.BlockSignature = Sign(m, sk)
 }
-
-// Validation functions
 
 func (b Block) ValidateBlock() bool {
 	return Verify(buildBlockStringToSign(b), b.BlockSignature, b.BakerID)
@@ -81,11 +86,6 @@ func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot int) BlockNo
 	proof := Sign(newNonceString, sk)
 	newNonce := HashSHA(proof)
 	return BlockNonce{newNonce, proof}
-}
-
-type BlockNonce struct {
-	Nonce string
-	Proof string
 }
 
 func (b *Block) validateBlockNonce(leadershipNonce string) bool {
