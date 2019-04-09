@@ -45,15 +45,15 @@ func TestHardness(t *testing.T) {
 	rounds := 1000
 	var sk, pk = KeyGen(2048)
 
-	yourStake := 15000000
+	yourStake := 30000000
 	systemStake := 30000000
-	hardness := 0.98
+	hardness := 0.9
 
 	for i := 0; i < rounds; i++ {
 
 		//nonce = CreateNewBlockNonce(nonce, i, sk, pk)
 
-		b, _ := CalculateDraw("8556", hardness, sk, pk, yourStake, systemStake, i)
+		b, _ := CalculateDraw("0001000", hardness, sk, pk, yourStake, systemStake, i)
 		if b {
 			winCounter += 1
 		}
