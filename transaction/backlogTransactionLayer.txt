@@ -39,12 +39,12 @@ OK - Only first instance of genesis should be accepted
 - Gas?
 - TEST, TEST, TEST!!
 - Add tests for AddTransaction in state_test
-- Change limitations for how to limit transactions in a single block
+- Change limitations for number of transactions in a single block
 - Change action on return boolean from TransactionLayer
 
 
 -  Gas
-    - Block creator should receive block rewards for a block (comes from the blue)
+    OK - Block creator should receive block rewards for a block (comes from the blue)
     - Transaction cost should be subtracted from the sender.
 
 - Blocks are done

@@ -36,7 +36,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 				systemAccount = b.BlockData.GenesisData.SystemAccount
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
-					channels.BoolFromTrans <- tree.processBlock(b)
+					tree.processBlock(b)
 				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
@@ -66,7 +66,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 	}
 }
 
-func (t *Tree) processBlock(b Block) bool {
+func (t *Tree) processBlock(b Block) {
 	successfulTransactions := 0
 	s := State{}
 	s.ParentHash = b.ParentPointer
@@ -95,11 +95,10 @@ func (t *Tree) processBlock(b Block) bool {
 
 		// Update head
 		t.head = b.CalculateBlockHash()
-		return true
+
 	} else {
 		s.AddBlockRewardAndTransFees(systemAccount, blockReward+(successfulTransactions*transactionFee))
-
-		return false
+		fmt.Println("Proof of work in block didn't match...")
 	}
 
 }

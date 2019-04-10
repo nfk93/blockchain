@@ -10,7 +10,6 @@ type ChannelStruct struct {
 	FinalizeToTrans  chan string
 	BlockFromTrans   chan Block
 	TransToTrans     chan CreateBlockData
-	BoolFromTrans    chan bool
 }
 
 func CreateChannelStruct() ChannelStruct {
@@ -23,8 +22,7 @@ func CreateChannelStruct() ChannelStruct {
 	blockDataChannel := make(chan CreateBlockData)
 	stringChannel := make(chan string)
 	stateChannel := make(chan State)
-	boolChannel := make(chan bool)
 	return ChannelStruct{tci, transChannel, blockChannel1,
 		blockChannel2, blockChannel3, stateChannel,
-		stringChannel, blockChannel4, blockDataChannel, boolChannel}
+		stringChannel, blockChannel4, blockDataChannel}
 }
