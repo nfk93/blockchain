@@ -118,7 +118,6 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
 		newTrans := blockData.TransList[i]
-		//transactions = transactions[1:]
 		s.AddTransaction(newTrans, transactionFee)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
@@ -153,32 +152,3 @@ func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
 	}
 	return newMap
 }
-
-//func PreviousStatesAsString(currentBlock Block) string {
-//	var buf bytes.Buffer
-//
-//	currentBlock = tree.treeMap[tree.head].block
-//
-//	parentBlock := currentBlock.ParentPointer
-//	for currentBlock.LastFinalized != parentBlock {
-//		buf.WriteString(string(tree.treeMap[parentBlock].state.StateAsString()))
-//		parentBlock = tree.treeMap[parentBlock].block.ParentPointer
-//	}
-//
-//	return buf.String()
-//}
-//func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk SecretKey, pk PublicKey) BlockNonce {
-//
-//	blockToFinalize := t.treeMap[finalizeThisBlock].block
-//
-//	var buf bytes.Buffer
-//	buf.WriteString("NONCE")
-//	buf.WriteString(PreviousStatesAsString(blockToFinalize))
-//	buf.WriteString(strconv.Itoa(slot))
-//
-//	newNonceString := buf.String()
-//	newNonce := HashSHA(newNonceString)
-//	bn := BlockNonce{newNonce, "", pk}
-//	bn.SignBlockNonce(sk)
-//	return bn
-//}

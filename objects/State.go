@@ -39,8 +39,8 @@ func (s *State) AddTransaction(t Transaction, transFee int) bool {
 		return false
 	}
 
-	s.Ledger[t.To] += t.Amount
 	s.Ledger[t.From] -= amountWithFees
+	s.Ledger[t.To] += t.Amount
 	return true
 }
 
