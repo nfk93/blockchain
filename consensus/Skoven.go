@@ -195,6 +195,11 @@ func sendBranchToTL(branch []o.Block) {
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
 	channels.BlockToTrans <- block
+	goodBlock := <-channels.BoolFromTrans // TODO: Do some proper handling in case that this returns a false!
+	if !goodBlock {
+		fmt.Println("Proof of work in block didn't match...")
+	}
+
 }
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight

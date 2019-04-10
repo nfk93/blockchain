@@ -14,7 +14,7 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 	_, p2 := KeyGen(2048)
 
 	channels := CreateChannelStruct()
-	go StartTransactionLayer(channels, sk1)
+	go StartTransactionLayer(channels)
 
 	GenBlock := CreateTestGenesis(p1)
 	channels.BlockToTrans <- GenBlock
@@ -25,6 +25,9 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 	b := <-channels.BlockFromTrans
 
 	channels.BlockToTrans <- b
+	if goodBlock := <-channels.BoolFromTrans; !goodBlock {
+		fmt.Println("Proof of work in block didn't match...")
+	}
 
 	time.Sleep(time.Second * 3)
 	channels.FinalizeToTrans <- b.CalculateBlockHash()
@@ -46,7 +49,16 @@ func TestForking(t *testing.T) {
 	_, p4 := KeyGen(2048)
 
 	channels := CreateChannelStruct()
-	go StartTransactionLayer(channels, sk1)
+	go StartTransactionLayer(channels)
+
+	go func() {
+		for {
+			if goodBlock := <-channels.BoolFromTrans; !goodBlock {
+				fmt.Println("Proof of work in block didn't match...")
+			}
+
+		}
+	}()
 
 	go func() {
 		for {
@@ -102,7 +114,16 @@ func TestCreateNewBlock(t *testing.T) {
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
 	channels := CreateChannelStruct()
-	go StartTransactionLayer(channels, sk1)
+	go StartTransactionLayer(channels)
+
+	go func() {
+		for {
+			if goodBlock := <-channels.BoolFromTrans; !goodBlock {
+				fmt.Println("Proof of work in block didn't match...")
+			}
+
+		}
+	}()
 
 	genBlock := CreateTestGenesis(pk1)
 	channels.BlockToTrans <- genBlock
@@ -128,7 +149,16 @@ func TestRuns(t *testing.T) { //Does not really test anything, but runs a lot of
 	_, pk2 := KeyGen(2048)
 
 	channels := CreateChannelStruct()
-	go StartTransactionLayer(channels, sk1)
+	go StartTransactionLayer(channels)
+
+	go func() {
+		for {
+			if goodBlock := <-channels.BoolFromTrans; !goodBlock {
+				fmt.Println("Proof of work in block didn't match...")
+			}
+
+		}
+	}()
 
 	go func() {
 		for {

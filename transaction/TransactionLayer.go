@@ -19,7 +19,7 @@ type Tree struct {
 
 var tree Tree
 
-func StartTransactionLayer(channels ChannelStruct, sk SecretKey) {
+func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), "", ""}
 
 	// Process a NodeBlock coming from the consensus layer
@@ -32,7 +32,7 @@ func StartTransactionLayer(channels ChannelStruct, sk SecretKey) {
 				tree.head = b.CalculateBlockHash()
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
-					tree.processBlock(b)
+					channels.BoolFromTrans <- tree.processBlock(b)
 				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
@@ -62,7 +62,7 @@ func StartTransactionLayer(channels ChannelStruct, sk SecretKey) {
 	}
 }
 
-func (t *Tree) processBlock(b Block) {
+func (t *Tree) processBlock(b Block) bool {
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
@@ -84,9 +84,10 @@ func (t *Tree) processBlock(b Block) {
 
 		// Update head
 		t.head = b.CalculateBlockHash()
-	} else {
-		fmt.Println("Proof of work didn't verify. Block is therefore not processed!")
+		return true
 	}
+
+	return false
 
 }
 
