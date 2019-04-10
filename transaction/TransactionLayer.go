@@ -18,6 +18,9 @@ type Tree struct {
 }
 
 var tree Tree
+var transactionFee = 1
+var blockReward = 100
+var systemAccount PublicKey
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), "", ""}
@@ -30,6 +33,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
+				systemAccount = b.BlockData.GenesisData.SystemAccount
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					channels.BoolFromTrans <- tree.processBlock(b)
@@ -63,6 +67,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 }
 
 func (t *Tree) processBlock(b Block) bool {
+	successfulTransactions := 0
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
@@ -73,7 +78,10 @@ func (t *Tree) processBlock(b Block) bool {
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
-			s.AddTransaction(tr)
+			transSuccess := s.AddTransaction(tr, transactionFee)
+			if transSuccess {
+				successfulTransactions += 1
+			}
 		}
 	}
 
@@ -82,12 +90,17 @@ func (t *Tree) processBlock(b Block) bool {
 		// Create new node in the tree
 		t.createNewNode(b, s)
 
+		// Pay the block creator
+		s.AddBlockRewardAndTransFees(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+
 		// Update head
 		t.head = b.CalculateBlockHash()
 		return true
-	}
+	} else {
+		s.AddBlockRewardAndTransFees(systemAccount, blockReward+(successfulTransactions*transactionFee))
 
-	return false
+		return false
+	}
 
 }
 
@@ -107,7 +120,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
 		newTrans := blockData.TransList[i]
 		//transactions = transactions[1:]
-		s.AddTransaction(newTrans)
+		s.AddTransaction(newTrans, transactionFee)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
