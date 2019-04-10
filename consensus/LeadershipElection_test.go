@@ -47,7 +47,7 @@ func TestHardness(t *testing.T) {
 
 	yourStake := 30000000
 	systemStake := 30000000
-	hardness := 0.9
+	hardness := 0.90
 
 	for i := 0; i < rounds; i++ {
 

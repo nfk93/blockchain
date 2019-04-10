@@ -19,13 +19,13 @@ type Tree struct {
 
 var tree Tree
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
+func StartTransactionLayer(channels ChannelStruct, sk SecretKey) {
 	tree = Tree{make(map[string]TLNode), "", ""}
 
 	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
-			b := <-blockInput
+			b := <-channels.BlockToTrans
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
@@ -43,22 +43,22 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 	// Finalize a given NodeBlock
 	go func() {
 		for {
-			finalize := <-finalizeChan
+			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
 				tree.lastFinalized = finalize
-				stateReturn <- finalizedNode.state
+				channels.StateFromTrans <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
-				stateReturn <- State{}
+				channels.StateFromTrans <- State{}
 			}
 		}
 	}()
 
 	// A new NodeBlock should be created from the transactions in transList
 	for {
-		newBlockData := <-newBlockChan
+		newBlockData := <-channels.TransToTrans
 		newBlock := tree.createNewBlock(newBlockData)
-		blockReturn <- newBlock
+		channels.BlockFromTrans <- newBlock
 	}
 }
 

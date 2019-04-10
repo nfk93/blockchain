@@ -51,9 +51,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	currentStake = lastFinalizedLedger[pk]
 	systemStake = currentStake * 10 // TODO actually calculate the stake in the system somehow
 	go runSlot()
-	go transaction.StartTransactionLayer(channels.BlockToTrans,
-		channels.StateFromTrans, channels.FinalizeToTrans, channels.BlockFromTrans,
-		channels.TransToTrans, sk)
+	go transaction.StartTransactionLayer(channels, sk)
 }
 
 func finalize(slot int) { //TODO add generation of new leadershipNonce
