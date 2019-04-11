@@ -306,7 +306,7 @@ func (l ListLit) String() string {
 	if len(l.list) == 0 {
 		return fmt.Sprintf("ListLit(list: [], typ: %s)", typeCodeToString[l.typ])
 	} else {
-		res := "ListLit(list: "
+		res := "ListLit(list: ["
 		var e Exp
 		list := l.list
 		for len(list) > 1 {
@@ -314,15 +314,16 @@ func (l ListLit) String() string {
 			res = res + fmt.Sprintf("%s, ", e.String())
 		}
 		e = list[0]
-		res = res + fmt.Sprintf("%s)", e.String())
+		res = res + fmt.Sprintf("%s])", e.String())
 		return res
 	}
 }
 
 // TODO: derive types
 func NewListLit(exp interface{}) (Exp, error) {
+	e := exp.(Exp)
 	return ListLit{-1, //TODO
-		[]Exp{exp.(Exp)}}, nil
+		[]Exp{e}}, nil
 }
 
 func NewEmptyList() (Exp, error) {
@@ -333,8 +334,8 @@ func NewEmptyList() (Exp, error) {
 // TODO: check that listtype matches exp type
 func AppendList(exp1, exp2 interface{}) (Exp, error) {
 	lst1 := exp1.(ListLit)
-	lst2 := exp2.(ListLit)
-	return ListLit{lst1.typ, append(lst1.list, lst2.list...)}, nil
+	lst2 := exp2.(Exp)
+	return ListLit{lst1.typ, append(lst1.list, lst2)}, nil
 }
 
 func PrependList(exp, list interface{}) (Exp, error) {

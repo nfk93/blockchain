@@ -93,13 +93,13 @@ Exp         : lident                                            << ast.NewTodoEx
             | Lookup lident larrow Exp                          << ast.NewTodoExp() // lookupexp >>
             | if Exp then Exp else Exp                          << ast.NewTodoExp() // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewTodoExp() // ifthen exp >>
-            | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >>
             | Exp colon colon Exp                               << ast.PrependList($0, $3) // >>
             | let Pattern eq Exp in Exp                         << ast.NewTodoExp() // letexp >>
             | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewTodoExp() // BinopExp >>
             | Constant                                          << >> ;
+         /* | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >> */
 
 Binop       : plus
             | minus
@@ -147,7 +147,7 @@ Constant    : key_lit                                           << ast.NewKeyLit
             | string_lit                                        << ast.NewStringLit(util.ParseString($0)) >>
             | lparen rparen                                     << ast.NewUnitLit() >>
             | lbrack rbrack                                     << ast.NewEmptyList() >>
-            | lbrack Array rbrack                               << >> ;
+            | lbrack Array rbrack                               << $1, nil >> ;
 
 Array       : Exp                                               << ast.NewListLit($0) >>
             | Array semicolon Exp                               << ast.AppendList($0, $2) >> ;
