@@ -20,7 +20,6 @@ type Tree struct {
 var tree Tree
 var transactionFee = 1
 var blockReward = 100
-var systemAccount PublicKey
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), "", ""}
@@ -33,7 +32,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
-				systemAccount = b.BlockData.GenesisData.SystemAccount
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
@@ -71,6 +69,7 @@ func (t *Tree) processBlock(b Block) {
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	if s.Ledger == nil {
 		s.Ledger = make(map[PublicKey]int)
 	}
@@ -87,19 +86,17 @@ func (t *Tree) processBlock(b Block) {
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyStateHash(b.StateHash, b.BakerID) {
-		// Create new node in the tree
-		t.createNewNode(b, s)
-
 		// Pay the block creator
 		s.AddBlockRewardAndTransFees(b.BakerID, blockReward+(successfulTransactions*transactionFee))
 
-		// Update head
-		t.head = b.CalculateBlockHash()
-
 	} else {
-		s.AddBlockRewardAndTransFees(systemAccount, blockReward+(successfulTransactions*transactionFee))
 		fmt.Println("Proof of work in block didn't match...")
 	}
+	// Create new node in the tree
+	t.createNewNode(b, s)
+
+	// Update head
+	t.head = b.CalculateBlockHash()
 
 }
 
@@ -112,6 +109,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 	s.ParentHash = t.head
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []Transaction
 
 	noOfTrans := len(blockData.TransList)

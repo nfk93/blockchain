@@ -8,12 +8,11 @@ import (
 )
 
 type GenesisData struct {
-	GenesisTime   time.Time
-	SlotDuration  time.Duration
-	Nonce         string
-	Hardness      float64
-	InitialState  State
-	SystemAccount crypto.PublicKey
+	GenesisTime  time.Time
+	SlotDuration time.Duration
+	Nonce        string
+	Hardness     float64
+	InitialState State
 	// TODO: fill with more stuff?
 }
 
@@ -27,7 +26,7 @@ func NewGenesisData(publicKey crypto.PublicKey, slotDuration time.Duration, hard
 	if hardness <= 0 || hardness >= 1 {
 		return GenesisData{}, errors.Errorf("Hardness must be between 0 and 1")
 	} else {
-		return GenesisData{time, slotDuration, string(nonce), hardness, state, publicKey}, nil
+		return GenesisData{time, slotDuration, string(nonce), hardness, state}, nil
 	}
 }
 

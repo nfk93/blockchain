@@ -55,6 +55,7 @@ func TestForking(t *testing.T) {
 			for _, account := range state.Ledger {
 				fmt.Println(account)
 			}
+			fmt.Println("Total system stake: ", state.TotalStake)
 			//if state.Ledger[p1] != 999400 || state.Ledger[p2] != 150 || state.Ledger[p4] != 450 {
 			//	t.Error("Bad luck! Branching did not succeed")
 			//}
@@ -76,6 +77,7 @@ func TestForking(t *testing.T) {
 	t2 := CreateTransaction(p1, p2, 200, strconv.Itoa(2), sk1)
 	channels.TransToTrans <- CreateBlockData{[]Transaction{t2}, sk2, p2, 2, "", BlockNonce{}}
 	block2 := <-channels.BlockFromTrans
+	block2.StateHash = "00000000123200000000000000000000000000"
 	channels.BlockToTrans <- block2
 	time.Sleep(time.Millisecond * 100)
 
