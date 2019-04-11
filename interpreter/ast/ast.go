@@ -9,43 +9,13 @@ type Exp interface {
 	String() string
 }
 
-type Type int
-
-const (
-	// Types
-	STRING Type = iota
-	INT
-	FLOAT
-	KEYHASH
-)
-
-var typeCodeToString = map[Type]string{
-	STRING:  "string",
-	INT:     "int",
-	FLOAT:   "float",
-	KEYHASH: "keyhash"}
-
-type TypeOption struct {
-	opt bool
-	typ Type
-}
-
-type Operation int
-
-const (
-	PLUS Operation = iota
-	MINUS
-	TIMES
-	DIVIDE
-)
-
 type BinOPExp struct {
 	left  interface{}
 	right interface{}
-	oper  Operation
+	oper  OperationType
 }
 
-func NewBinOpExp(left, right, oper Operation) (BinOPExp, error) {
+func NewBinOpExp(left, right, oper OperationType) (BinOPExp, error) {
 	return BinOPExp{left, right, oper}, nil
 }
 
@@ -70,7 +40,7 @@ func NewSimpleTypeDecl(id string, typ interface{}) (Exp, error) {
 }
 
 func (e SimpleTypeDecl) String() string {
-	return fmt.Sprintf("SimpleTypeDecl(id: %s, typ: %s)", e.id, typeCodeToString[e.typ])
+	return fmt.Sprintf("SimpleTypeDecl(id: %s, typ: %s)", e.id, e.typ.String())
 }
 
 /* Top Level */
@@ -131,14 +101,14 @@ type Param struct {
 
 func (p Param) String() string {
 	if p.anno.opt {
-		return fmt.Sprintf("(%s: %s)", p.id, typeCodeToString[p.anno.typ])
+		return fmt.Sprintf("(%s: %s)", p.id, p.anno.typ.String())
 	} else {
 		return fmt.Sprintf("%s", p.id)
 	}
 }
 
 func NewParam(id string) (Param, error) {
-	return Param{id, TypeOption{false, -1}}, nil
+	return Param{id, TypeOption{false, IntType{}}}, nil
 }
 
 func NewAnnoParam(id string, anno interface{}) (Param, error) {
@@ -254,7 +224,7 @@ func NewFloatLit(val float64) (Exp, error) {
 	return FloatLit{val}, nil
 }
 
-/* Koin Lit */
+/* KoinType Lit */
 type KoinLit struct {
 	val int64
 }
@@ -272,7 +242,7 @@ func NewKoinLit(koins int64) (Exp, error) {
 	}
 }
 
-/* String Lit */
+/* StringType Lit */
 type StringLit struct {
 	val string
 }
@@ -296,15 +266,14 @@ func NewUnitLit() (Exp, error) {
 	return UnitLit{}, nil
 }
 
-/* List Lit TODO: Refactor to use head and tail instead? */
+/* ListType Lit TODO: Refactor to use head and tail instead? */
 type ListLit struct {
-	typ  Type
 	list []Exp
 }
 
 func (l ListLit) String() string {
 	if len(l.list) == 0 {
-		return fmt.Sprintf("ListLit(list: [], typ: %s)", typeCodeToString[l.typ])
+		return fmt.Sprintf("ListLit(list: [])")
 	} else {
 		res := "ListLit(list: ["
 		var e Exp
@@ -319,23 +288,19 @@ func (l ListLit) String() string {
 	}
 }
 
-// TODO: derive types
 func NewListLit(exp interface{}) (Exp, error) {
 	e := exp.(Exp)
-	return ListLit{-1, //TODO
-		[]Exp{e}}, nil
+	return ListLit{[]Exp{e}}, nil
 }
 
 func NewEmptyList() (Exp, error) {
-	return ListLit{-1, //TODO
-		[]Exp{}}, nil
+	return ListLit{[]Exp{}}, nil
 }
 
-// TODO: check that listtype matches exp type
 func AppendList(exp1, exp2 interface{}) (Exp, error) {
 	lst1 := exp1.(ListLit)
 	lst2 := exp2.(Exp)
-	return ListLit{lst1.typ, append(lst1.list, lst2)}, nil
+	return ListLit{append(lst1.list, lst2)}, nil
 }
 
 func PrependList(exp, list interface{}) (Exp, error) {

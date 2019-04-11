@@ -1,0 +1,23 @@
+type myint = int
+
+type mybool = bool
+
+type mykoin = koin
+
+type mystring = string
+
+type mykey = key
+
+type myop = operation
+
+type myintlist = int list
+
+type myintkointuple = int * koin
+
+type mydeclaredtype = myop
+
+type mydeclaredtype1 = mykey * myintkointuple
+
+type crazy = (mydeclaredtype1 * mydeclaredtype) list list
+
+type crazy1 = int list * crazy list

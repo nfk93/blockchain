@@ -67,7 +67,7 @@ func TestLexInitStorage(t *testing.T) {
 
 /* THIS TEST IS DEPRECATED
 func TestLexSimpleEntry(t *testing.T) {
-	bytes := read_file("../test_cases/simple_entry", t)
+	bytes := read_file("../test_cases/simple_entry_parser", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{

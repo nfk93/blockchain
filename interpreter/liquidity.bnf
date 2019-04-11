@@ -89,17 +89,18 @@ Struct      : lident colon Type semicolon Struct                << ast.NewTodoEx
 
 Exp         : lident                                            << ast.NewTodoExp() // idexp >>
             | uident dot lident                                 << ast.NewTodoExp() // external lookup exp >>
+            | lparen Exp rparen                                 << ast.NewTodoExp() // parenthesis >>
             | Lookup lident                                     << ast.NewTodoExp() // lookupexp >>
             | Lookup lident larrow Exp                          << ast.NewTodoExp() // lookupexp >>
             | if Exp then Exp else Exp                          << ast.NewTodoExp() // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewTodoExp() // ifthen exp >>
+            | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >>
             | Exp colon colon Exp                               << ast.PrependList($0, $3) // >>
             | let Pattern eq Exp in Exp                         << ast.NewTodoExp() // letexp >>
             | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewTodoExp() // BinopExp >>
             | Constant                                          << >> ;
-         /* | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >> */
 
 Binop       : plus
             | minus
@@ -128,15 +129,16 @@ Param       : lident                                            << ast.NewParam(
 Paramlist   : Param comma Paramlist                             << ast.AppendParams($0, $2)>>
             | Param                                             << ast.NewParamList($0)>> ;
 
-Type        : bool                                              << ast.NewTodoExp() // bool >>
-            | int                                               << ast.INT, nil >>
-            | koin                                              << ast.NewTodoExp() // tez >>
-            | string                                            << ast.NewTodoExp() // string >>
-            | key                                               << ast.NewTodoExp() // key_hash >>
-            | operation                                         << ast.NewTodoExp() // operation >>
-            | Type list                                         << ast.NewTodoExp() // list >>
-            | Type ast Type                                     << ast.NewTodoExp() // tuple >>
-            | lident                                            << ast.NewTodoExp() // declaredtype >> ;
+Type        : bool                                              << ast.NewBoolType(), nil >>
+            | int                                               << ast.NewIntType(), nil >>
+            | koin                                              << ast.NewKoinType(), nil >>
+            | string                                            << ast.NewStringType(), nil >>
+            | key                                               << ast.NewKeyType(), nil >>
+            | operation                                         << ast.NewOperationType(), nil >>
+            | lparen Type rparen                                << $1, nil >>
+            | Type list                                         << ast.NewListType($0), nil >>
+            | Type ast Type                                     << ast.NewTupleType($0, $2), nil >>
+            | lident                                            << ast.NewDeclaredType(util.ParseString($0)), nil >> ;
 
 Constant    : key_lit                                           << ast.NewKeyLit(util.ParseKey($0)) >>
             | true                                              << ast.NewBoolLit(true) >>
@@ -149,8 +151,8 @@ Constant    : key_lit                                           << ast.NewKeyLit
             | lbrack rbrack                                     << ast.NewEmptyList() >>
             | lbrack Array rbrack                               << $1, nil >> ;
 
-Array       : Exp                                               << ast.NewListLit($0) >>
-            | Array semicolon Exp                               << ast.AppendList($0, $2) >> ;
+Array       : Constant                                          << ast.NewListLit($0) >>
+            | Array semicolon Constant                          << ast.AppendList($0, $2) >> ;
 
 
 

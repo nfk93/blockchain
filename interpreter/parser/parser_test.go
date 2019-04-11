@@ -46,7 +46,11 @@ func TestParseIncrementStorage(t *testing.T) {
 }
 
 func TestParseSimpleEntry(t *testing.T) {
-	testFile(t, "../test_cases/simple_entry")
+	testFile(t, "../test_cases/simple_entry_parser")
+}
+
+func TestParseTypeDecl(t *testing.T) {
+	testFile(t, "../test_cases/type_decl_parser")
 }
 
 func searchAstForErrorExps(t *testing.T, e ast.Exp) {
