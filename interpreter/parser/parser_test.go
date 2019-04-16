@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"github.com/nfk93/blockchain/interpreter/ast"
+	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"io/ioutil"
 	"testing"
@@ -26,7 +26,7 @@ func testFile(t *testing.T, testpath string) {
 		t.Fail()
 		return
 	}
-	e := a.(ast.Exp)
+	e := a.(Exp)
 	fmt.Println(e.String())
 	searchAstForErrorExps(t, e)
 }
@@ -59,35 +59,92 @@ func TestLetExp(t *testing.T) {
 	testFile(t, testdir+"letexp")
 }
 
-func searchAstForErrorExps(t *testing.T, e ast.Exp) {
+func TestAnnoExp(t *testing.T) {
+	testFile(t, testdir+"annotated_exp")
+}
+
+func TestTupleExp(t *testing.T) {
+	testFile(t, testdir+"tuple")
+}
+
+func TestVarExp(t *testing.T) {
+	testFile(t, testdir+"varexp")
+}
+
+func TestIfExps(t *testing.T) {
+	testFile(t, testdir+"ifexps")
+}
+
+func TestSeqExp(t *testing.T) {
+	testFile(t, testdir+"sequence_expression")
+}
+
+func TestModuleLookup(t *testing.T) {
+	testFile(t, testdir+"module_lookup")
+}
+
+func TestLookupExp(t *testing.T) {
+	testFile(t, testdir+"lookupexp")
+}
+
+func TestUpdateStructExp(t *testing.T) {
+	testFile(t, testdir+"update_struct_exp")
+}
+
+func searchAstForErrorExps(t *testing.T, e Exp) {
 	switch e.(type) {
-	case ast.TypeDecl:
-	case ast.TopLevel:
-		e := e.(ast.TopLevel)
+	case TypeDecl:
+	case TopLevel:
+		e := e.(TopLevel)
 		for _, v := range e.Roots {
 			searchAstForErrorExps(t, v)
 		}
-	case ast.EntryExpression:
-		e := e.(ast.EntryExpression)
+	case EntryExpression:
+		e := e.(EntryExpression)
 		searchAstForErrorExps(t, e.Body)
-	case ast.BinOpExp:
-		e := e.(ast.BinOpExp)
+	case BinOpExp:
+		e := e.(BinOpExp)
 		searchAstForErrorExps(t, e.Left)
 		searchAstForErrorExps(t, e.Right)
-	case ast.KeyLit, ast.BoolLit, ast.IntLit, ast.FloatLit, ast.KoinLit, ast.StringLit, ast.UnitLit:
-	case ast.ListLit:
-		e := e.(ast.ListLit)
+	case ListLit:
+		e := e.(ListLit)
 		for _, v := range e.List {
 			searchAstForErrorExps(t, v)
 		}
-	case ast.ListConcat:
-		e := e.(ast.ListConcat)
+	case ListConcat:
+		e := e.(ListConcat)
 		searchAstForErrorExps(t, e.Exp)
 		searchAstForErrorExps(t, e.List)
-	case ast.LetExp:
-		e := e.(ast.LetExp)
+	case LetExp:
+		e := e.(LetExp)
 		searchAstForErrorExps(t, e.DefExp)
 		searchAstForErrorExps(t, e.InExp)
+	case TupleExp:
+		e := e.(TupleExp)
+		for _, v := range e.Exps {
+			searchAstForErrorExps(t, v)
+		}
+	case AnnoExp:
+		e := e.(AnnoExp)
+		searchAstForErrorExps(t, e.Exp)
+	case IfThenElseExp:
+		e := e.(IfThenElseExp)
+		searchAstForErrorExps(t, e.If)
+		searchAstForErrorExps(t, e.Then)
+		searchAstForErrorExps(t, e.Else)
+	case IfThenExp:
+		e := e.(IfThenExp)
+		searchAstForErrorExps(t, e.If)
+		searchAstForErrorExps(t, e.Then)
+	case ExpSeq:
+		e := e.(ExpSeq)
+		searchAstForErrorExps(t, e.Left)
+		searchAstForErrorExps(t, e.Right)
+	case UpdateStructExp:
+		e := e.(UpdateStructExp)
+		searchAstForErrorExps(t, e.Exp)
+	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
+		ModuleLookupExp, LookupExp:
 	default:
 		t.Error("Encountered unknown expression:", e.String())
 	}

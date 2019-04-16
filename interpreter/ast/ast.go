@@ -49,7 +49,7 @@ func NewTypeDecl(id string, typ interface{}) (Exp, error) {
 }
 
 func (e TypeDecl) String() string {
-	return fmt.Sprintf("TypeDecl(id: %s, typ: %s)", e.id, e.typ.String())
+	return fmt.Sprintf("TypeDecl(Id: %s, typ: %s)", e.id, e.typ.String())
 }
 
 /* Top Level */
@@ -94,7 +94,7 @@ type EntryExpression struct {
 }
 
 func (e EntryExpression) String() string {
-	return fmt.Sprintf("EntryExpression(id: %s, params: %s, storage: %s, body: %s)", e.Id, e.Params.String(),
+	return fmt.Sprintf("EntryExpression(Id: %s, params: %s, storage: %s, body: %s)", e.Id, e.Params.String(),
 		e.Storage.String(), e.Body.String())
 }
 
@@ -342,6 +342,179 @@ func NewLetExp(patt, def, in interface{}) (Exp, error) {
 	return LetExp{patt.(Pattern), def.(Exp), in.(Exp)}, nil
 }
 
+/* AnnoExp */
+type AnnoExp struct {
+	Exp  Exp
+	Anno Type
+}
+
+func (a AnnoExp) String() string {
+	return fmt.Sprintf("AnnoExp(Exp: %s, Anno: %s)", a.Exp.String(), a.Anno.String())
+}
+
+func NewAnnoExp(exp, typ interface{}) (Exp, error) {
+	return AnnoExp{exp.(Exp), typ.(Type)}, nil
+}
+
+/* TupleExp */
+type TupleExp struct {
+	Exps []Exp
+}
+
+func (t TupleExp) String() string {
+	res := "TupleExp("
+	var e Exp
+	exps := t.Exps
+	for len(exps) > 1 {
+		e, exps = exps[0], exps[1:]
+		res += e.String() + ", "
+	}
+	return res + exps[0].String() + ")"
+}
+
+func NewTupleExp(exp1, exp2 interface{}) (Exp, error) {
+	return TupleExp{[]Exp{exp1.(Exp), exp2.(Exp)}}, nil
+}
+
+func AddTupleEntry(exp, tuple interface{}) (Exp, error) {
+	exps := tuple.(TupleExp).Exps
+	return TupleExp{append([]Exp{exp.(Exp)}, exps...)}, nil
+}
+
+/* VarExp */
+type VarExp struct {
+	Id string
+}
+
+func (v VarExp) String() string {
+	return fmt.Sprintf("VarExp(Id: %s)", v.Id)
+}
+
+func NewVarExp(id string) (Exp, error) {
+	return VarExp{id}, nil
+}
+
+/* ExpSeq */
+type ExpSeq struct {
+	Left  Exp
+	Right Exp
+}
+
+func (e ExpSeq) String() string {
+	return fmt.Sprintf("ExpSeq(Left: %s, Right: %s)", e.Left.String(), e.Right.String())
+}
+
+func NewExpSeq(exp1, exp2 interface{}) (Exp, error) {
+	return ExpSeq{exp1.(Exp), exp2.(Exp)}, nil
+}
+
+/* IfThenElseExp */
+type IfThenElseExp struct {
+	If   Exp
+	Then Exp
+	Else Exp
+}
+
+func (e IfThenElseExp) String() string {
+	return fmt.Sprintf("IfThenElseExp(If: %s, Then: %s, Else: %s)", e.If.String(),
+		e.Then.String(), e.Else.String())
+}
+
+func NewIfThenElseExp(if_, then, else_ interface{}) (Exp, error) {
+	return IfThenElseExp{if_.(Exp), then.(Exp), else_.(Exp)}, nil
+}
+
+/* IfThenExp */
+type IfThenExp struct {
+	If   Exp
+	Then Exp
+}
+
+func (e IfThenExp) String() string {
+	return fmt.Sprintf("IfThenExp(If: %s, Then: %s)", e.If.String(), e.Then.String())
+}
+
+func NewIfThenExp(if_, then interface{}) (Exp, error) {
+	return IfThenExp{if_.(Exp), then.(Exp)}, nil
+}
+
+/* ModuleLookupExp */
+type ModuleLookupExp struct {
+	ModId   string
+	FieldId string
+}
+
+func (e ModuleLookupExp) String() string {
+	return fmt.Sprintf("ModuleLookupExp(ModId: %s, FieldId: %s)", e.ModId, e.FieldId)
+}
+
+func NewModuleLookupExp(mod, field string) (Exp, error) {
+	// TODO check module existance?
+	return ModuleLookupExp{mod, field}, nil
+}
+
+/* LookupExp */
+type LookupExp struct {
+	PathIds []string
+	LeafId  string
+}
+
+func (e LookupExp) String() string {
+	res := "LookupExp(PathIds: ["
+	var s string
+	idpath := e.PathIds
+	for len(idpath) > 1 {
+		s, idpath = idpath[0], idpath[1:]
+		res += s + ", "
+	}
+	return res + idpath[0] + "], LeafId: " + e.LeafId + ")"
+}
+
+func NewLookupExp(path interface{}, leaf string) (Exp, error) {
+	return LookupExp{path.([]string), leaf}, nil
+}
+
+func LookupPathRoot(id string) []string {
+	return []string{id}
+}
+
+func AddPathElement(list interface{}, id string) []string {
+	return append(list.([]string), id)
+}
+
+/* UpdateStructExp */
+type UpdateStructExp struct {
+	PathIds []string
+	LeafId  string
+	Exp     Exp
+}
+
+func (e UpdateStructExp) String() string {
+	res := "UpdateStructExp(PathIds: ["
+	var s string
+	idpath := e.PathIds
+	for len(idpath) > 1 {
+		s, idpath = idpath[0], idpath[1:]
+		res += s + ", "
+	}
+	return res + idpath[0] + "], LeafId: " + e.LeafId + ", Exp: " + e.Exp.String() + ")"
+}
+
+func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, error) {
+	return UpdateStructExp{path.([]string), leafid, exp.(Exp)}, nil
+}
+
+/* ExpList */
+func NewExpList(exp interface{}) []Exp {
+	return []Exp{exp.(Exp)}
+}
+
+func AddExpToList(exp, list interface{}) []Exp {
+	e := exp.(Exp)
+	l := list.([]Exp)
+	return prependList(e, l)
+}
+
 // ---------------------------
 
 func notImplemented() *notImplementedError { return &notImplementedError{} }
@@ -361,4 +534,8 @@ func (e ErrorExpression) String() string {
 }
 func fail(str string) (Exp, error) {
 	return ErrorExpression{str}, nil
+}
+
+func prependList(exp Exp, list []Exp) []Exp {
+	return append([]Exp{exp}, list...)
 }
