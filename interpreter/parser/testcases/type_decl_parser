@@ -20,4 +20,6 @@ type mydeclaredtype1 = mykey * myintkointuple
 
 type crazy = (mydeclaredtype1 * mydeclaredtype) list list
 
-type crazy1 = int list * crazy list
+type crazy1 = mydeclaredtype1 * mydeclaredtype list list
+
+type crazy2 = int list * crazy list

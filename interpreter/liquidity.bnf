@@ -81,37 +81,37 @@ Structure   : ModStruct                                         << >>
             | letinit Exp                                       << ast.NewTodoExp() >>
             | letentry lident Pattern Pattern eq Exp            << ast.NewEntryExpression(util.ParseId($1), $2, $3, $5) // >> ;
 
-ModStruct   : type lident eq Type                               << ast.NewSimpleTypeDecl(util.ParseId($1), $3) // >>
-            | type lident eq lbrack Struct rbrack               << ast.NewTodoExp() // >> ;
+ModStruct   : type lident eq Type                               << ast.NewTypeDecl(util.ParseId($1), $3) // >>
+            | type lident eq lbrace Struct rbrace               << ast.NewTypeDecl(util.ParseId($1), $4) // >> ;
 
-Struct      : lident colon Type semicolon Struct                << ast.NewTodoExp() // >>
-            | lident colon Type semicolon                       << ast.NewTodoExp() // >> ;
+Struct      : lident colon Type semicolon Struct                << ast.AddFieldToStruct(util.ParseId($0), $2, $4), nil // >>
+            | lident colon Type semicolon                       << ast.NewStructType(util.ParseId($0), $2), nil // >> ;
 
 Exp         : lident                                            << ast.NewTodoExp() // idexp >>
             | uident dot lident                                 << ast.NewTodoExp() // external lookup exp >>
-            | lparen Exp rparen                                 << ast.NewTodoExp() // parenthesis >>
+            | lparen Exp rparen                                 << $1, nil // parenthesis >>
             | Lookup lident                                     << ast.NewTodoExp() // lookupexp >>
             | Lookup lident larrow Exp                          << ast.NewTodoExp() // lookupexp >>
             | if Exp then Exp else Exp                          << ast.NewTodoExp() // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewTodoExp() // ifthen exp >>
             | Exp semicolon Exp                                 << ast.NewTodoExp() // seqexp >>
-            | Exp colon colon Exp                               << ast.PrependList($0, $3) // >>
-            | let Pattern eq Exp in Exp                         << ast.NewTodoExp() // letexp >>
+            | Exp colon colon Exp                               << ast.NewListConcat($0, $3) // >>
+            | let Pattern eq Exp in Exp                         << ast.NewLetExp($1, $3, $5) // letexp >>
             | lparen Tuple rparen                               << ast.NewTodoExp() // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewTodoExp() // annotatedExp >>
-            | Exp Binop Exp                                     << ast.NewTodoExp() // BinopExp >>
+            | Exp Binop Exp                                     << ast.NewBinOpExp($0, $1, $2) // BinopExp >>
             | Constant                                          << >> ;
 
-Binop       : plus
-            | minus
-            | ast
-            | slash
-            | eq eq
-            | neq
-            | geq
-            | leq
-            | lt
-            | gt ;
+Binop       : plus                                              << ast.PLUS, nil >>
+            | minus                                             << ast.MINUS, nil>>
+            | ast                                               << ast.TIMES, nil>>
+            | slash                                             << ast.DIVIDE, nil>>
+            | eq eq                                             << ast.EQ, nil >>
+            | neq                                               << ast.NEQ, nil >>
+            | geq                                               << ast.GEQ, nil >>
+            | leq                                               << ast.LEQ, nil >>
+            | lt                                                << ast.LT, nil >>
+            | gt                                                << ast.GT, nil >> ;
 
 Tuple       : Exp comma Exp                                     << ast.NewTodoExp() // tuple >>
             | Exp comma Tuple                                   << ast.NewTodoExp() // tuple of tuple >> ;

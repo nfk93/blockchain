@@ -5,20 +5,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: Massive overhaul using type casing instead of naive casting, returning errors where relevant
+
 type Exp interface {
 	String() string
 }
 
-type BinOPExp struct {
-	left  interface{}
-	right interface{}
-	oper  OperationType
+/* BinOpExp */
+type BinOpExp struct {
+	Left  Exp
+	Op    Oper
+	Right Exp
 }
 
-func NewBinOpExp(left, right, oper OperationType) (BinOPExp, error) {
-	return BinOPExp{left, right, oper}, nil
+func (b BinOpExp) String() string {
+	return fmt.Sprintf("BinOpExp(Left: %s, Op: %s, Right: %s)", b.Left.String(),
+		operToString(b.Op), b.Right.String())
 }
 
+func NewBinOpExp(left, oper, right interface{}) (BinOpExp, error) {
+	return BinOpExp{left.(Exp), oper.(Oper), right.(Exp)}, nil
+}
+
+/* TODO Exp */
 type TodoExp struct{}
 
 func NewTodoExp() (Exp, error) {
@@ -30,17 +39,17 @@ func (e TodoExp) String() string {
 }
 
 /* Simple Type Declaration */
-type SimpleTypeDecl struct {
+type TypeDecl struct {
 	id  string
 	typ Type
 }
 
-func NewSimpleTypeDecl(id string, typ interface{}) (Exp, error) {
-	return SimpleTypeDecl{id, typ.(Type)}, nil
+func NewTypeDecl(id string, typ interface{}) (Exp, error) {
+	return TypeDecl{id, typ.(Type)}, nil
 }
 
-func (e SimpleTypeDecl) String() string {
-	return fmt.Sprintf("SimpleTypeDecl(id: %s, typ: %s)", e.id, e.typ.String())
+func (e TypeDecl) String() string {
+	return fmt.Sprintf("TypeDecl(id: %s, typ: %s)", e.id, e.typ.String())
 }
 
 /* Top Level */
@@ -50,7 +59,7 @@ type TopLevel struct {
 
 func NewRoot(e interface{}) (Exp, error) {
 	switch e.(type) {
-	case SimpleTypeDecl, EntryExpression:
+	case TypeDecl, EntryExpression:
 		return TopLevel{[]Exp{e.(Exp)}}, nil
 	default:
 		ex, _ := fail(fmt.Sprintf("Toplevel error, New root can't be type %T", e))
@@ -181,7 +190,7 @@ func NewKeyLit(key []byte) (Exp, error) {
 }
 
 func checkKey(key []byte) bool {
-	// TODO: check if this is an actual base 58 key, i.e. has the right characters and such
+	// TODO: check if this is an actual base 58 key, i.e. has the Right characters and such
 	return true
 }
 
@@ -268,16 +277,16 @@ func NewUnitLit() (Exp, error) {
 
 /* ListType Lit TODO: Refactor to use head and tail instead? */
 type ListLit struct {
-	list []Exp
+	List []Exp
 }
 
 func (l ListLit) String() string {
-	if len(l.list) == 0 {
-		return fmt.Sprintf("ListLit(list: [])")
+	if len(l.List) == 0 {
+		return fmt.Sprintf("ListLit(List: [])")
 	} else {
-		res := "ListLit(list: ["
+		res := "ListLit(List: ["
 		var e Exp
-		list := l.list
+		list := l.List
 		for len(list) > 1 {
 			e, list = list[0], list[1:]
 			res = res + fmt.Sprintf("%s, ", e.String())
@@ -300,11 +309,37 @@ func NewEmptyList() (Exp, error) {
 func AppendList(exp1, exp2 interface{}) (Exp, error) {
 	lst1 := exp1.(ListLit)
 	lst2 := exp2.(Exp)
-	return ListLit{append(lst1.list, lst2)}, nil
+	return ListLit{append(lst1.List, lst2)}, nil
 }
 
-func PrependList(exp, list interface{}) (Exp, error) {
-	return TodoExp{}, nil
+/* ListConcat */
+type ListConcat struct {
+	Exp  Exp
+	List Exp
+}
+
+func (l ListConcat) String() string {
+	return fmt.Sprintf("ListConcat(Exp: %s, List: %s)", l.Exp.String(), l.List.String())
+}
+
+func NewListConcat(exp, list interface{}) (Exp, error) {
+	return ListConcat{exp.(Exp), list.(Exp)}, nil
+}
+
+/* LetExp */
+type LetExp struct {
+	Patt   Pattern
+	DefExp Exp
+	InExp  Exp
+}
+
+func (l LetExp) String() string {
+	return fmt.Sprintf("LetExp(Patt: %s, DefExp: %s, InExp: %s)", l.Patt.String(),
+		l.DefExp.String(), l.InExp.String())
+}
+
+func NewLetExp(patt, def, in interface{}) (Exp, error) {
+	return LetExp{patt.(Pattern), def.(Exp), in.(Exp)}, nil
 }
 
 // ---------------------------

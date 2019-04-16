@@ -2,6 +2,8 @@ package ast
 
 import "fmt"
 
+// TODO: Massive overhaul using type casing instead of naive casting, returning errors where relevant
+
 type Type interface {
 	Type() Typecode
 	String() string
@@ -21,6 +23,7 @@ const (
 	LIST
 	TUPLE
 	DECLARED
+	STRUCT
 )
 
 type StringType struct{}
@@ -115,7 +118,7 @@ func (t ListType) Type() Typecode {
 	return LIST
 }
 func (t ListType) String() string {
-	return fmt.Sprintf("%s list", t.Typ.String())
+	return fmt.Sprintf("%s List", t.Typ.String())
 }
 func NewListType(typ interface{}) ListType {
 	return ListType{typ.(Type)}
@@ -150,16 +153,83 @@ func NewDeclaredType(id string) DeclaredType {
 	return DeclaredType{id}
 }
 
+type StructType struct {
+	Fields []StructField
+}
+type StructField struct {
+	Id  string
+	Typ Type
+}
+
+func NewStructType(id string, typ interface{}) StructType {
+	fields := []StructField{NewStructField(id, typ.(Type))}
+	return StructType{fields}
+}
+func NewStructField(id string, typ Type) StructField {
+	return StructField{id, typ}
+}
+func AddFieldToStruct(id string, typ, str interface{}) StructType {
+	s := str.(StructType)
+	field := StructField{id, typ.(Type)}
+	fields := append([]StructField{field}, s.Fields...)
+	return StructType{fields}
+}
+func (t StructType) String() string {
+	s := "{"
+	var field StructField
+	fields := t.Fields
+	for len(fields) > 1 {
+		field, fields = fields[0], fields[1:]
+		s = s + fmt.Sprintf("%s : %s, ", field.Id, field.Typ.String())
+	}
+	return s + fmt.Sprintf("%s : %s}", fields[0].Id, fields[0].Typ)
+}
+func (t StructType) Type() Typecode {
+	return STRUCT
+}
+
 type TypeOption struct {
 	opt bool
 	typ Type
 }
 
-type BinOp int
+type Oper int
 
 const (
-	PLUS BinOp = iota
+	PLUS Oper = iota
 	MINUS
 	TIMES
 	DIVIDE
+	EQ
+	NEQ
+	GEQ
+	LEQ
+	LT
+	GT
 )
+
+func operToString(op Oper) string {
+	switch op {
+	case PLUS:
+		return "PLUS"
+	case MINUS:
+		return "MINUS"
+	case TIMES:
+		return "TIMES"
+	case DIVIDE:
+		return "DIVIDE"
+	case EQ:
+		return "EQ"
+	case NEQ:
+		return "NEQ"
+	case GEQ:
+		return "GEQ"
+	case LEQ:
+		return "LEQ"
+	case LT:
+		return "LT"
+	case GT:
+		return "GT"
+	}
+	return "ERROR"
+}
