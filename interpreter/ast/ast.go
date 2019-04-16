@@ -59,7 +59,7 @@ type TopLevel struct {
 
 func NewRoot(e interface{}) (Exp, error) {
 	switch e.(type) {
-	case TypeDecl, EntryExpression:
+	case TypeDecl, EntryExpression, InitExp:
 		return TopLevel{[]Exp{e.(Exp)}}, nil
 	default:
 		ex, _ := fail(fmt.Sprintf("Toplevel error, New root can't be type %T", e))
@@ -273,6 +273,35 @@ func (u UnitLit) String() string {
 
 func NewUnitLit() (Exp, error) {
 	return UnitLit{}, nil
+}
+
+/* StructLit */
+type StructLit struct {
+	Ids  []string
+	Vals []Exp
+}
+
+func (e StructLit) String() string {
+	res := "StructLit("
+	var id string
+	var exp Exp
+	idlist := e.Ids
+	elist := e.Vals
+	for len(idlist) > 0 {
+		id, exp, idlist, elist = idlist[0], elist[0], idlist[1:], elist[1:]
+		res = res + fmt.Sprintf("\n\t%s = %s;", id, exp.String())
+	}
+	res = res + fmt.Sprintf("\n)")
+	return res
+}
+
+func NewStructLit(id string, exp interface{}) (Exp, error) {
+	return StructLit{[]string{id}, []Exp{exp.(Exp)}}, nil
+}
+
+func AppendStructLit(struc interface{}, id string, exp interface{}) (Exp, error) {
+	s := struc.(StructLit)
+	return StructLit{append(s.Ids, id), append(s.Vals, exp.(Exp))}, nil
 }
 
 /* ListType Lit TODO: Refactor to use head and tail instead? */
@@ -502,6 +531,23 @@ func (e UpdateStructExp) String() string {
 
 func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, error) {
 	return UpdateStructExp{path.([]string), leafid, exp.(Exp)}, nil
+}
+
+/* InitExp */
+type InitExp struct {
+	Exp Exp
+}
+
+func (e InitExp) String() string {
+	return fmt.Sprintf("InitExp(Exp: %s)", e.Exp.String())
+}
+
+func NewInitExp(id string, exp interface{}) (Exp, error) {
+	if id != "storage" {
+		return (ErrorExpression{"Inits must initialize storage only"}),
+			errors.Errorf("init is not initializing storage, but %s", id)
+	}
+	return InitExp{exp.(Exp)}, nil
 }
 
 /* ExpList */

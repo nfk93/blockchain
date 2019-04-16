@@ -78,7 +78,7 @@ Toplevel    : Structure                                         << ast.NewRoot($
 
 
 Structure   : ModStruct                                         << >>
-            | letinit Exp                                       << ast.NewTodoExp() >>
+            | letinit lident eq Exp                             << ast.NewInitExp(util.ParseId($1), $3) >>
             | letentry lident Pattern Pattern eq Exp            << ast.NewEntryExpression(util.ParseId($1), $2, $3, $5) // >> ;
 
 ModStruct   : type lident eq Type                               << ast.NewTypeDecl(util.ParseId($1), $3) // >>
@@ -87,20 +87,22 @@ ModStruct   : type lident eq Type                               << ast.NewTypeDe
 Struct      : lident colon Type semicolon Struct                << ast.AddFieldToStruct(util.ParseId($0), $2, $4), nil // >>
             | lident colon Type semicolon                       << ast.NewStructType(util.ParseId($0), $2), nil // >> ;
 
+ExpSeq      : Exp                                               << $0, nil >>
+            | ExpSeq semicolon Exp                              << ast.NewExpSeq($0, $2) // seqexp >> ;
+
 Exp         : lident                                            << ast.NewVarExp(util.ParseId($0)) // idexp >>
             | uident dot lident                                 << ast.NewModuleLookupExp(util.ParseId($0), util.ParseId($2)) // external lookup exp >>
-            | lparen Exp rparen                                 << $1, nil // parenthesis >>
+            | lparen ExpSeq rparen                              << $1, nil // parenthesis >>
             | Lookup lident larrow Exp                          << ast.NewUpdateStructExp($0, util.ParseId($1), $3) // lookupexp >>
             | Lookup lident                                     << ast.NewLookupExp($0, util.ParseId($1)) // lookupexp >>
             | if Exp then Exp else Exp                          << ast.NewIfThenElseExp($1, $3, $5) // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewIfThenExp($1, $3) // ifthen exp >>
-            | Exp semicolon Exp                                 << ast.NewExpSeq($0, $2) // seqexp >>
             | Exp colon colon Exp                               << ast.NewListConcat($0, $3) // >>
             | let Pattern eq Exp in Exp                         << ast.NewLetExp($1, $3, $5) // letexp >>
             | lparen Tuple rparen                               << $1, nil // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewAnnoExp($1, $3) // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewBinOpExp($0, $1, $2) // BinopExp >>
-            | Constant                                          << >> ;
+            | Constant                                          << >>;
 
 Binop       : plus                                              << ast.PLUS, nil >>
             | minus                                             << ast.MINUS, nil>>
@@ -149,10 +151,14 @@ Constant    : key_lit                                           << ast.NewKeyLit
             | string_lit                                        << ast.NewStringLit(util.ParseString($0)) >>
             | lparen rparen                                     << ast.NewUnitLit() >>
             | lbrack rbrack                                     << ast.NewEmptyList() >>
-            | lbrack Array rbrack                               << $1, nil >> ;
+            | lbrack Array rbrack                               << $1, nil >>
+            | lbrace StructLit rbrace                           << $1, nil >>;
 
 Array       : Constant                                          << ast.NewListLit($0) >>
             | Array semicolon Constant                          << ast.AppendList($0, $2) >> ;
+
+StructLit   : lident eq Exp semicolon                           << ast.NewStructLit(util.ParseId($0), $2) >>
+            | StructLit lident eq Exp semicolon                 << ast.AppendStructLit($0, util.ParseId($1), $3) >> ;
 
 
 

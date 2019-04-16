@@ -91,6 +91,22 @@ func TestUpdateStructExp(t *testing.T) {
 	testFile(t, testdir+"update_struct_exp")
 }
 
+func TestInit1(t *testing.T) {
+	testFile(t, testdir+"init1")
+}
+
+func TestInit2(t *testing.T) {
+	testFile(t, testdir+"init2")
+}
+
+func TestStructLit(t *testing.T) {
+	testFile(t, testdir+"struct_lit")
+}
+
+func TestFundMe(t *testing.T) {
+	testFile(t, testdir+"fundme")
+}
+
 func searchAstForErrorExps(t *testing.T, e Exp) {
 	switch e.(type) {
 	case TypeDecl:
@@ -143,6 +159,14 @@ func searchAstForErrorExps(t *testing.T, e Exp) {
 	case UpdateStructExp:
 		e := e.(UpdateStructExp)
 		searchAstForErrorExps(t, e.Exp)
+	case InitExp:
+		e := e.(InitExp)
+		searchAstForErrorExps(t, e.Exp)
+	case StructLit:
+		e := e.(StructLit)
+		for _, v := range e.Vals {
+			searchAstForErrorExps(t, v)
+		}
 	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp:
 	default:
