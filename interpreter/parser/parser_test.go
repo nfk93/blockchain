@@ -167,6 +167,10 @@ func searchAstForErrorExps(t *testing.T, e Exp) {
 		for _, v := range e.Vals {
 			searchAstForErrorExps(t, v)
 		}
+	case CallExp:
+		e := e.(CallExp)
+		searchAstForErrorExps(t, e.Exp1)
+		searchAstForErrorExps(t, e.Exp2)
 	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp:
 	default:
