@@ -243,7 +243,7 @@ func (k KoinLit) String() string {
 }
 
 func NewKoinLit(koins int64) (Exp, error) {
-	if koins <= 0 {
+	if koins < 0 {
 		err := "koin literal can't have negative value"
 		return ErrorExpression{err}, nil
 	} else {
@@ -353,6 +353,20 @@ func (l ListConcat) String() string {
 
 func NewListConcat(exp, list interface{}) (Exp, error) {
 	return ListConcat{exp.(Exp), list.(Exp)}, nil
+}
+
+/* CallExp */
+type CallExp struct {
+	Exp1 Exp
+	Exp2 Exp
+}
+
+func (e CallExp) String() string {
+	return fmt.Sprintf("CallExp(Exp1: %s, Exp2: %s)", e.Exp1.String(), e.Exp2.String())
+}
+
+func NewCallExp(exp1, exp2 interface{}) (Exp, error) {
+	return CallExp{exp1.(Exp), exp2.(Exp)}, nil
 }
 
 /* LetExp */
