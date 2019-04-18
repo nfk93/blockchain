@@ -12,7 +12,7 @@ var genesis Block
 
 func resetMocksAndStart() {
 	sk, pk := KeyGen(2048)
-	genesis = createTestGenesisBlock(time.Duration(1)*time.Second, 0.9)
+	genesis = createTestGenesisBlock(time.Duration(1)*time.Second, 0.25)
 	StartConsensus(CreateChannelStruct(), pk, sk, true)
 }
 
@@ -173,5 +173,4 @@ func TestBlockGeneration(t *testing.T) {
 		channels.TransFromP2P <- CreateTransaction(pk, pk2, 50, "t"+strconv.Itoa(i), sk)
 	}
 	time.Sleep(slotLength * 50)
-
 }

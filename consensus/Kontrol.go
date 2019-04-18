@@ -97,7 +97,8 @@ func generateBlock(draw string, slot int) {
 		pk,
 		slot,
 		draw,
-		o.CreateNewBlockNonce(leadershipNonce, sk, slot)}
+		o.CreateNewBlockNonce(leadershipNonce, sk, slot),
+		lastFinalized}
 	channels.TransToTrans <- blockData
 	go sendBlock()
 }

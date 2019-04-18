@@ -65,9 +65,9 @@ func ValidateDraw(b Block, leadershipNonce string, hardness float64) bool {
 	threshold := new(big.Int)
 	new(big.Float).Mul(big.NewFloat(float64(phiFunc)), new(big.Float).SetInt(multFactor)).Int(threshold)
 
-	// Checks if the draw is bigger than the threshold
-	// Returns 1 if x > y
-	if hashVal.Cmp(threshold) == 1 {
+	// Checks if the draw is less than the threshold
+	// Returns -1 if x < y
+	if hashVal.Cmp(threshold) == -1 {
 		return true
 	}
 

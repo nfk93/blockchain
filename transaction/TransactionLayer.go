@@ -12,22 +12,20 @@ type TLNode struct {
 }
 
 type Tree struct {
-	treeMap       map[string]TLNode
-	head          string
-	lastFinalized string
+	treeMap map[string]TLNode
+	head    string
 }
 
 var tree Tree
 
 func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
-	tree = Tree{make(map[string]TLNode), "", ""}
+	tree = Tree{make(map[string]TLNode), ""}
 
 	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
 			b := <-blockInput
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
-				tree.lastFinalized = b.CalculateBlockHash()
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
 			} else if len(tree.treeMap) > 0 {
@@ -40,12 +38,11 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 		}
 	}()
 
-	// Finalize a given NodeBlock
+	// Consensus layer asks for the state of a finalized block
 	go func() {
 		for {
 			finalize := <-finalizeChan
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
-				tree.lastFinalized = finalize
 				stateReturn <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
@@ -115,7 +112,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		blockData.Pk,
 		blockData.Draw,
 		BlockNonce{},
-		t.lastFinalized,
+		blockData.LastFinalized,
 		Data{addedTransactions, GenesisData{}},
 		s.CreateStateHash(blockData.Sk),
 		""}
