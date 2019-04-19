@@ -39,8 +39,12 @@ OK - Only first instance of genesis should be accepted
 - Gas?
 - TEST, TEST, TEST!!
 - Add tests for AddTransaction in state_test
+- Change limitations for number of transactions in a single block
 
 
+-  Gas
+    OK - Block creator should receive block rewards for a block.
+    OK - Transaction cost should be subtracted from the sender.
 
 - Blocks are done
 - Leadership election is not tested

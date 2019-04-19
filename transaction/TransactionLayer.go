@@ -17,14 +17,16 @@ type Tree struct {
 }
 
 var tree Tree
+var transactionFee = 1
+var blockReward = 100
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, newBlockChan chan CreateBlockData, sk SecretKey) {
+func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), ""}
 
 	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
-			b := <-blockInput
+			b := <-channels.BlockToTrans
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
@@ -41,28 +43,30 @@ func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finali
 	// Consensus layer asks for the state of a finalized block
 	go func() {
 		for {
-			finalize := <-finalizeChan
+			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
-				stateReturn <- finalizedNode.state
+				channels.StateFromTrans <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
-				stateReturn <- State{}
+				channels.StateFromTrans <- State{}
 			}
 		}
 	}()
 
 	// A new NodeBlock should be created from the transactions in transList
 	for {
-		newBlockData := <-newBlockChan
+		newBlockData := <-channels.TransToTrans
 		newBlock := tree.createNewBlock(newBlockData)
-		blockReturn <- newBlock
+		channels.BlockFromTrans <- newBlock
 	}
 }
 
 func (t *Tree) processBlock(b Block) {
+	successfulTransactions := 0
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	if s.Ledger == nil {
 		s.Ledger = make(map[PublicKey]int)
 	}
@@ -70,20 +74,26 @@ func (t *Tree) processBlock(b Block) {
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
-			s.AddTransaction(tr)
+			transSuccess := s.AddTransaction(tr, transactionFee)
+			if transSuccess {
+				successfulTransactions += 1
+			}
 		}
 	}
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyStateHash(b.StateHash, b.BakerID) {
-		// Create new node in the tree
-		t.createNewNode(b, s)
+		// Pay the block creator
+		s.AddBlockRewardAndTransFees(b.BakerID, blockReward+(successfulTransactions*transactionFee))
 
-		// Update head
-		t.head = b.CalculateBlockHash()
 	} else {
-		fmt.Println("Proof of work didn't verify. Block is therefore not processed!")
+		fmt.Println("Proof of work in block didn't match...")
 	}
+	// Create new node in the tree
+	t.createNewNode(b, s)
+
+	// Update head
+	t.head = b.CalculateBlockHash()
 
 }
 
@@ -96,14 +106,14 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 	s.ParentHash = t.head
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []Transaction
 
 	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
 		newTrans := blockData.TransList[i]
-		//transactions = transactions[1:]
-		s.AddTransaction(newTrans)
+		s.AddTransaction(newTrans, transactionFee)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
@@ -137,32 +147,3 @@ func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
 	}
 	return newMap
 }
-
-//func PreviousStatesAsString(currentBlock Block) string {
-//	var buf bytes.Buffer
-//
-//	currentBlock = tree.treeMap[tree.head].block
-//
-//	parentBlock := currentBlock.ParentPointer
-//	for currentBlock.LastFinalized != parentBlock {
-//		buf.WriteString(string(tree.treeMap[parentBlock].state.StateAsString()))
-//		parentBlock = tree.treeMap[parentBlock].block.ParentPointer
-//	}
-//
-//	return buf.String()
-//}
-//func (t *Tree) CreateNewBlockNonce(finalizeThisBlock string, slot int, sk SecretKey, pk PublicKey) BlockNonce {
-//
-//	blockToFinalize := t.treeMap[finalizeThisBlock].block
-//
-//	var buf bytes.Buffer
-//	buf.WriteString("NONCE")
-//	buf.WriteString(PreviousStatesAsString(blockToFinalize))
-//	buf.WriteString(strconv.Itoa(slot))
-//
-//	newNonceString := buf.String()
-//	newNonce := HashSHA(newNonceString)
-//	bn := BlockNonce{newNonce, "", pk}
-//	bn.SignBlockNonce(sk)
-//	return bn
-//}

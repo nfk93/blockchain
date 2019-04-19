@@ -11,32 +11,45 @@ import (
 type State struct {
 	Ledger     map[PublicKey]int
 	ParentHash string
+	TotalStake int
 }
 
 func NewInitialState(key PublicKey) State {
+	initialStake := 1000000 // 1 mil
 	ledger := make(map[PublicKey]int)
-	ledger[key] = 1000000 // 1 mil
-	return State{ledger, ""}
+	ledger[key] = initialStake
+	return State{ledger, "", initialStake}
 }
 
-func (s *State) AddTransaction(t Transaction) {
+func (s *State) AddTransaction(t Transaction, transFee int) bool {
 	//TODO: Handle checks of legal transactions
+
+	amountWithFees := t.Amount + transFee
 
 	if !t.VerifyTransaction() {
 		fmt.Println("The transactions didn't verify", t)
-		return
+		return false
 	}
 	if t.Amount <= 0 {
 		fmt.Println("Invalid transaction Amount! Amount should be positive!", t.Amount)
-		return
+		return false
 	}
 
-	if s.Ledger[t.From] < t.Amount {
+	// Sender has to be able to pay both the amount and the fee
+	if s.Ledger[t.From] < amountWithFees {
 		fmt.Println("Not enough money on senders account")
-		return
+		return false
 	}
+
+	s.Ledger[t.From] -= amountWithFees
 	s.Ledger[t.To] += t.Amount
-	s.Ledger[t.From] -= t.Amount
+	s.TotalStake -= transFee // Take the fee out of the system
+	return true
+}
+
+func (s *State) AddBlockRewardAndTransFees(pk PublicKey, reward int) {
+	s.Ledger[pk] += reward
+	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
 
 func (s State) StateAsString() string {
@@ -56,6 +69,7 @@ func (s State) StateAsString() string {
 		buf.WriteString(strconv.Itoa(sortedLedger[k]))
 	}
 	buf.WriteString(s.ParentHash)
+	buf.WriteString(strconv.Itoa(s.TotalStake))
 
 	return buf.String()
 }

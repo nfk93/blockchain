@@ -34,7 +34,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 
 func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
 	gData := GenesisData{time.Now(), slotDuration,
-		"1001001010100100010101", hardness, State{make(map[PublicKey]int), ""}}
+		"1001001010100100010101", hardness, State{make(map[PublicKey]int), "", 100000}}
 	return Block{0,
 		"",
 		PublicKey{},
@@ -167,6 +167,7 @@ func TestInteraction(t *testing.T) {
 func TestBlockGeneration(t *testing.T) {
 	resetMocksAndStart()
 	genesis.BlockData.GenesisData.InitialState.Ledger[pk] = 1000000 //1 Million
+	genesis.BlockData.GenesisData.InitialState.TotalStake = 10000000
 	channels.BlockFromP2P <- genesis
 	_, pk2 := KeyGen(2048)
 	for i := 0; i < 10; i++ {

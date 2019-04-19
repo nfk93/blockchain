@@ -30,7 +30,6 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	badBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
 	testDrawVal = 0
-	// TODO: do something with the genesis data
 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
@@ -68,13 +67,13 @@ func handleBlock(b o.Block) {
 		handleGenesisBlock(b)
 		return
 	}
-	if !b.ValidateBlock() || !verifyDraw(b) { // TODO: Should maybe use b.ValidateBlock
+	if !b.ValidateBlock() || !ValidateDraw(b, leadershipNonce, hardness) {
 		return
 	}
 	addBlock(b)
 }
 
-func handleGenesisBlock(b o.Block) { //*TODO Proper genesisdata should be added and handled
+func handleGenesisBlock(b o.Block) {
 	blocks.add(b)
 	processGenesisData(b.BlockData.GenesisData)
 	sendBlockToTL(b)
@@ -238,20 +237,10 @@ func addBlock(b o.Block) {
 	}
 }
 
-//Sends a block to the P2P layer to be broadcasted
-func broadcastBlock(b o.Block) {
-
-}
-
 func calculateDraw(b o.Block) int {
 	//*TODO
 	testDrawVal++
 	return testDrawVal
-}
-
-func verifyDraw(b o.Block) bool {
-	// *TODO
-	return true
 }
 
 func log() {
