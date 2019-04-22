@@ -102,12 +102,22 @@ func comparePathWeight(b o.Block) {
 		return
 	}
 
-	if l > currentLength || calculateDraw(blocks.get(currentHead)) < calculateDraw(b) {
+	if l > currentLength || compareDrawVal(b) {
 		if rollback(b) {
 			currentHead = b.CalculateBlockHash()
 			currentLength = l
 		}
 	}
+}
+
+//Compares the draw value of a block with the current head
+func compareDrawVal(b o.Block) bool {
+	headDraw := CalculateDrawValue(blocks.get(currentHead), leadershipNonce)
+	blockDraw := CalculateDrawValue(b, leadershipNonce)
+	if headDraw.Cmp(blockDraw) == -1 {
+		return true
+	}
+	return false
 }
 
 //Manages rollback in the case of branch shifting. Returns true if successful and false otherwise.
@@ -235,12 +245,6 @@ func addBlock(b o.Block) {
 	if isLegalExtension(b) {
 		updateHead(b)
 	}
-}
-
-func calculateDraw(b o.Block) int {
-	//*TODO
-	testDrawVal++
-	return testDrawVal
 }
 
 func log() {

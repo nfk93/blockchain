@@ -33,7 +33,6 @@ func main() {
 	channels = objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
 	consensus.StartConsensus(channels, publicKey, secretKey, true)
-
 	cliLoop()
 }
 

@@ -55,7 +55,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	go transaction.StartTransactionLayer(channels)
 }
 
-func finalize(slot int) { //TODO add generation of new leadershipNonce
+func finalize(slot int) { //TODO add generation of new leadershipNonce (when doing so also change all places using it)
 	finalLock.Lock()
 	defer finalLock.Unlock()
 	head := blocks.get(currentHead)

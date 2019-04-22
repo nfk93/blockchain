@@ -50,28 +50,31 @@ func ValidateDraw(b Block, leadershipNonce string, hardness float64) bool {
 		return false
 	}
 
-	// Calculates the draw value
-	var valBuf bytes.Buffer
-	valBuf.WriteString("LEADERSHIP_ELECTION")
-	valBuf.WriteString(leadershipNonce)
-	valBuf.WriteString(strconv.Itoa(b.Slot))
-
-	hashVal := big.NewInt(0)
-	hashVal.SetString(HashSHA(valBuf.String()), 10)
-
 	// Calculates the threshold
 	phiFunc := float64(1) - math.Pow(float64(1)-hardness, getLotteryPower(b.BakerID))
 	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(256)), nil)
 	threshold := new(big.Int)
 	new(big.Float).Mul(big.NewFloat(float64(phiFunc)), new(big.Float).SetInt(multFactor)).Int(threshold)
 
+	drawVal := CalculateDrawValue(b, leadershipNonce)
+
 	// Checks if the draw is less than the threshold
 	// Returns -1 if x < y
-	if hashVal.Cmp(threshold) == -1 {
+	if drawVal.Cmp(threshold) == -1 {
 		return true
 	}
-
 	return false
+}
+
+func CalculateDrawValue(b Block, leadershipNonce string) *big.Int {
+	// Calculates the draw value
+	var valBuf bytes.Buffer
+	valBuf.WriteString("LEADERSHIP_ELECTION")
+	valBuf.WriteString(leadershipNonce)
+	valBuf.WriteString(strconv.Itoa(b.Slot))
+	hashVal := big.NewInt(0)
+	hashVal.SetString(HashSHA(valBuf.String()), 10)
+	return hashVal
 }
 
 func validateDrawSignature(b Block, leadershipNonce string) bool {
