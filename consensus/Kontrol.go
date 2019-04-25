@@ -16,6 +16,7 @@ var slotLock sync.RWMutex
 var currentStake int
 var systemStake int
 var hardness float64
+var genesisTime time.Time
 var sk SecretKey
 var pk PublicKey
 var lastFinalizedLedger map[PublicKey]int
@@ -30,7 +31,11 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 			finalize(currentSlot - 10)
 		}
 		go drawLottery(currentSlot)
-		time.Sleep(slotLength)
+		timeSinceGenesis := time.Since(genesisTime)
+		sleepyTime := time.Duration(currentSlot)*slotLength - timeSinceGenesis
+		if sleepyTime > 0 {
+			time.Sleep(sleepyTime)
+		}
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
@@ -51,6 +56,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	leadershipNonce = genesisData.Nonce
 	currentStake = lastFinalizedLedger[pk]
 	systemStake = genesisData.InitialState.TotalStake
+	genesisTime = genesisData.GenesisTime
 	go runSlot()
 	go transaction.StartTransactionLayer(channels)
 }
