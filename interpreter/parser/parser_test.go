@@ -103,6 +103,10 @@ func TestStructLit(t *testing.T) {
 	testFile(t, testdir+"struct_lit")
 }
 
+func TestCallExp(t *testing.T) {
+	testFile(t, testdir+"call_exp")
+}
+
 func TestFundMe(t *testing.T) {
 	testFile(t, testdir+"fundme")
 }
@@ -159,8 +163,8 @@ func searchAstForErrorExps(t *testing.T, e Exp) {
 	case UpdateStructExp:
 		e := e.(UpdateStructExp)
 		searchAstForErrorExps(t, e.Exp)
-	case InitExp:
-		e := e.(InitExp)
+	case StorageInitExp:
+		e := e.(StorageInitExp)
 		searchAstForErrorExps(t, e.Exp)
 	case StructLit:
 		e := e.(StructLit)

@@ -188,6 +188,11 @@ func (t StructType) Type() Typecode {
 	return STRUCT
 }
 
+type NotImplementedType struct{}
+
+func (t NotImplementedType) String() string { return "NotImplementedType" }
+func (t NotImplementedType) Type() Typecode { return -1 }
+
 type TypeOption struct {
 	opt bool
 	typ Type

@@ -78,7 +78,7 @@ Toplevel    : Structure                                         << ast.NewRoot($
 
 
 Structure   : ModStruct                                         << >>
-            | letinit lident eq Exp                             << ast.NewInitExp(util.ParseId($1), $3) >>
+            | letinit lident eq Exp                             << ast.NewStorageInitExp(util.ParseId($1), $3) >>
             | letentry lident Pattern Pattern eq Exp            << ast.NewEntryExpression(util.ParseId($1), $2, $3, $5) // >> ;
 
 ModStruct   : type lident eq Type                               << ast.NewTypeDecl(util.ParseId($1), $3) // >>

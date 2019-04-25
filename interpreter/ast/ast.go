@@ -27,17 +27,6 @@ func NewBinOpExp(left, oper, right interface{}) (BinOpExp, error) {
 	return BinOpExp{left.(Exp), oper.(Oper), right.(Exp)}, nil
 }
 
-/* TODO Exp */
-type TodoExp struct{}
-
-func NewTodoExp() (Exp, error) {
-	return TodoExp{}, nil
-}
-
-func (e TodoExp) String() string {
-	return "TODOEXP"
-}
-
 /* Simple Type Declaration */
 type TypeDecl struct {
 	id  string
@@ -59,7 +48,7 @@ type TopLevel struct {
 
 func NewRoot(e interface{}) (Exp, error) {
 	switch e.(type) {
-	case TypeDecl, EntryExpression, InitExp:
+	case TypeDecl, EntryExpression, StorageInitExp:
 		return TopLevel{[]Exp{e.(Exp)}}, nil
 	default:
 		ex, _ := fail(fmt.Sprintf("Toplevel error, New root can't be type %T", e))
@@ -547,43 +536,24 @@ func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, 
 	return UpdateStructExp{path.([]string), leafid, exp.(Exp)}, nil
 }
 
-/* InitExp */
-type InitExp struct {
+/* StorageInitExp */
+type StorageInitExp struct {
 	Exp Exp
 }
 
-func (e InitExp) String() string {
-	return fmt.Sprintf("InitExp(Exp: %s)", e.Exp.String())
+func (e StorageInitExp) String() string {
+	return fmt.Sprintf("StorageInitExp(Exp: %s)", e.Exp.String())
 }
 
-func NewInitExp(id string, exp interface{}) (Exp, error) {
+func NewStorageInitExp(id string, exp interface{}) (Exp, error) {
 	if id != "storage" {
 		return (ErrorExpression{"Inits must initialize storage only"}),
 			errors.Errorf("init is not initializing storage, but %s", id)
 	}
-	return InitExp{exp.(Exp)}, nil
-}
-
-/* ExpList */
-func NewExpList(exp interface{}) []Exp {
-	return []Exp{exp.(Exp)}
-}
-
-func AddExpToList(exp, list interface{}) []Exp {
-	e := exp.(Exp)
-	l := list.([]Exp)
-	return prependList(e, l)
+	return StorageInitExp{exp.(Exp)}, nil
 }
 
 // ---------------------------
-
-func notImplemented() *notImplementedError { return &notImplementedError{} }
-
-type notImplementedError struct{}
-
-func (e *notImplementedError) Error() string {
-	return fmt.Sprint("Not Implemented!")
-}
 
 type ErrorExpression struct {
 	errormsg string
@@ -594,8 +564,4 @@ func (e ErrorExpression) String() string {
 }
 func fail(str string) (Exp, error) {
 	return ErrorExpression{str}, nil
-}
-
-func prependList(exp Exp, list []Exp) []Exp {
-	return append([]Exp{exp}, list...)
 }

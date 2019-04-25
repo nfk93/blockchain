@@ -1,0 +1,105 @@
+package ast
+
+import "testing"
+
+func TestBoolLit(t *testing.T) {
+	exp := BoolLit{true}
+	texp := AddTypes(exp, InitialTypeEnv())
+	expected := TypedExp{exp, BoolType{}}
+	checkTypeEquality(t, texp, expected)
+}
+
+func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
+	texp := texp_.(TypedExp)
+	expected := expected_.(TypedExp)
+	if texp.Type != expected.Type {
+		t.Errorf("Types not equal:\n"+
+			"\tactual..: %s\n"+
+			"\texpected: %s", texp_.String(), expected_.String())
+	}
+	e := texp.Exp
+	e_ := expected.Exp
+	switch e.(type) {
+	case TypeDecl:
+	case TopLevel:
+		e := e.(TopLevel)
+		e_ := e_.(TopLevel)
+		for i, v := range e.Roots {
+			checkTypeEquality(t, v, e_.Roots[i])
+		}
+	case EntryExpression:
+		e := e.(EntryExpression)
+		e_ := e_.(EntryExpression)
+		checkTypeEquality(t, e.Body, e_.Body)
+	case BinOpExp:
+		e := e.(BinOpExp)
+		e_ := e_.(BinOpExp)
+		checkTypeEquality(t, e.Left, e_.Left)
+		checkTypeEquality(t, e.Right, e_.Right)
+	case ListLit:
+		e := e.(ListLit)
+		e_ := e_.(ListLit)
+		for i, v := range e.List {
+			checkTypeEquality(t, v, e_.List[i])
+		}
+	case ListConcat:
+		e := e.(ListConcat)
+		e_ := e_.(ListConcat)
+		checkTypeEquality(t, e.Exp, e_.Exp)
+		checkTypeEquality(t, e.List, e_.List)
+	case LetExp:
+		e := e.(LetExp)
+		e_ := e_.(LetExp)
+		checkTypeEquality(t, e.DefExp, e_.DefExp)
+		checkTypeEquality(t, e.InExp, e_.InExp)
+	case TupleExp:
+		e := e.(TupleExp)
+		e_ := e_.(TupleExp)
+		for i, v := range e.Exps {
+			checkTypeEquality(t, v, e_.Exps[i])
+		}
+	case AnnoExp:
+		e := e.(AnnoExp)
+		e_ := e_.(AnnoExp)
+		checkTypeEquality(t, e.Exp, e_.Exp)
+	case IfThenElseExp:
+		e := e.(IfThenElseExp)
+		e_ := e_.(IfThenElseExp)
+		checkTypeEquality(t, e.If, e_.If)
+		checkTypeEquality(t, e.Then, e_.Then)
+		checkTypeEquality(t, e.Else, e_.Else)
+	case IfThenExp:
+		e := e.(IfThenExp)
+		e_ := e_.(IfThenExp)
+		checkTypeEquality(t, e.If, e_.If)
+		checkTypeEquality(t, e.Then, e_.Then)
+	case ExpSeq:
+		e := e.(ExpSeq)
+		e_ := e_.(ExpSeq)
+		checkTypeEquality(t, e.Left, e_.Left)
+		checkTypeEquality(t, e.Right, e_.Right)
+	case UpdateStructExp:
+		e := e.(UpdateStructExp)
+		e_ := e_.(UpdateStructExp)
+		checkTypeEquality(t, e.Exp, e_.Exp)
+	case StorageInitExp:
+		e := e.(StorageInitExp)
+		e_ := e_.(StorageInitExp)
+		checkTypeEquality(t, e.Exp, e_.Exp)
+	case StructLit:
+		e := e.(StructLit)
+		e_ := e_.(StructLit)
+		for i, v := range e.Vals {
+			checkTypeEquality(t, v, e_.Vals[i])
+		}
+	case CallExp:
+		e := e.(CallExp)
+		e_ := e_.(CallExp)
+		checkTypeEquality(t, e.Exp1, e_.Exp1)
+		checkTypeEquality(t, e.Exp2, e_.Exp2)
+	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
+		ModuleLookupExp, LookupExp:
+	default:
+		t.Error("Encountered unknown expression:", e.String())
+	}
+}
