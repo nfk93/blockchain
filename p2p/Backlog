@@ -1,0 +1,1 @@
+encapsulate p2player in an object that can be instantiated (type struct) for e2e testing

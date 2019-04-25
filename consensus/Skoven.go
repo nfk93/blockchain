@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"sync"
 )
@@ -9,30 +10,38 @@ import (
 var unusedTransactions map[string]bool
 var transactions map[string]o.Transaction
 var tLock sync.RWMutex
+var finalLock sync.RWMutex
 var blocks skov
 var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
+var testDrawVal int //Remove when implementing proper calculateDrawVal
+var channels o.ChannelStruct
+var isVerbose bool
 
-func StartConsensus(transFromP2P chan o.Transaction, blockFromP2P chan o.Block, blockToP2P chan o.Block) {
+func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose bool) {
+	pk = pkey
+	sk = skey
+	isVerbose = verbose
+	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
-	// TODO: do something with the genesis data
+	testDrawVal = 0
 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
-			block := <-blockFromP2P
+			block := <-channels.BlockFromP2P
 			handleBlock(block)
 		}
 	}()
 	// Start processing transactions on one thread, concurrently
 	go func() {
 		for {
-			trans := <-transFromP2P
+			trans := <-channels.TransFromP2P
 			go handleTransaction(trans)
 		}
 	}()
@@ -56,8 +65,9 @@ func handleTransaction(t o.Transaction) {
 func handleBlock(b o.Block) {
 	if b.Slot == 0 { //*TODO Should probably add some security measures so you can't fake a genesis block
 		handleGenesisBlock(b)
+		return
 	}
-	if !b.VerifyBlock(b.BakerID) || !verifyDraw(b) {
+	if !b.ValidateBlock() || !ValidateDraw(b, leadershipNonce, hardness) {
 		return
 	}
 	addBlock(b)
@@ -65,34 +75,49 @@ func handleBlock(b o.Block) {
 
 func handleGenesisBlock(b o.Block) {
 	blocks.add(b)
+	processGenesisData(b.BlockData.GenesisData)
+	sendBlockToTL(b)
 	currentHead = b.CalculateBlockHash()
+	lastFinalized = b.CalculateBlockHash()
 }
 
 // Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
+	block := b
 	for {
-		if !blocks.contains(b.ParentPointer) {
+		if !blocks.contains(block.ParentPointer) {
 			return
 		}
-		parent := blocks.get(b.ParentPointer)
+		parent := blocks.get(block.ParentPointer)
 
 		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
 			break
 		}
+		block = parent
 		l += 1
 	}
 	if l < currentLength {
 		return
 	}
 
-	if l > currentLength || calculateDraw(blocks.get(currentHead)) < calculateDraw(b) {
+	if l > currentLength || compareDrawVal(b) {
 		if rollback(b) {
 			currentHead = b.CalculateBlockHash()
 			currentLength = l
 		}
 	}
+}
+
+//Compares the draw value of a block with the current head
+func compareDrawVal(b o.Block) bool {
+	headDraw := CalculateDrawValue(blocks.get(currentHead), leadershipNonce)
+	blockDraw := CalculateDrawValue(b, leadershipNonce)
+	if headDraw.Cmp(blockDraw) == -1 {
+		return true
+	}
+	return false
 }
 
 //Manages rollback in the case of branch shifting. Returns true if successful and false otherwise.
@@ -107,15 +132,16 @@ func rollback(newHead o.Block) bool {
 	for {
 		transactionsUnused(head)
 		head = blocks.get(head.ParentPointer)
-		if head.CalculateBlockHash() == lastFinalized {
+		if head.CalculateBlockHash() == newHead.LastFinalized {
 			break
 		}
 	}
 	var newBranch []o.Block
+	head = newHead
 	for {
-		newBranch = append(newBranch, newHead)
-		newHead = blocks.get(newHead.ParentPointer)
-		if newHead.CalculateBlockHash() == lastFinalized {
+		newBranch = append(newBranch, head)
+		head = blocks.get(head.ParentPointer)
+		if head.CalculateBlockHash() == newHead.LastFinalized {
 			break
 		}
 	}
@@ -129,6 +155,8 @@ func rollback(newHead o.Block) bool {
 	}
 	if !noBadBlocks {
 		unusedTransactions = oldUnusedTransmap //If rollback involved invalid blocks, we return to the old map
+	} else {
+		sendBranchToTL(newBranch)
 	}
 	return noBadBlocks
 }
@@ -144,6 +172,10 @@ func transactionsUnused(b o.Block) {
 //Removes the transactions used in a block from unusedTransactions, and saves transactions that we have not already saved.
 //It returns false if the block reuses any transactions already spent on the chain and marks the block as bad. It returns true otherwise.
 func transactionsUsed(b o.Block) bool {
+	oldUnusedTransmap := make(map[string]bool)
+	for k, v := range unusedTransactions {
+		oldUnusedTransmap[k] = v
+	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
 		_, alreadyStored := transactions[t.ID]
@@ -151,9 +183,10 @@ func transactionsUsed(b o.Block) bool {
 			transactions[t.ID] = t
 			unusedTransactions[t.ID] = true
 		}
-		_, alreadyUsed := unusedTransactions[t.ID]
-		if alreadyUsed {
+		_, unused := unusedTransactions[t.ID]
+		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
+			unusedTransactions = oldUnusedTransmap
 			return false
 		}
 		delete(unusedTransactions, t.ID)
@@ -161,44 +194,75 @@ func transactionsUsed(b o.Block) bool {
 	return true
 }
 
+//Used after a rollback to send the branch of the new head to the transaction layer
+func sendBranchToTL(branch []o.Block) {
+	for i := len(branch) - 1; i >= 0; i-- {
+		sendBlockToTL(branch[i])
+	}
+}
+
+//Used to send a new head to the transaction layer
+func sendBlockToTL(block o.Block) {
+	channels.BlockToTrans <- block
+}
+
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
-	_, badParent := badBlocks[b.ParentPointer]
-	if badParent {
-		badBlocks[b.CalculateBlockHash()] = true
-		return
-	}
 	if b.ParentPointer == currentHead {
 		tLock.Lock()
 		defer tLock.Unlock()
-		currentHead = b.CalculateBlockHash()
-		currentLength += 1
-		transactionsUsed(b)
+		if transactionsUsed(b) {
+			currentHead = b.CalculateBlockHash()
+			currentLength += 1
+			sendBlockToTL(b)
+		}
 	} else {
 		comparePathWeight(b)
 	}
-	fmt.Println(blocks.get(currentHead).Slot)
+	log() //Used for testing purposes
 }
 
-//Adds a block to our blockmap and calls updateHead
+// Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block
+func isLegalExtension(b o.Block) bool {
+	_, badParent := badBlocks[b.ParentPointer]
+	if badParent {
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	if blocks.contains(b.ParentPointer) && blocks.get(b.ParentPointer).Slot >= b.Slot { //Check that slot of parent is smaller
+		badBlocks[b.CalculateBlockHash()] = true
+		return false
+	}
+	if b.Slot > getCurrentSlot() { //We do not accept early blocks
+		return false
+	}
+	return true
+}
+
+//Adds a block to our blockmap and calls updateHead if it's a legal extension
 func addBlock(b o.Block) {
 	blocks.add(b)
-	updateHead(b)
+	if isLegalExtension(b) {
+		updateHead(b)
+	}
 }
 
-//Sends a block to the P2P layer to be broadcasted
-func broadcastBlock(b o.Block) {
-
+func log() {
+	if isVerbose {
+		fmt.Println(blocks.get(currentHead).Slot)
+	}
 }
 
-func calculateDraw(b o.Block) int {
-	//*TODO
-	return 0
-}
-
-func verifyDraw(b o.Block) bool {
-	// *TODO
-	return true
+func getUnusedTransactions() []o.Transaction {
+	tLock.Lock()
+	defer tLock.Unlock()
+	trans := make([]o.Transaction, len(unusedTransactions))
+	i := 0
+	for k := range unusedTransactions {
+		trans[i] = transactions[k]
+		i++
+	}
+	return trans
 }
 
 type skov struct {

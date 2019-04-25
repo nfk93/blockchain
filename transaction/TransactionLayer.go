@@ -11,61 +11,90 @@ type TLNode struct {
 	state State
 }
 
-type State struct {
-	ledger     map[PublicKey]int
-	parentHash string
-}
-
 type Tree struct {
 	treeMap map[string]TLNode
 	head    string
 }
 
-func StartTransactionLayer(blockInput chan Block, stateReturn chan State, finalizeChan chan string, blockReturn chan Block, transChan chan []Transaction) {
-	tree := Tree{make(map[string]TLNode), ""}
-	//gen := createGenesis() //TODO: Remove this and only add create genesis if you are first on tree
-	//processBlock(gen, tree)
+var tree Tree
+var transactionFee = 1
+var blockReward = 100
 
+func StartTransactionLayer(channels ChannelStruct) {
+	tree = Tree{make(map[string]TLNode), ""}
+
+	// Process a NodeBlock coming from the consensus layer
 	go func() {
 		for {
-			b := <-blockInput
-			tree.processBlock(b)
+			b := <-channels.BlockToTrans
+			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
+				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
+				tree.head = b.CalculateBlockHash()
+			} else if len(tree.treeMap) > 0 {
+				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
+					tree.processBlock(b)
+				}
+			} else {
+				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
+			}
 		}
 	}()
 
+	// Consensus layer asks for the state of a finalized block
 	go func() {
 		for {
-			finalize := <-finalizeChan
-			stateReturn <- tree.treeMap[finalize].state
+			finalize := <-channels.FinalizeToTrans
+			if finalizedNode, ok := tree.treeMap[finalize]; ok {
+				channels.StateFromTrans <- finalizedNode.state
+			} else {
+				fmt.Println("Couldn't finalize")
+				channels.StateFromTrans <- State{}
+			}
 		}
 	}()
 
+	// A new NodeBlock should be created from the transactions in transList
 	for {
-		transList := <-transChan
-		blockReturn <- tree.createNewBlock(transList)
+		newBlockData := <-channels.TransToTrans
+		newBlock := tree.createNewBlock(newBlockData)
+		channels.BlockFromTrans <- newBlock
 	}
 }
 
 func (t *Tree) processBlock(b Block) {
+	successfulTransactions := 0
 	s := State{}
-	s.parentHash = b.ParentPointer
-	s.ledger = copyMap(t.treeMap[s.parentHash].state.ledger)
-	if s.ledger == nil {
-		s.ledger = make(map[PublicKey]int)
+	s.ParentHash = b.ParentPointer
+	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
+	if s.Ledger == nil {
+		s.Ledger = make(map[PublicKey]int)
 	}
-
-	// Update head
-	t.head = b.CalculateBlockHash()
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, tr := range b.BlockData.Trans {
-			s.addTransaction(tr)
+			transSuccess := s.AddTransaction(tr, transactionFee)
+			if transSuccess {
+				successfulTransactions += 1
+			}
 		}
 	}
 
+	// Verify our new state matches the state of the block creator to ensure he has also done the same work
+	if s.VerifyStateHash(b.StateHash, b.BakerID) {
+		// Pay the block creator
+		s.AddBlockRewardAndTransFees(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+
+	} else {
+		fmt.Println("Proof of work in block didn't match...")
+	}
 	// Create new node in the tree
 	t.createNewNode(b, s)
+
+	// Update head
+	t.head = b.CalculateBlockHash()
+
 }
 
 func (t *Tree) createNewNode(b Block, s State) {
@@ -73,63 +102,34 @@ func (t *Tree) createNewNode(b Block, s State) {
 	t.treeMap[b.CalculateBlockHash()] = n
 }
 
-func (s *State) addTransaction(t Transaction) {
-	//TODO: Handle checks of legal transactions
-
-	if !t.VerifyTransaction() {
-		fmt.Println("The transactions didn't verify", t)
-		return
-	}
-
-	//if s.ledger[t.From] < t.Amount { //TODO: remove comment such that it checks the balance
-	//	fmt.Println("Not enough money on senders account")
-	//	return
-	//}
-	s.ledger[t.To] += t.Amount
-	s.ledger[t.From] -= t.Amount
-}
-
-func CreateGenesis() Block {
-	sk, _ := KeyGen(256)
-	genBlock := Block{0,
-		"",
-		0,
-		"VALID", //TODO: Still missing Blockproof
-		0,       //TODO: Should this be chosen for next round?
-		"",
-		Data{[]Transaction{}},
-		""}
-
-	genBlock.SignBlock(sk)
-	return genBlock
-}
-
-func (t Tree) createNewBlock(transactions []Transaction) Block {
+func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
-	s.ledger = copyMap(t.treeMap[t.head].state.ledger)
-
+	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
+	s.ParentHash = t.head
+	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []Transaction
 
-	noOfTrans := len(transactions)
+	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := transactions[i]
-		//transactions = transactions[1:]
-		s.addTransaction(newTrans)
+		newTrans := blockData.TransList[i]
+		s.AddTransaction(newTrans, transactionFee)
 		addedTransactions = append(addedTransactions, newTrans)
 	}
 
-	//TODO: Make proper way of creating a new block
-	b := Block{43,
+	b := Block{blockData.SlotNo,
 		t.head,
-		43,
-		"PROOF",
-		43,
-		"LAST_FINALIZED",
-		Data{addedTransactions},
+		blockData.Pk,
+		blockData.Draw,
+		BlockNonce{},
+		blockData.LastFinalized,
+		Data{addedTransactions, GenesisData{}},
+		s.CreateStateHash(blockData.Sk),
 		""}
 
+	b.SignBlock(blockData.Sk)
 	return b
+
 }
 
 // Helpers
