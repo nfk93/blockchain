@@ -2,7 +2,8 @@ package ast
 
 import "fmt"
 
-type TypeEnv int
+type TypeEnv int // TODO
+type VarEnv int  // TODO
 
 type TypedExp struct {
 	Exp  Exp
@@ -17,11 +18,15 @@ func InitialTypeEnv() TypeEnv {
 	return -1 // TODO
 }
 
+func InitialVarEnv() VarEnv {
+	return -1 // TODO
+}
+
 func todo(exp Exp) TypedExp {
 	return TypedExp{exp, NotImplementedType{}}
 }
 
-func AddTypes(exp Exp, tenv TypeEnv) TypedExp {
+func AddTypes(exp Exp, venv VarEnv, tenv TypeEnv) TypedExp {
 	switch exp.(type) {
 	case TopLevel:
 		return todo(exp)
@@ -38,13 +43,13 @@ func AddTypes(exp Exp, tenv TypeEnv) TypedExp {
 	case IntLit:
 		return TypedExp{exp, IntType{}}
 	case FloatLit:
-		return todo(exp)
+		return TypedExp{exp, FloatType{}}
 	case KoinLit:
-		return todo(exp)
+		return TypedExp{exp, KoinType{}}
 	case StringLit:
-		return todo(exp)
+		return TypedExp{exp, StringType{}}
 	case UnitLit:
-		return todo(exp)
+		return TypedExp{exp, UnitType{}}
 	case StructLit:
 		return todo(exp)
 	case ListLit:

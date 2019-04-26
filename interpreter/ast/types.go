@@ -24,6 +24,7 @@ const (
 	TUPLE
 	DECLARED
 	STRUCT
+	UNIT
 )
 
 type StringType struct{}
@@ -122,6 +123,15 @@ func (t ListType) String() string {
 }
 func NewListType(typ interface{}) ListType {
 	return ListType{typ.(Type)}
+}
+
+type UnitType struct{}
+
+func (t UnitType) Type() Typecode {
+	return UNIT
+}
+func (t UnitType) String() string {
+	return "unit"
 }
 
 type TupleType struct {

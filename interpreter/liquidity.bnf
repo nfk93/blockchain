@@ -122,7 +122,7 @@ Tuple       : Exp comma Exp                                     << ast.NewTupleE
 Lookup      : Lookup lident dot                                 << ast.AddPathElement($0, util.ParseId($1)), nil // intermediate for lookup calls  >>
             | lident dot                                        << ast.LookupPathRoot(util.ParseId($0)), nil // see above >> ;
 
-Pattern     : lparen rparen                                     << ast.NewEmptyPattern() >>
+Pattern     : lparen rparen                                     << ast.NewEmptyPattern() // TODO: Yikes, you can write let () = 12 in >>
             | lparen Paramlist rparen                           << ast.NewPattern($1) >>
             | Param                                             << ast.NewPattern($0) >> ;
 
