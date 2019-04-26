@@ -9,6 +9,7 @@ import (
 	"net/rpc"
 	"sort"
 	"sync"
+	"time"
 )
 
 const (
@@ -88,8 +89,9 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
-		connectToNetwork(connectTo)
 		go listenForRPC(myHostPort)
+		time.Sleep(1 * time.Second)
+		connectToNetwork(connectTo)
 	}
 
 	// Pull user-input transactions and send via p2p
