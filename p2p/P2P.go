@@ -82,10 +82,11 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
+		myIp = "127.0.0.1"
 		networkList[myIp+":"+myHostPort] = true
 		determinePeers()
 		go listenForRPC(myHostPort)
-		fmt.Println("Listening on port " + myHostPort)
+		fmt.Printf("Listening on %v:%v ", myIp, myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
