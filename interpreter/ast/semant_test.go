@@ -67,6 +67,25 @@ func TestBinOp(t *testing.T) {
 	fmt.Println(texp.String())
 }
 
+func TestTypeDecl(t *testing.T) {
+	exp := TypeDecl{"test", NewIntType()}
+	texp, _, tenv, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
+	expected := TypedExp{exp, UnitType{}}
+	checkTypeEquality(t, texp, expected)
+	switch lookupType("test", tenv).(type) {
+	case IntType:
+		// do nothing
+	default:
+		t.Fail()
+	}
+	switch lookupType("nope", tenv).(type) {
+	case nil:
+		// do nothing
+	default:
+		t.Fail()
+	}
+}
+
 func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	texp := texp_.(TypedExp)
 	expected := expected_.(TypedExp)
@@ -79,6 +98,9 @@ func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	e_ := expected.Exp
 	switch e.(type) {
 	case TypeDecl:
+		if texp.Type.Type() != UNIT {
+			t.Fail()
+		}
 	case TopLevel:
 		e := e.(TopLevel)
 		e_ := e_.(TopLevel)

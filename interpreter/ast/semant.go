@@ -2,12 +2,13 @@ package ast
 
 import (
 	"fmt"
+	"github.com/mndrix/ps"
 	"log"
 )
 
-type TypeEnv map[string]Type         // TODO
-type VarEnv map[string]Type          // TODO
-type StructEnv map[string]StructType // TODO
+type TypeEnv ps.Map   // TODO
+type VarEnv ps.Map    // TODO
+type StructEnv ps.Map // TODO
 
 type TypedExp struct {
 	Exp  Exp
@@ -19,15 +20,15 @@ func (e TypedExp) String() string {
 }
 
 func InitialTypeEnv() TypeEnv {
-	return make(map[string]Type) // TODO
+	return ps.NewMap() // TODO
 }
 
 func InitialVarEnv() VarEnv {
-	return make(map[string]Type) // TODO
+	return ps.NewMap() // TODO
 }
 
 func InitialStructEnv() StructEnv {
-	return make(map[string]StructType) // TODO
+	return ps.NewMap() // TODO
 }
 
 func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv, TypeEnv, StructEnv) {
@@ -37,6 +38,24 @@ func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv,
 func AddTypes(exp Exp) TypedExp {
 	texp, _, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
 	return texp
+}
+
+func lookupType(id string, tenv TypeEnv) Type {
+	val, contained := tenv.Lookup(id)
+	if contained {
+		return val.(Type)
+	} else {
+		return nil
+	}
+}
+
+func lookupVar(id string, venv VarEnv) Type {
+	val, contained := venv.Lookup(id)
+	if contained {
+		return val.(Type)
+	} else {
+		return nil
+	}
 }
 
 func translateType(typ Type, tenv TypeEnv) Type {
@@ -61,11 +80,25 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		return StructType{fields}
 	case DECLARED:
 		typ := typ.(DeclaredType)
-		return translateType(tenv[typ.TypId], tenv)
+		actualtype := lookupType(typ.TypId, tenv)
+		if actualtype != nil {
+			return translateType(actualtype, tenv)
+		} else {
+			return ErrorType{fmt.Sprintf("type %s is not declared", typ.TypId)}
+		}
+
 	default:
 		log.Fatal("SHOULD NOT HAPPEN")
 		return NotImplementedType{}
 	}
+}
+
+func getStructFieldString(structType StructType) string {
+	str := ""
+	for _, field := range structType.Fields {
+		str = str + field.Id
+	}
+	return str
 }
 
 func addTypes(
@@ -80,11 +113,11 @@ func addTypes(
 		return todo(exp, venv, tenv, senv)
 	case BinOpExp:
 		exp := exp.(BinOpExp)
+		leftTyped, _, _, _ := addTypes(exp.Left, venv, tenv, senv)
+		rightTyped, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
+		texp := BinOpExp{leftTyped, exp.Op, rightTyped}
 		switch exp.Op {
 		case EQ, NEQ, GEQ, LEQ, LT, GT:
-			leftTyped, _, _, _ := addTypes(exp.Left, venv, tenv, senv)
-			rightTyped, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
-			texp := BinOpExp{leftTyped, exp.Op, rightTyped}
 			switch leftTyped.Type.Type() {
 			case BOOL, INT, KOIN, STRING, KEY:
 				break
@@ -99,19 +132,55 @@ func addTypes(
 				return TypedExp{texp, ErrorType{"Types of comparison are not equal"}},
 					venv, tenv, senv
 			}
+		case PLUS, MINUS:
+			switch leftTyped.Type.Type() {
+			case INT, KOIN:
+				break
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't add or subtract expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+			if leftTyped.Type == rightTyped.Type {
+				return TypedExp{texp, NewBoolType()}, venv, tenv, senv
+			} else {
+				return TypedExp{texp, ErrorType{"Types of comparison are not equal"}},
+					venv, tenv, senv
+			}
+		case TIMES, DIVIDE:
+			switch leftTyped.Type.Type() {
+			case INT, KOIN:
+				break
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't add or subtract expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+			// TODO Work in progress
 		}
 		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
-		if tenv[exp.id] == nil {
+		if lookupType(exp.id, tenv) != nil {
 			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.id)}},
 				venv, tenv, senv
 		}
+		actualType := translateType(exp.typ, tenv)
 		switch exp.typ.Type() {
 		case STRUCT:
-			todo(exp, venv, tenv, senv)
+			actualType := actualType.(StructType)
+			_, contains := senv.Lookup(getStructFieldString(actualType))
+			if contains {
+				return TypedExp{TypeDecl{exp.id, actualType}, ErrorType{fmt.Sprintf("struct field names already used")}},
+					venv, tenv, senv
+			} else {
+				tenv_ := tenv.Set(exp.id, actualType)
+				return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv // TODO perhaps use decl type
+			}
+		default:
+			tenv_ := tenv.Set(exp.id, exp.typ)
+			return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv
 		}
-		return todo(exp, venv, tenv, senv)
 	case EntryExpression:
 		return todo(exp, venv, tenv, senv)
 	case KeyLit:
