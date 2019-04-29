@@ -56,13 +56,13 @@ func TestTypeDecl(t *testing.T) {
 	texp, _, tenv, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
-	switch tenv["test"].(type) {
+	switch lookupType("test", tenv).(type) {
 	case IntType:
 		// do nothing
 	default:
 		t.Fail()
 	}
-	switch tenv["nope"].(type) {
+	switch lookupType("nope", tenv).(type) {
 	case nil:
 		// do nothing
 	default:
@@ -82,6 +82,9 @@ func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	e_ := expected.Exp
 	switch e.(type) {
 	case TypeDecl:
+		if texp.Type.Type() != UNIT {
+			t.Fail()
+		}
 	case TopLevel:
 		e := e.(TopLevel)
 		e_ := e_.(TopLevel)
