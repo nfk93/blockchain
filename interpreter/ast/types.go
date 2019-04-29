@@ -198,6 +198,7 @@ func (t StructType) Type() Typecode {
 	return STRUCT
 }
 
+type ErrorType struct{}
 type NotImplementedType struct{}
 
 func (t NotImplementedType) String() string { return "NotImplementedType" }

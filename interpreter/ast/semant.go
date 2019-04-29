@@ -78,6 +78,22 @@ func addTypes(
 	case TopLevel:
 		return todo(exp, venv, tenv, senv)
 	case BinOpExp:
+		exp := exp.(BinOpExp)
+		switch exp.Op {
+		case EQ, NEQ, GEQ, LEQ, LT, GT:
+			leftTyped, _, _, _ := addTypes(exp.Left, venv, tenv, senv)
+			rightTyped, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
+			switch leftTyped.Type.Type() {
+			case BOOL, INT, KOIN, STRING, KEY:
+				break
+			default:
+
+			}
+
+			if leftTyped.Type == rightTyped.Type {
+				return TypedExp{exp, NewBoolType()}, venv, tenv, senv
+			}
+		}
 		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
