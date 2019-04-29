@@ -51,6 +51,25 @@ func TestUnitLit(t *testing.T) {
 	checkTypeEquality(t, texp, expected)
 }
 
+func TestTypeDecl(t *testing.T) {
+	exp := TypeDecl{"test", NewIntType()}
+	texp, _, tenv, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
+	expected := TypedExp{exp, UnitType{}}
+	checkTypeEquality(t, texp, expected)
+	switch tenv["test"].(type) {
+	case IntType:
+		// do nothing
+	default:
+		t.Fail()
+	}
+	switch tenv["nope"].(type) {
+	case nil:
+		// do nothing
+	default:
+		t.Fail()
+	}
+}
+
 func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	texp := texp_.(TypedExp)
 	expected := expected_.(TypedExp)

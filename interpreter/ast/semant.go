@@ -68,6 +68,14 @@ func translateType(typ Type, tenv TypeEnv) Type {
 	}
 }
 
+func getStructFieldString(structType StructType) string {
+	str := ""
+	for _, field := range structType.Fields {
+		str = str + field.Id
+	}
+	return str
+}
+
 func addTypes(
 	exp Exp,
 	venv VarEnv,
@@ -82,15 +90,25 @@ func addTypes(
 		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
-		if tenv[exp.id] == nil {
+		if tenv[exp.id] != nil {
 			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.id)}},
 				venv, tenv, senv
 		}
+		actualtype := translateType(exp.typ, tenv)
 		switch exp.typ.Type() {
 		case STRUCT:
-			todo(exp, venv, tenv, senv)
+			actualtype := actualtype.(StructType)
+			if _, contains := senv[getStructFieldString(actualtype)]; contains {
+				return TypedExp{TypeDecl{exp.id, actualtype}, ErrorType{fmt.Sprintf("struct field names already used")}},
+					venv, tenv, senv
+			} else {
+				tenv[exp.id] = actualtype
+				return TypedExp{TypeDecl{exp.id, actualtype}, UnitType{}}, venv, tenv, senv // TODO perhaps use decl type
+			}
+		default:
+			tenv[exp.id] = actualtype
+			return TypedExp{TypeDecl{exp.id, actualtype}, UnitType{}}, venv, tenv, senv
 		}
-		return todo(exp, venv, tenv, senv)
 	case EntryExpression:
 		return todo(exp, venv, tenv, senv)
 	case KeyLit:
