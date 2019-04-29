@@ -198,6 +198,15 @@ func (t StructType) Type() Typecode {
 	return STRUCT
 }
 
+type ErrorType struct {
+	err string
+}
+
+func (t ErrorType) String() string {
+	return fmt.Sprintf("ErrorType(err: %s)", t.err)
+}
+func (t ErrorType) Type() Typecode { return -1 }
+
 type NotImplementedType struct{}
 
 func (t NotImplementedType) String() string { return "NotImplementedType" }

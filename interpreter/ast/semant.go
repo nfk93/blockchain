@@ -39,28 +39,29 @@ func AddTypes(exp Exp) TypedExp {
 	return texp
 }
 
-func translateType(typ Type) Type {
+func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
 	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT:
 		return typ
 	case LIST:
 		typ := typ.(ListType)
-		return ListType{translateType(typ.Typ)}
+		return ListType{translateType(typ.Typ, tenv)}
 	case TUPLE:
 		typ := typ.(TupleType)
-		typ1 := translateType(typ.Typ1)
-		typ2 := translateType(typ.Typ2)
+		typ1 := translateType(typ.Typ1, tenv)
+		typ2 := translateType(typ.Typ2, tenv)
 		return TupleType{typ1, typ2}
 	case STRUCT:
 		typ := typ.(StructType)
 		fields := make([]StructField, 0)
 		for _, field := range typ.Fields {
-			fieldtyp := translateType(field.Typ)
+			fieldtyp := translateType(field.Typ, tenv)
 			fields = append(fields, StructField{field.Id, fieldtyp})
 		}
 		return StructType{fields}
 	case DECLARED:
-		return typ
+		typ := typ.(DeclaredType)
+		return translateType(tenv[typ.TypId], tenv)
 	default:
 		log.Fatal("SHOULD NOT HAPPEN")
 		return NotImplementedType{}
@@ -81,7 +82,14 @@ func addTypes(
 		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
-
+		if tenv[exp.id] == nil {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.id)}},
+				venv, tenv, senv
+		}
+		switch exp.typ.Type() {
+		case STRUCT:
+			todo(exp, venv, tenv, senv)
+		}
 		return todo(exp, venv, tenv, senv)
 	case EntryExpression:
 		return todo(exp, venv, tenv, senv)
