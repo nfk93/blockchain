@@ -1,6 +1,9 @@
 package ast
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
@@ -49,6 +52,19 @@ func TestUnitLit(t *testing.T) {
 	texp := AddTypes(exp)
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
+}
+
+func TestBinOp(t *testing.T) {
+	exp := BinOpExp{IntLit{123}, EQ, IntLit{11}}
+	texp := AddTypes(exp)
+	fmt.Println(texp.String())
+	ltyped := TypedExp{IntLit{123}, IntType{}}
+	rtyped := TypedExp{IntLit{11}, IntType{}}
+	expected := TypedExp{BinOpExp{ltyped, exp.Op, rtyped}, BoolType{}}
+	checkTypeEquality(t, texp, expected)
+	exp = BinOpExp{IntLit{123}, EQ, StringLit{"tis"}}
+	texp = AddTypes(exp)
+	fmt.Println(texp.String())
 }
 
 func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
