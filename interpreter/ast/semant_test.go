@@ -4,49 +4,49 @@ import "testing"
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, BoolType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestKeyLit(t *testing.T) {
 	exp := KeyLit{"2aAad314"}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, KeyType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestIntLit(t *testing.T) {
 	exp := IntLit{123}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, IntType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestFloatLit(t *testing.T) {
 	exp := FloatLit{123.45}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, FloatType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestKoinLit(t *testing.T) {
 	exp := KoinLit{123}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, KoinType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestStringLit(t *testing.T) {
 	exp := StringLit{"ey"}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, StringType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestUnitLit(t *testing.T) {
 	exp := UnitLit{}
-	texp := AddTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	texp := AddTypes(exp)
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
 }

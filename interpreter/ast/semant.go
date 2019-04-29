@@ -22,34 +22,40 @@ func InitialVarEnv() VarEnv {
 	return -1 // TODO
 }
 
-func todo(exp Exp) TypedExp {
-	return TypedExp{exp, NotImplementedType{}}
+func todo(exp Exp) (TypedExp, VarEnv, TypeEnv) {
+	return TypedExp{exp, NotImplementedType{}}, -1, -1
 }
 
-func AddTypes(exp Exp, venv VarEnv, tenv TypeEnv) TypedExp {
+func AddTypes(exp Exp) TypedExp {
+	texp, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv())
+	return texp
+}
+
+func addTypes(exp Exp, venv VarEnv, tenv TypeEnv) (TypedExp, VarEnv, TypeEnv) {
 	switch exp.(type) {
 	case TopLevel:
 		return todo(exp)
 	case BinOpExp:
 		return todo(exp)
 	case TypeDecl:
+
 		return todo(exp)
 	case EntryExpression:
 		return todo(exp)
 	case KeyLit:
-		return TypedExp{exp, KeyType{}}
+		return TypedExp{exp, KeyType{}}, venv, tenv
 	case BoolLit:
-		return TypedExp{exp, BoolType{}}
+		return TypedExp{exp, BoolType{}}, venv, tenv
 	case IntLit:
-		return TypedExp{exp, IntType{}}
+		return TypedExp{exp, IntType{}}, venv, tenv
 	case FloatLit:
-		return TypedExp{exp, FloatType{}}
+		return TypedExp{exp, FloatType{}}, venv, tenv
 	case KoinLit:
-		return TypedExp{exp, KoinType{}}
+		return TypedExp{exp, KoinType{}}, venv, tenv
 	case StringLit:
-		return TypedExp{exp, StringType{}}
+		return TypedExp{exp, StringType{}}, venv, tenv
 	case UnitLit:
-		return TypedExp{exp, UnitType{}}
+		return TypedExp{exp, UnitType{}}, venv, tenv
 	case StructLit:
 		return todo(exp)
 	case ListLit:
