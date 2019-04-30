@@ -32,3 +32,8 @@ func ParseKoin(kn interface{}) int64 {
 	knval, _ := strconv.ParseInt(knstr[:len(knstr)-2], 10, 64)
 	return knval
 }
+
+func ParseNat(i interface{}) uint64 {
+	uint, _ := strconv.ParseUint(string(i.(*token.Token).Lit), 10, 64)
+	return uint
+}

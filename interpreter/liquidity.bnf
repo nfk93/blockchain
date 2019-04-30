@@ -8,6 +8,13 @@ larrow      : '<' '-' ;
 neq         : '<' '>' ;
 lt          : '<' ;
 rarrow      : '-' '>' ;
+and         : '&'
+            | '&' '&'
+            | 'l' 'a' 'n' 'd';
+or          : '|' '|'
+            | 'l' 'o' 'r'
+            | 'o' 'r' ;
+not         : 'n' 'o' 't' ;
 eq          : '=' ;
 plus        : '+' ;
 minus       : '-' ;
@@ -25,6 +32,7 @@ key         : 'k' 'e' 'y' ;
 operation   : 'o' 'p' 'e' 'r' 'a' 't' 'i' 'o' 'n' ;
 list        : 'l' 'i' 's' 't' ;
 bool        : 'b' 'o' 'o' 'l' ;
+nat         : 'n' 'a' 't' ;
 int         : 'i' 'n' 't' ;
 string      : 's' 't' 'r' 'i' 'n' 'g' ;
 false       : 'f' 'a' 'l' 's' 'e' ;
@@ -53,7 +61,8 @@ string_lit  : '"' {.} '"' ;
 
 _digit      : '0'-'9' ;
 _amount     : _digit { _digit } ;
-koin_lit     : _amount 'k' 'n' ;
+koin_lit    : _amount 'k' 'n' ;
+nat_lit     : _amount 'p' ;
 int_lit     : {'-'} _digit { _digit } ;
 float_lit   : _digit { _digit } '.' { _digit } ;
 
@@ -114,7 +123,10 @@ Binop       : plus                                              << ast.PLUS, nil
             | geq                                               << ast.GEQ, nil >>
             | leq                                               << ast.LEQ, nil >>
             | lt                                                << ast.LT, nil >>
-            | gt                                                << ast.GT, nil >> ;
+            | gt                                                << ast.GT, nil >>
+            | or                                                << ast.OR, nil >>
+            | and                                               << ast.AND, nil >>
+            | not                                               << ast.NOT, nil >> ;
 
 Tuple       : Exp comma Exp                                     << ast.NewTupleExp($0, $2) // tuple >>
             | Exp comma Tuple                                   << ast.AddTupleEntry($0, $2) // tuple of tuple >> ;
@@ -134,6 +146,7 @@ Paramlist   : Param comma Paramlist                             << ast.AppendPar
 
 Type        : bool                                              << ast.NewBoolType(), nil >>
             | int                                               << ast.NewIntType(), nil >>
+            | nat                                               << ast.NewNatType(), nil >>
             | koin                                              << ast.NewKoinType(), nil >>
             | string                                            << ast.NewStringType(), nil >>
             | key                                               << ast.NewKeyType(), nil >>
@@ -147,13 +160,14 @@ Constant    : key_lit                                           << ast.NewKeyLit
             | true                                              << ast.NewBoolLit(true) >>
             | false                                             << ast.NewBoolLit(false) >>
             | int_lit                                           << ast.NewIntLit(util.ParseInt($0)) >>
+            | nat_lit                                           << ast.NewNatLit(util.ParseNat($0)) >>
             | float_lit                                         << ast.NewFloatLit(util.ParseFloat($0)) >>
             | koin_lit                                          << ast.NewKoinLit(util.ParseKoin($0)) >>
             | string_lit                                        << ast.NewStringLit(util.ParseString($0)) >>
             | lparen rparen                                     << ast.NewUnitLit() >>
             | lbrack rbrack                                     << ast.NewEmptyList() >>
             | lbrack Array rbrack                               << $1, nil >>
-            | lbrace StructLit rbrace                           << $1, nil >>;
+            | lbrace StructLit rbrace                           << $1, nil >> ;
 
 Array       : Exp                                               << ast.NewListLit($0) >>
             | Array semicolon Exp                               << ast.AppendList($0, $2) >> ;

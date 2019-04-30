@@ -52,6 +52,18 @@ func NewIntType() IntType {
 	return IntType{}
 }
 
+type NatType struct{}
+
+func (t NatType) Type() Typecode {
+	return NAT
+}
+func (t NatType) String() string {
+	return "nat"
+}
+func NewNatType() NatType {
+	return NatType{}
+}
+
 type FloatType struct{}
 
 func (t FloatType) Type() Typecode {
@@ -199,20 +211,6 @@ func (t StructType) Type() Typecode {
 	return STRUCT
 }
 
-type NatType struct{}
-
-func (n NatType) Type() Typecode {
-	return NAT
-}
-
-func (n NatType) String() string {
-	return "nat"
-}
-
-func NewNatType() NatType {
-	return NatType{}
-}
-
 type ErrorType struct {
 	err string
 }
@@ -245,6 +243,9 @@ const (
 	LEQ
 	LT
 	GT
+	AND
+	OR
+	NOT
 )
 
 func operToString(op Oper) string {
@@ -269,6 +270,12 @@ func operToString(op Oper) string {
 		return "LT"
 	case GT:
 		return "GT"
+	case AND:
+		return "AND"
+	case OR:
+		return "OR"
+	case NOT:
+		return "NOT"
 	}
 	return "ERROR"
 }
