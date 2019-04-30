@@ -119,7 +119,7 @@ func addTypes(
 		switch exp.Op {
 		case EQ, NEQ, GEQ, LEQ, LT, GT:
 			switch leftTyped.Type.Type() {
-			case BOOL, INT, KOIN, STRING, KEY:
+			case BOOL, INT, KOIN, STRING, KEY, NAT:
 				break
 			default:
 				return TypedExp{texp,
@@ -132,31 +132,121 @@ func addTypes(
 				return TypedExp{texp, ErrorType{"Types of comparison are not equal"}},
 					venv, tenv, senv
 			}
-		case PLUS, MINUS:
+		case PLUS:
 			switch leftTyped.Type.Type() {
-			case INT, KOIN:
+			case INT, KOIN, NAT:
 				break
 			default:
 				return TypedExp{texp,
-						ErrorType{"Can't add or subtract expressions of type " + leftTyped.Type.String()}},
+						ErrorType{"Can't add expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
 			if leftTyped.Type == rightTyped.Type {
-				return TypedExp{texp, NewBoolType()}, venv, tenv, senv
+				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
 			} else {
-				return TypedExp{texp, ErrorType{"Types of comparison are not equal"}},
+				return TypedExp{texp, ErrorType{"Types of plus or minus operation are not equal"}},
 					venv, tenv, senv
 			}
-		case TIMES, DIVIDE:
+
+		case MINUS:
 			switch leftTyped.Type.Type() {
-			case INT, KOIN:
-				break
+			case INT, NAT:
+				switch rightTyped.Type.Type() {
+				case INT, NAT:
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case KOIN:
+				switch rightTyped.Type.Type() {
+				case KOIN:
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
+						venv, tenv, senv
+				}
 			default:
 				return TypedExp{texp,
-						ErrorType{"Can't add or subtract expressions of type " + leftTyped.Type.String()}},
+						ErrorType{"Can't subtract expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
-			// TODO Work in progress
+		case TIMES:
+			switch leftTyped.Type.Type() {
+			case KOIN:
+				switch rightTyped.Type.Type() {
+				case NAT:
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case NAT:
+				switch rightTyped.Type.Type() {
+				case NAT:
+					return TypedExp{texp, NewNatType()}, venv, tenv, senv
+				case KOIN:
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv
+				case INT:
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case INT:
+				switch rightTyped.Type.Type() {
+				case INT, NAT:
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+		case DIVIDE: // TODO make the returned type from division an option to account for divide by zero
+			switch leftTyped.Type.Type() {
+			case KOIN:
+				switch rightTyped.Type.Type() {
+				case KOIN:
+					return TypedExp{texp, NewTupleType(NewNatType(), NewKoinType())}, venv, tenv, senv
+				case NAT:
+					return TypedExp{texp, NewTupleType(NewKoinType(), NewKoinType())}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case NAT:
+				switch rightTyped.Type.Type() {
+				case INT:
+					return TypedExp{texp, NewTupleType(NewIntType(), NewNatType())}, venv, tenv, senv
+				case NAT:
+					return TypedExp{texp, NewTupleType(NewNatType(), NewNatType())}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case INT:
+				switch rightTyped.Type.Type() {
+				case NAT, INT:
+					return TypedExp{texp, NewTupleType(NewIntType(), NewNatType())}, venv, tenv, senv
+				default:
+					return TypedExp{texp,
+							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't divide expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
 		}
 		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
