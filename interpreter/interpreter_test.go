@@ -4,22 +4,31 @@ import (
 	"github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
+	"io/ioutil"
 	"testing"
 )
 
-func TestWorld(t *testing.T) {
-	input := []byte(`hello gocc`)
-	lex := lexer.NewLexer(input)
-	p := parser.NewParser()
-	st, err := p.Parse(lex)
+func TestTopLevel(t *testing.T) {
+	testFile(t, "test_cases/toplevel_semant")
+}
+
+func TestRemoveLater(t *testing.T) {
+	testFile(t, "test_cases/binop_removelater")
+}
+
+func testFile(t *testing.T, testpath string) {
+	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
-		panic(err)
+		t.Error("Error reading testfile:", testpath)
 	}
-	w, ok := st.(*ast.World)
-	if !ok {
-		t.Fatalf("This is not a world")
-	}
-	if w.Name != `gocc` {
-		t.Fatalf("Wrong world %v", w.Name)
+	lex := lexer.NewLexer(dat)
+	p := parser.NewParser()
+	par, err := p.Parse(lex)
+	if err != nil {
+		t.Errorf("can't parse this program")
+	} else {
+
+		parsed := par.(ast.Exp)
+		print("\n" + ast.AddTypes(parsed).String() + "\n")
 	}
 }

@@ -88,8 +88,63 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		}
 
 	default:
-		log.Fatal("SHOULD NOT HAPPEN")
+		log.Fatal("compiler error, translateType case not matched")
 		return NotImplementedType{}
+	}
+}
+
+/*func actualType(typ Type, tenv TypeEnv) Type {
+	switch typ.Type() {
+	case DECLARED:
+		typ := typ.(DeclaredType)
+		actualtyp := lookupType(typ.TypId, tenv)
+		if actualtyp == nil {
+			return ErrorType{fmt.Sprintf("type %s is not declared", typ.TypId)}
+		} else {
+			return actualtyp
+		}
+	default:
+		return typ
+	}
+} */
+
+// ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
+func checkTypesEqual(typ1, typ2 Type) bool {
+	switch typ1.Type() {
+	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT:
+		return typ1.Type() == typ2.Type()
+	case LIST:
+		switch typ2.Type() {
+		case LIST:
+			typ1 := typ1.(ListType)
+			typ2 := typ2.(ListType)
+			return checkTypesEqual(typ1.Typ, typ2.Typ)
+		default:
+			return false
+		}
+	case TUPLE:
+		switch typ2.Type() {
+		case TUPLE:
+			typ1 := typ1.(TupleType)
+			typ2 := typ2.(TupleType)
+			return checkTypesEqual(typ1.Typ1, typ2.Typ1) && checkTypesEqual(typ1.Typ2, typ2.Typ2)
+		default:
+			return false
+		}
+	case STRUCT:
+		switch typ2.Type() {
+		case STRUCT:
+			typ1 := typ1.(StructType)
+			typ2 := typ2.(StructType)
+			return getStructFieldString(typ1) == getStructFieldString(typ2)
+		default:
+			return false
+		}
+	case -1:
+		return false
+	default:
+		log.Println("checkTypesEqual case not matched")
+		return false
 	}
 }
 
@@ -99,6 +154,49 @@ func getStructFieldString(structType StructType) string {
 		str = str + field.Id
 	}
 	return str
+}
+
+// matches the pattern p to the type typ, doing pattern matching if typ is a tuple, and returning an updated venv
+func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool) {
+	venv_ := venv
+	typ = translateType(typ, tenv)
+	switch typ.Type() {
+	case TUPLE:
+		typ := typ.(TupleType)
+		types := unpackTuple(typ, []Type{typ.Typ1})
+		if len(p.params) != len(types) {
+			return venv, false
+		}
+		for i, v := range p.params {
+			if !checkAnnotation(v, types[i]) {
+				return venv, false
+			}
+			venv_ = venv_.Set(v.id, types[i])
+		}
+		return venv_, true
+	default:
+		if len(p.params) != 1 {
+			return venv, false
+		}
+		return venv_.Set(p.params[0].id, typ), true
+	}
+}
+func unpackTuple(typ TupleType, types []Type) []Type {
+	switch typ.Typ2.Type() {
+	case TUPLE:
+		typ2 := typ.Typ2.(TupleType)
+		return unpackTuple(typ2, append(types, typ2.Typ1))
+	default:
+		return append(types, typ.Typ2)
+	}
+}
+
+func checkAnnotation(param Param, typ Type) bool {
+	if param.anno.opt {
+		return param.anno.typ.Type() == typ.Type()
+	} else {
+		return true
+	}
 }
 
 func addTypes(
@@ -133,14 +231,15 @@ func addTypes(
 			case StorageInitExp:
 				storageInitialized = true
 				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
+				roots = append(roots, texp)
 			default:
-				return todo(exp, venv, tenv, senv)
+				roots = append(roots, TypedExp{ErrorExpression{"can only have entries, typedecls and storageinits in toplevel"}, ErrorType{}})
 			}
 		}
 		if storageDefined && storageInitialized && mainEntryDefined {
 			return TypedExp{TopLevel{roots}, UnitType{}}, venv, tenv, senv // TODO use toplevel type?
 		} else {
-			return todo(exp, venv, tenv, senv)
+			return TypedExp{TopLevel{roots}, ErrorType{"toplevel error, must define storage, main entry, and initialize storage"}}, venv, tenv, senv
 		}
 	case BinOpExp:
 		exp := exp.(BinOpExp)
@@ -303,7 +402,31 @@ func addTypes(
 			return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv
 		}
 	case EntryExpression:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(EntryExpression)
+		// check that parameters are typeannotated and add them to variable environment
+		venv_ := venv
+		for _, v := range exp.Params.params {
+			if v.anno.opt != true {
+				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
+			}
+			venv_ = venv_.Set(v.id, translateType(v.anno.typ, tenv))
+		}
+		// check that storage pattern matches storage type
+		storagetype := lookupType("storage", tenv)
+		if storagetype == nil {
+			return TypedExp{ErrorExpression{}, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
+		}
+		venv_, ok := patternMatch(exp.Storage, storagetype, venv, tenv)
+		if !ok {
+			return TypedExp{ErrorExpression{}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+		}
+		// add types with updated venv
+		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
+		// check that return type is operation list * storage
+		if !checkTypesEqual(body.Type, TupleType{OperationType{}, storagetype}) {
+			return TypedExp{body, ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}}, venv, tenv, senv
+		}
+		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
 	case KeyLit:
 		return TypedExp{exp, KeyType{}}, venv, tenv, senv
 	case BoolLit:
