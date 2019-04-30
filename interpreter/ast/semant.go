@@ -340,7 +340,26 @@ func addTypes(
 		}
 		return TypedExp{ListLit{texplist}, ListType{listtype}}, venv, tenv, senv
 	case ListConcat:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(ListConcat)
+		tconcatexp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
+		tlistexp, _, _, _ := addTypes(exp.List, venv, tenv, senv)
+		texp := ListConcat{tconcatexp, tlistexp}
+		var listtype Type
+		if tlistexp.Type.Type() != LIST {
+			return TypedExp{texp,
+					ErrorType{"Cannot concatenate with type " + tlistexp.Type.String() + " . Should be a list. "}},
+				venv, tenv, senv
+		} else {
+			listtype = tlistexp.Type.(ListType).Typ
+		}
+
+		if tconcatexp.Type.Type() != listtype.Type() {
+			return TypedExp{texp,
+					ErrorType{"Cannot concatenate type " + tconcatexp.Type.String() + " with list of type " + listtype.String()}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, ListType{listtype}}, venv, tenv, senv
+
 	case CallExp:
 		return todo(exp, venv, tenv, senv)
 	case LetExp:
