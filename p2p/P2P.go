@@ -72,17 +72,19 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, blockIn chan objects.Block, blockOut chan objects.Block,
-	transIn chan objects.Transaction, transOut chan objects.Transaction) {
+// TODO: The Network creators public key is not included in the public key list.
+// TODO: The current public key list is not forwarded to new peers.
+
+func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
 	myIp = getIP().String()
 	myHostPort = hostPort
-	deliverBlock = blockOut
-	deliverTrans = transOut
-	inputBlock = blockIn
-	inputTrans = transIn
+	deliverBlock = channels.BlockFromP2P
+	deliverTrans = channels.TransFromP2P
+	inputBlock = channels.BlockToP2P
+	inputTrans = channels.TransClientInput
 	myKey = mypk
 	publicKeys = make(map[crypto.PublicKey]bool)
 
@@ -112,7 +114,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, blockIn 
 	go func() {
 		for {
 			block := <-inputBlock
-			go handleBlockWithoutDelivering(block)
+			go handleBlock(block)
 		}
 	}()
 }
@@ -131,6 +133,14 @@ func PrintTransHashList() {
 	for _, k := range setAsList(transSeen.m) {
 		fmt.Println(k)
 	}
+}
+
+func GetPublicKeys() []crypto.PublicKey {
+	var pkList []crypto.PublicKey
+	for pk := range publicKeys {
+		pkList = append(pkList, pk)
+	}
+	return pkList
 }
 
 func PrintPublicKeys() {
@@ -263,15 +273,15 @@ func handleBlock(block objects.Block) {
 	}
 }
 
-func handleBlockWithoutDelivering(block objects.Block) {
-	blocksSeen.lock()
-	defer blocksSeen.unlock()
-	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if blocksSeen.contains(block.CalculateBlockHash()) != true {
-		blocksSeen.add(block.CalculateBlockHash())
-		go broadcastBlock(block)
-	}
-}
+//func handleBlockWithoutDelivering(block objects.Block) {
+//	blocksSeen.lock()
+//	defer blocksSeen.unlock()
+//	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+//	if blocksSeen.contains(block.CalculateBlockHash()) != true {
+//		blocksSeen.add(block.CalculateBlockHash())
+//		go broadcastBlock(block)
+//	}
+//}
 
 func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
@@ -289,7 +299,7 @@ func broadcastBlock(block objects.Block) {
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	fmt.Println("received SendTransaction RPC")
+	//fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
@@ -313,7 +323,7 @@ func handleTransaction(trans objects.Transaction) {
 		transSeen.add(transHash(trans))
 
 		// TODO: handle the trans more?
-		fmt.Println("Received Transaction: ", trans)
+		//fmt.Println("Received Transaction: ", trans)
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}

@@ -147,3 +147,7 @@ func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
 	}
 	return newMap
 }
+
+func GetCurrentLedger() map[PublicKey]int {
+	return tree.treeMap[tree.head].state.Ledger
+}

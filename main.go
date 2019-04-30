@@ -7,7 +7,9 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/p2p"
+	"github.com/nfk93/blockchain/transaction"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -31,7 +33,7 @@ func main() {
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
-	p2p.StartP2P(*addr, *port, publicKey, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
+	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, true)
 	cliLoop()
 }
@@ -46,6 +48,8 @@ func cliLoop() {
 		switch commandline {
 		case "-h":
 			fmt.Println("NOT IMPLEMENTED")
+		case "-q":
+			return
 		case "-n":
 			p2p.PrintNetworkList()
 		case "-send-test-block":
@@ -58,18 +62,50 @@ func cliLoop() {
 			p2p.PrintPeers()
 		case "-public-keys":
 			p2p.PrintPublicKeys()
-		case "-start_network":
+		case "-ledger":
+			ledger := transaction.GetCurrentLedger()
+			for l := range ledger {
+				fmt.Printf("Amount %v is owned by %v\n", ledger[l], l)
+			}
+		case "-start": //"-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
 				if err != nil {
 					log.Fatal(err)
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.Data{GenesisData: genesisdata}}
-				channels.BlockFromP2P <- genesisblock
 				channels.BlockToP2P <- genesisblock
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}
+		case "-test1":
+			for _, p := range p2p.GetPublicKeys() {
+				trans := objects.CreateTransaction(publicKey,
+					p,
+					100000,
+					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+					secretKey)
+				channels.TransClientInput <- trans
+			}
+		case "-test2":
+			currentStake := consensus.GetLastFinalState()[publicKey]
+			pkList := p2p.GetPublicKeys()
+
+			if currentStake == 0 {
+				continue
+			}
+			amount := rand.Intn(currentStake / 20)
+
+			for i := 0; i < 5; i++ {
+				receiverPK := pkList[rand.Intn(len(pkList))]
+				trans := objects.CreateTransaction(publicKey,
+					receiverPK,
+					amount,
+					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+					secretKey)
+				channels.TransClientInput <- trans
+			}
+
 		default:
 			fmt.Println(commandline, "is not a known command. Type -h for help")
 		}

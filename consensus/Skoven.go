@@ -59,6 +59,7 @@ func handleTransaction(t o.Transaction) {
 		transactions[t.ID] = t
 		unusedTransactions[t.ID] = true
 	}
+
 }
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
@@ -70,6 +71,7 @@ func handleBlock(b o.Block) {
 	if !b.ValidateBlock() || !ValidateDraw(b, leadershipNonce, hardness) {
 		return
 	}
+
 	addBlock(b)
 }
 
