@@ -110,7 +110,38 @@ func addTypes(
 
 	switch exp.(type) {
 	case TopLevel:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(TopLevel)
+		roots := make([]Exp, 0)
+		var texp TypedExp
+		var storageDefined, storageInitialized, mainEntryDefined bool
+		for _, exp1 := range exp.Roots {
+			switch exp1.(type) {
+			case TypeDecl:
+				typedecl := exp1.(TypeDecl)
+				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
+				roots = append(roots, texp)
+				if typedecl.id == "storage" {
+					storageDefined = true
+				}
+			case EntryExpression:
+				entryexpression := exp1.(EntryExpression)
+				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
+				roots = append(roots, texp)
+				if entryexpression.Id == "main" {
+					mainEntryDefined = true
+				}
+			case StorageInitExp:
+				storageInitialized = true
+				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
+			default:
+				return todo(exp, venv, tenv, senv)
+			}
+		}
+		if storageDefined && storageInitialized && mainEntryDefined {
+			return TypedExp{TopLevel{roots}, UnitType{}}, venv, tenv, senv // TODO use toplevel type?
+		} else {
+			return todo(exp, venv, tenv, senv)
+		}
 	case BinOpExp:
 		exp := exp.(BinOpExp)
 		leftTyped, _, _, _ := addTypes(exp.Left, venv, tenv, senv)

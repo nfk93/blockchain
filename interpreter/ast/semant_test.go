@@ -86,6 +86,13 @@ func TestTypeDecl(t *testing.T) {
 	}
 }
 
+func TestTypeDeclStruct(t *testing.T) {
+	// check that struct with same names can't be used
+	// check that types with same names can't be used
+	// check that recursive types can't be used
+	// TODO
+}
+
 func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	texp := texp_.(TypedExp)
 	expected := expected_.(TypedExp)
