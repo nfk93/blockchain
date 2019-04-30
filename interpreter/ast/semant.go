@@ -377,8 +377,26 @@ func addTypes(
 						ErrorType{"Can't divide expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
+		case OR, AND:
+			switch leftTyped.Type.Type() {
+			case NAT, BOOL:
+				break
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't use logical binop on expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+			if leftTyped.Type == rightTyped.Type {
+				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
+			} else {
+				return TypedExp{texp, ErrorType{"Types of logical binop are not equal"}},
+					venv, tenv, senv
+			}
+		default:
+			return TypedExp{texp,
+					ErrorType{"Unrecogized Binop, Should not happen!"}},
+				venv, tenv, senv
 		}
-		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
 		if lookupType(exp.id, tenv) != nil {
