@@ -12,6 +12,10 @@ func TestTopLevel(t *testing.T) {
 	testFile(t, "test_cases/toplevel_semant")
 }
 
+func TestRemoveLater(t *testing.T) {
+	testFile(t, "test_cases/binop_removelater")
+}
+
 func testFile(t *testing.T, testpath string) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
@@ -21,8 +25,10 @@ func testFile(t *testing.T, testpath string) {
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		panic(err)
+		t.Errorf("can't parse this program")
+	} else {
+
+		parsed := par.(ast.Exp)
+		print("\n" + ast.AddTypes(parsed).String() + "\n")
 	}
-	parsed := par.(ast.Exp)
-	print("\n" + ast.AddTypes(parsed).String() + "\n")
 }

@@ -231,14 +231,15 @@ func addTypes(
 			case StorageInitExp:
 				storageInitialized = true
 				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
+				roots = append(roots, texp)
 			default:
-				return todo(exp, venv, tenv, senv)
+				roots = append(roots, TypedExp{ErrorExpression{"can only have entries, typedecls and storageinits in toplevel"}, ErrorType{}})
 			}
 		}
 		if storageDefined && storageInitialized && mainEntryDefined {
 			return TypedExp{TopLevel{roots}, UnitType{}}, venv, tenv, senv // TODO use toplevel type?
 		} else {
-			return todo(exp, venv, tenv, senv)
+			return TypedExp{TopLevel{roots}, ErrorType{"toplevel error, must define storage, main entry, and initialize storage"}}, venv, tenv, senv
 		}
 	case BinOpExp:
 		exp := exp.(BinOpExp)
@@ -406,24 +407,24 @@ func addTypes(
 		venv_ := venv
 		for _, v := range exp.Params.params {
 			if v.anno.opt != true {
-				return TypedExp{exp, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
+				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
 			}
 			venv_ = venv_.Set(v.id, translateType(v.anno.typ, tenv))
 		}
 		// check that storage pattern matches storage type
 		storagetype := lookupType("storage", tenv)
 		if storagetype == nil {
-			return TypedExp{exp, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
+			return TypedExp{ErrorExpression{}, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
 		}
 		venv_, ok := patternMatch(exp.Storage, storagetype, venv, tenv)
 		if !ok {
-			return TypedExp{exp, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+			return TypedExp{ErrorExpression{}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
 		}
 		// add types with updated venv
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
 		// check that return type is operation list * storage
 		if !checkTypesEqual(body.Type, TupleType{OperationType{}, storagetype}) {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}}, venv, tenv, senv
+			return TypedExp{body, ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}}, venv, tenv, senv
 		}
 		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
 	case KeyLit:
