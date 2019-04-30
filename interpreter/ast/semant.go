@@ -93,12 +93,59 @@ func translateType(typ Type, tenv TypeEnv) Type {
 	}
 }
 
+func checkTypesEqual(typ1, typ2 Type) bool {
+	switch typ1 {
+
+	}
+}
+
 func getStructFieldString(structType StructType) string {
 	str := ""
 	for _, field := range structType.Fields {
 		str = str + field.Id
 	}
 	return str
+}
+
+func patternMatch(p Pattern, typ Type, venv VarEnv) (VarEnv, bool) {
+	venv_ := venv
+	switch typ.Type() {
+	case TUPLE:
+		typ := typ.(TupleType)
+		types := unpackTuple(typ, []Type{typ.Typ1})
+		if len(p.params) != len(types) {
+			return venv, false
+		}
+		for i, v := range p.params {
+			if !checkAnnotation(v, types[i]) {
+				return venv, false
+			}
+			venv_ = venv_.Set(v.id, types[i])
+		}
+		return venv_, true
+	default:
+		if len(p.params) != 1 {
+			return venv, false
+		}
+		return venv_.Set(p.params[0].id, typ), true
+	}
+}
+func unpackTuple(typ TupleType, types []Type) []Type {
+	switch typ.Typ2.Type() {
+	case TUPLE:
+		typ2 := typ.Typ2.(TupleType)
+		return unpackTuple(typ2, append(types, typ2.Typ1))
+	default:
+		return append(types, typ.Typ2)
+	}
+}
+
+func checkAnnotation(param Param, typ Type) bool {
+	if param.anno.opt {
+		return param.anno.typ.Type() == typ.Type()
+	} else {
+		return true
+	}
 }
 
 func addTypes(
@@ -167,7 +214,31 @@ func addTypes(
 			return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv
 		}
 	case EntryExpression:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(EntryExpression)
+		// check that parameters are typeannotated and add them to variable environment
+		venv_ := venv
+		for _, v := range exp.Params.params {
+			if v.anno.opt != true {
+				return TypedExp{exp, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
+			}
+			venv_ = venv_.Set(v.id, v.anno.typ)
+		}
+		// check that storage pattern matches storage type
+		storagetype := lookupType("storage", tenv)
+		if storagetype == nil {
+			return TypedExp{exp, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
+		}
+		venv_, ok := patternMatch(exp.Storage, storagetype, venv)
+		if !ok {
+			return TypedExp{exp, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+		}
+		// add types with updated venv
+		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
+		// check that return type is operation list * storage
+		if !checkTypesEqual(body.Type, storagetype) {
+			return TypedExp{exp, ErrorType{"return type of entry must be operation list * storage"}}, venv, tenv, senv
+		}
+		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
 	case KeyLit:
 		return TypedExp{exp, KeyType{}}, venv, tenv, senv
 	case BoolLit:
