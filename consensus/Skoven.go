@@ -35,6 +35,7 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
+			fmt.Printf("CL Received Block %v with Transaction: %v \n", block.Slot, block.BlockData.Trans)
 			handleBlock(block)
 		}
 	}()
@@ -42,6 +43,8 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			trans := <-channels.TransFromP2P
+			fmt.Println("CL Received Transaction: ", trans)
+
 			go handleTransaction(trans)
 		}
 	}()
@@ -59,6 +62,8 @@ func handleTransaction(t o.Transaction) {
 		transactions[t.ID] = t
 		unusedTransactions[t.ID] = true
 	}
+	fmt.Println("CL Added Transaction to Queue: ", t)
+
 }
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
@@ -70,6 +75,7 @@ func handleBlock(b o.Block) {
 	if !b.ValidateBlock() || !ValidateDraw(b, leadershipNonce, hardness) {
 		return
 	}
+
 	addBlock(b)
 }
 
@@ -203,6 +209,7 @@ func sendBranchToTL(branch []o.Block) {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
+	fmt.Printf("CL send Block %v to TransactionLayer with Transaction: %v \n", block.Slot, block.BlockData.Trans)
 	channels.BlockToTrans <- block
 }
 

@@ -27,6 +27,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 	go func() {
 		for {
 			b := <-channels.BlockToTrans
+			fmt.Printf("TransactionLayer received a block from slot %v with transaction %v\n", b.Slot, b.BlockData.Trans)
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()

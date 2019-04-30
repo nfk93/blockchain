@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -68,21 +69,19 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blockOut chan objects.Block,
-	transIn chan objects.Transaction, transOut chan objects.Transaction) {
+func StartP2P(connectTo string, hostPort string, channels objects.ChannelStruct) {
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
 	myIp = getIP().String()
 	myHostPort = hostPort
-	deliverBlock = blockOut
-	deliverTrans = transOut
-	inputBlock = blockIn
-	inputTrans = transIn
+	deliverBlock = channels.BlockFromP2P
+	deliverTrans = channels.TransFromP2P
+	inputBlock = channels.BlockToP2P
+	inputTrans = channels.TransClientInput
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
-		myIp = "127.0.0.1"
 		networkList[myIp+":"+myHostPort] = true
 		determinePeers()
 		go listenForRPC(myHostPort)
@@ -106,7 +105,7 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 	go func() {
 		for {
 			block := <-inputBlock
-			go handleBlockWithoutDelivering(block)
+			go handleBlock(block)
 		}
 	}()
 }
@@ -216,6 +215,8 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 func handleBlock(block objects.Block) {
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
+
+	fmt.Println("P2P Received block from slot " + strconv.Itoa(block.Slot))
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
 	if blocksSeen.contains(block.CalculateBlockHash()) != true {
 		blocksSeen.add(block.CalculateBlockHash())
@@ -226,15 +227,15 @@ func handleBlock(block objects.Block) {
 	}
 }
 
-func handleBlockWithoutDelivering(block objects.Block) {
-	blocksSeen.lock()
-	defer blocksSeen.unlock()
-	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if blocksSeen.contains(block.CalculateBlockHash()) != true {
-		blocksSeen.add(block.CalculateBlockHash())
-		go broadcastBlock(block)
-	}
-}
+//func handleBlockWithoutDelivering(block objects.Block) {
+//	blocksSeen.lock()
+//	defer blocksSeen.unlock()
+//	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+//	if blocksSeen.contains(block.CalculateBlockHash()) != true {
+//		blocksSeen.add(block.CalculateBlockHash())
+//		go broadcastBlock(block)
+//	}
+//}
 
 func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
@@ -276,7 +277,7 @@ func handleTransaction(trans objects.Transaction) {
 		transSeen.add(transHash(trans))
 
 		// TODO: handle the trans more?
-		fmt.Println("Received Transaction: ", trans)
+		fmt.Println("P2P Received & Handled Transaction: ", trans)
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}

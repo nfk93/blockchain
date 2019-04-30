@@ -27,8 +27,8 @@ var leadershipLock sync.RWMutex
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	for {
-		if (currentSlot)%20 == 0 {
-			finalize(currentSlot - 10)
+		if (currentSlot)%100 == 0 {
+			finalize(currentSlot - 50)
 		}
 		go drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime)
@@ -103,18 +103,24 @@ func generateBlock(draw string, slot int) {
 		draw,
 		o.CreateNewBlockNonce(leadershipNonce, sk, slot),
 		lastFinalized}
+	fmt.Println("CL created BLOCKDATA with the following transactions: ", blockData.TransList)
 	channels.TransToTrans <- blockData
 	go sendBlock()
 }
 
 func sendBlock() {
 	block := <-channels.BlockFromTrans
-	channels.BlockFromP2P <- block // TODO change this when using P2P
-	//channels.BlockToP2P <- block
+	//channels.BlockFromP2P <- block // TODO change this when using P2P
+	fmt.Println("CL created a block and sends to P2P with the following transactions: ", block.BlockData.Trans)
+	channels.BlockToP2P <- block
 }
 
 func getLotteryPower(pk PublicKey) float64 {
 	ledgerLock.RLock()
 	defer ledgerLock.RUnlock()
 	return float64(lastFinalizedLedger[pk]) / float64(systemStake)
+}
+
+func GetLastFinalState() map[PublicKey]int {
+	return lastFinalizedLedger
 }
