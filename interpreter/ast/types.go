@@ -17,6 +17,7 @@ const (
 	INT
 	FLOAT
 	KEY
+	NAT
 	BOOL
 	KOIN
 	OPERATION
@@ -196,6 +197,20 @@ func (t StructType) String() string {
 }
 func (t StructType) Type() Typecode {
 	return STRUCT
+}
+
+type NatType struct{}
+
+func (n NatType) Type() Typecode {
+	return NAT
+}
+
+func (n NatType) String() string {
+	return "nat"
+}
+
+func NewNatType() NatType {
+	return NatType{}
 }
 
 type ErrorType struct {

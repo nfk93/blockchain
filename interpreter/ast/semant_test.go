@@ -53,6 +53,19 @@ func TestUnitLit(t *testing.T) {
 	checkTypeEquality(t, texp, expected)
 }
 
+func TestBinOp(t *testing.T) {
+	exp := BinOpExp{IntLit{123}, EQ, IntLit{11}}
+	texp := AddTypes(exp)
+	fmt.Println(texp.String())
+	ltyped := TypedExp{IntLit{123}, IntType{}}
+	rtyped := TypedExp{IntLit{11}, IntType{}}
+	expected := TypedExp{BinOpExp{ltyped, exp.Op, rtyped}, BoolType{}}
+	checkTypeEquality(t, texp, expected)
+	exp = BinOpExp{IntLit{123}, EQ, StringLit{"tis"}}
+	texp = AddTypes(exp)
+	fmt.Println(texp.String())
+}
+
 func TestTypeDecl(t *testing.T) {
 	exp := TypeDecl{"test", NewIntType()}
 	texp, _, tenv, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
