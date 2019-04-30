@@ -209,6 +209,19 @@ func NewIntLit(val int64) (Exp, error) {
 	return IntLit{val}, nil
 }
 
+/* NatLit */
+type NatLit struct {
+	val uint64
+}
+
+func (n NatLit) String() string {
+	return fmt.Sprintf("NatLit(val: %d)", n.val)
+}
+
+func NewNatLit(val uint64) (Exp, error) {
+	return NatLit{val}, nil
+}
+
 /* FloatLit */
 type FloatLit struct {
 	val float64
