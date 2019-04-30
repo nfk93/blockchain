@@ -16,6 +16,10 @@ func TestRemoveLater(t *testing.T) {
 	testFile(t, "test_cases/binop_removelater")
 }
 
+func TestConcatList(t *testing.T) {
+	testFile(t, "test_cases/ConcatList")
+}
+
 func testFile(t *testing.T, testpath string) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
