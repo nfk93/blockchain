@@ -515,11 +515,25 @@ func addTypes(
 	case AnnoExp:
 		return todo(exp, venv, tenv, senv)
 	case TupleExp:
+		/* exp := exp.(TupleExp)
+		var texplist []Exp
+		for _, e := range exp.Exps {
+			typedE, _, _, _ := addTypes(e, venv, tenv, senv)
+		}*/
 		return todo(exp, venv, tenv, senv)
 	case VarExp:
 		return todo(exp, venv, tenv, senv)
 	case ExpSeq:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(ExpSeq)
+		typedLeftExp, _, _, _ := addTypes(exp.Left, venv, tenv, senv)
+		typedRightExp, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
+		texp := ExpSeq{typedLeftExp, typedRightExp}
+		if typedLeftExp.Type.Type() != UNIT {
+			return TypedExp{texp,
+					ErrorType{"All expresssion in ExpSeq, except the last, must be of type UNIT!"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv
 	case IfThenElseExp:
 		return todo(exp, venv, tenv, senv)
 	case IfThenExp:
