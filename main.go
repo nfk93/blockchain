@@ -7,6 +7,7 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/p2p"
+	"github.com/nfk93/blockchain/transaction"
 	"log"
 	"math/rand"
 	"time"
@@ -32,7 +33,7 @@ func main() {
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
-	p2p.StartP2P(*addr, *port, channels)
+	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, true)
 	cliLoop()
 }
@@ -59,10 +60,12 @@ func cliLoop() {
 			p2p.PrintTransHashList()
 		case "-peers":
 			p2p.PrintPeers()
+		case "-public-keys":
+			p2p.PrintPublicKeys()
 		case "-ledger":
-			ledger := consensus.GetLastFinalState()
+			ledger := transaction.GetCurrentLedger()
 			for l := range ledger {
-				fmt.Printf("Amount %v is owned by %v", ledger[l], l)
+				fmt.Printf("Amount %v is owned by %v\n", ledger[l], l)
 			}
 		case "-start": //"-start_network":
 			if *newNetwork {
@@ -76,7 +79,7 @@ func cliLoop() {
 				fmt.Println("Only the network founder can start the network!")
 			}
 		case "-test1":
-			for p := range consensus.GetLastFinalState() {
+			for _, p := range p2p.GetPublicKeys() {
 				trans := objects.CreateTransaction(publicKey,
 					p,
 					100000,
@@ -85,12 +88,8 @@ func cliLoop() {
 				channels.TransClientInput <- trans
 			}
 		case "-test2":
-			finalizedLedger := consensus.GetLastFinalState()
-			currentStake := finalizedLedger[publicKey]
-			var peerList []crypto.PublicKey
-			for p := range finalizedLedger {
-				peerList = append(peerList, p)
-			}
+			currentStake := consensus.GetLastFinalState()[publicKey]
+			pkList := p2p.GetPublicKeys()
 
 			if currentStake == 0 {
 				continue
@@ -98,7 +97,7 @@ func cliLoop() {
 			amount := rand.Intn(currentStake / 20)
 
 			for i := 0; i < 5; i++ {
-				receiverPK := peerList[rand.Intn(len(peerList))]
+				receiverPK := pkList[rand.Intn(len(pkList))]
 				trans := objects.CreateTransaction(publicKey,
 					receiverPK,
 					amount,

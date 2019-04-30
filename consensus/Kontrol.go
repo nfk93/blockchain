@@ -81,7 +81,7 @@ func updateStake() {
 	state := <-channels.StateFromTrans
 	ledgerLock.Lock()
 	defer ledgerLock.Unlock()
-	fmt.Println(state)
+	//fmt.Println(state)
 	lastFinalizedLedger = state.Ledger
 }
 
@@ -103,7 +103,6 @@ func generateBlock(draw string, slot int) {
 		draw,
 		o.CreateNewBlockNonce(leadershipNonce, sk, slot),
 		lastFinalized}
-	fmt.Println("CL created BLOCKDATA with the following transactions: ", blockData.TransList)
 	channels.TransToTrans <- blockData
 	go sendBlock()
 }
@@ -111,7 +110,6 @@ func generateBlock(draw string, slot int) {
 func sendBlock() {
 	block := <-channels.BlockFromTrans
 	//channels.BlockFromP2P <- block // TODO change this when using P2P
-	fmt.Println("CL created a block and sends to P2P with the following transactions: ", block.BlockData.Trans)
 	channels.BlockToP2P <- block
 }
 
