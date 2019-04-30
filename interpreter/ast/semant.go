@@ -452,16 +452,21 @@ func addTypes(
 			return TypedExp{exp, NewListType(UnitType{})}, venv, tenv, senv
 		}
 		var listtype Type
+		var typesNotEqual bool
 		for _, e := range exp.List {
 			typedE, _, _, _ := addTypes(e, venv, tenv, senv)
 			if listtype == nil {
 				listtype = typedE.Type
-			} else if listtype != typedE.Type {
-				return TypedExp{exp,
-						ErrorType{"All elements in list must be of same type"}},
-					venv, tenv, senv
+			} else if !checkTypesEqual(listtype, typedE.Type) {
+				typesNotEqual = true
+
 			}
 			texplist = append(texplist, typedE)
+		}
+		if typesNotEqual {
+			return TypedExp{ListLit{texplist},
+					ErrorType{"All elements in list must be of same type"}},
+				venv, tenv, senv
 		}
 		return TypedExp{ListLit{texplist}, ListType{listtype}}, venv, tenv, senv
 	case ListConcat:
@@ -480,7 +485,7 @@ func addTypes(
 		if listtype.Type() == UNIT {
 			listtype = tconcatexp.Type
 		}
-		if tconcatexp.Type.Type() != listtype.Type() {
+		if !checkTypesEqual(tconcatexp.Type, listtype) {
 			return TypedExp{texp,
 					ErrorType{"Cannot concatenate type " + tconcatexp.Type.String() + " with list of type " + listtype.String()}},
 				venv, tenv, senv
