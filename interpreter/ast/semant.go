@@ -321,7 +321,24 @@ func addTypes(
 	case StructLit:
 		return todo(exp, venv, tenv, senv)
 	case ListLit:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(ListLit)
+		var texplist []Exp
+		if len(exp.List) == 0 {
+			return TypedExp{exp, NewListType(UnitType{})}, venv, tenv, senv
+		}
+		var listtype Type
+		for _, e := range exp.List {
+			typedE, _, _, _ := addTypes(e, venv, tenv, senv)
+			if listtype == nil {
+				listtype = typedE.Type
+			} else if listtype != typedE.Type {
+				return TypedExp{exp,
+						ErrorType{"All elements in list must be of same type"}},
+					venv, tenv, senv
+			}
+			texplist = append(texplist, typedE)
+		}
+		return TypedExp{ListLit{texplist}, ListType{listtype}}, venv, tenv, senv
 	case ListConcat:
 		return todo(exp, venv, tenv, senv)
 	case CallExp:
