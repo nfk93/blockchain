@@ -60,7 +60,7 @@ func lookupVar(id string, venv VarEnv) Type {
 
 func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
-	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT:
+	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
 		return typ
 	case LIST:
 		typ := typ.(ListType)
@@ -111,7 +111,7 @@ func translateType(typ Type, tenv TypeEnv) Type {
 // ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
 func checkTypesEqual(typ1, typ2 Type) bool {
 	switch typ1.Type() {
-	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT:
+	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
 		return typ1.Type() == typ2.Type()
 	case LIST:
 		switch typ2.Type() {
@@ -442,7 +442,9 @@ func addTypes(
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
 		// check that return type is operation list * storage
 		if !checkTypesEqual(body.Type, TupleType{OperationType{}, storagetype}) {
-			return TypedExp{body, ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}}, venv, tenv, senv
+			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body},
+					ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}},
+				venv, tenv, senv
 		}
 		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
 	case KeyLit:

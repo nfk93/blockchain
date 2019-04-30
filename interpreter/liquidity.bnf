@@ -111,6 +111,7 @@ Exp         : lident                                            << ast.NewVarExp
             | lparen Tuple rparen                               << $1, nil // tupleexp >>
             | lparen Exp colon Type rparen                      << ast.NewAnnoExp($1, $3) // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewBinOpExp($0, $1, $2) // BinopExp >>
+            | Unop Exp                                          << ast.NewUnOpExp($0, $1) >>
             | Exp Exp                                           << ast.NewCallExp($0, $1) >>
             | Constant                                          << >>;
 
@@ -125,7 +126,9 @@ Binop       : plus                                              << ast.PLUS, nil
             | lt                                                << ast.LT, nil >>
             | gt                                                << ast.GT, nil >>
             | or                                                << ast.OR, nil >>
-            | and                                               << ast.AND, nil >>
+            | and                                               << ast.AND, nil >> ;
+
+Unop        : minus                                             << ast.UNARYMINUS, nil >>
             | not                                               << ast.NOT, nil >> ;
 
 Tuple       : Exp comma Exp                                     << ast.NewTupleExp($0, $2) // tuple >>
