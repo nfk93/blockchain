@@ -14,17 +14,31 @@ type Exp interface {
 /* BinOpExp */
 type BinOpExp struct {
 	Left  Exp
-	Op    Oper
+	Op    BinOper
 	Right Exp
 }
 
 func (b BinOpExp) String() string {
 	return fmt.Sprintf("BinOpExp(Left: %s, Op: %s, Right: %s)", b.Left.String(),
-		operToString(b.Op), b.Right.String())
+		binOperToString(b.Op), b.Right.String())
 }
 
 func NewBinOpExp(left, oper, right interface{}) (BinOpExp, error) {
-	return BinOpExp{left.(Exp), oper.(Oper), right.(Exp)}, nil
+	return BinOpExp{left.(Exp), oper.(BinOper), right.(Exp)}, nil
+}
+
+/* UnOpExp */
+type UnOpExp struct {
+	Op  UnOper
+	Exp Exp
+}
+
+func (u UnOpExp) String() string {
+	return fmt.Sprintf("UnOpExp(Op: %s, Exp: %s)", unOperToString(u.Op), u.Exp.String())
+}
+
+func NewUnOpExp(oper, exp interface{}) (Exp, error) {
+	return UnOpExp{oper.(UnOper), exp.(Exp)}, nil
 }
 
 /* Simple Type Declaration */
