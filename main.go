@@ -31,7 +31,7 @@ func main() {
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
-	p2p.StartP2P(*addr, *port, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
+	p2p.StartP2P(*addr, *port, publicKey, channels.BlockToP2P, channels.BlockFromP2P, channels.TransClientInput, channels.TransFromP2P)
 	consensus.StartConsensus(channels, publicKey, secretKey, true)
 	cliLoop()
 }
@@ -56,6 +56,8 @@ func cliLoop() {
 			p2p.PrintTransHashList()
 		case "-peers":
 			p2p.PrintPeers()
+		case "-public-keys":
+			p2p.PrintPublicKeys()
 		case "-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
