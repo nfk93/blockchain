@@ -475,7 +475,9 @@ func addTypes(
 		} else {
 			listtype = tlistexp.Type.(ListType).Typ
 		}
-
+		if listtype.Type() == UNIT {
+			listtype = tconcatexp.Type
+		}
 		if tconcatexp.Type.Type() != listtype.Type() {
 			return TypedExp{texp,
 					ErrorType{"Cannot concatenate type " + tconcatexp.Type.String() + " with list of type " + listtype.String()}},
