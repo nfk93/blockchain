@@ -72,7 +72,6 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-// TODO: The Network creators public key is not included in the public key list.
 // TODO: The current public key list is not forwarded to new peers.
 
 func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
