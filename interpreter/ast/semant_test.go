@@ -1,6 +1,8 @@
 package ast
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
