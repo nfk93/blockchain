@@ -20,6 +20,10 @@ func TestConcatList(t *testing.T) {
 	testFileNoError(t, "test_cases/ConcatList")
 }
 
+func TestOption(t *testing.T) {
+
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }

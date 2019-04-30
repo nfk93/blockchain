@@ -30,6 +30,7 @@ semicolon   : ';' ;
 ast         : '*' ;
 key         : 'k' 'e' 'y' ;
 operation   : 'o' 'p' 'e' 'r' 'a' 't' 'i' 'o' 'n' ;
+option      : 'o' 'p' 't' 'i' 'o' 'n' ;
 list        : 'l' 'i' 's' 't' ;
 bool        : 'b' 'o' 'o' 'l' ;
 nat         : 'n' 'a' 't' ;
@@ -147,17 +148,23 @@ Param       : lident                                            << ast.NewParam(
 Paramlist   : Param comma Paramlist                             << ast.AppendParams($0, $2)>>
             | Param                                             << ast.NewParamList($0)>> ;
 
-Type        : bool                                              << ast.NewBoolType(), nil >>
+Type        : Tupletype                                         << ast.NewTupleType($0), nil >>
+            | Type1                                             << $0, nil >> ;
+
+Type1       : lparen Type rparen                                << $1, nil >>
+            | bool                                              << ast.NewBoolType(), nil >>
             | int                                               << ast.NewIntType(), nil >>
             | nat                                               << ast.NewNatType(), nil >>
             | koin                                              << ast.NewKoinType(), nil >>
             | string                                            << ast.NewStringType(), nil >>
             | key                                               << ast.NewKeyType(), nil >>
             | operation                                         << ast.NewOperationType(), nil >>
-            | lparen Type rparen                                << $1, nil >>
-            | Type list                                         << ast.NewListType($0), nil >>
-            | Type ast Type                                     << ast.NewTupleType($0, $2), nil >>
+            | Type1 option                                      << ast.NewOptionType($0), nil >>
+            | Type1 list                                        << ast.NewListType($0), nil >>
             | lident                                            << ast.NewDeclaredType(util.ParseString($0)), nil >> ;
+
+Tupletype   : Type1 ast Tupletype                               << ast.PrependTypeList($0, $2), nil >>
+            | Type1 ast Type1                                   << ast.NewTypeList($0, $2), nil >> ;
 
 Constant    : key_lit                                           << ast.NewKeyLit(util.ParseKey($0)) >>
             | true                                              << ast.NewBoolLit(true) >>

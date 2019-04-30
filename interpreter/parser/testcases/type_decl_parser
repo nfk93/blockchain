@@ -18,6 +18,10 @@ type mydeclaredtype = myop
 
 type mydeclaredtype1 = mykey * myintkointuple
 
+type mytriple = int * string list * key
+
+type mydeclaredlongtuple = int * int * string * string * (string * string)
+
 type crazy = (mydeclaredtype1 * mydeclaredtype) list list
 
 type crazy1 = mydeclaredtype1 * mydeclaredtype list list
