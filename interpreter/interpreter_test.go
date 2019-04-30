@@ -20,8 +20,8 @@ func TestConcatList(t *testing.T) {
 	testFileNoError(t, "test_cases/ConcatList")
 }
 
-func TestOption(t *testing.T) {
-
+func TestFundme(t *testing.T) {
+	testFileNoError(t, "test_cases/fundme")
 }
 
 func testFileNoError(t *testing.T, testpath string) {
