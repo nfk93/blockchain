@@ -424,12 +424,14 @@ func addTypes(
 		switch exp.typ.Type() {
 		case STRUCT:
 			actualType := actualType.(StructType)
-			_, contains := senv.Lookup(getStructFieldString(actualType))
+			structfieldstring := getStructFieldString(actualType)
+			_, contains := senv.Lookup(structfieldstring)
 			if contains {
 				return TypedExp{TypeDecl{exp.id, actualType}, ErrorType{fmt.Sprintf("struct field names already used")}},
 					venv, tenv, senv
 			} else {
 				tenv_ := tenv.Set(exp.id, actualType)
+				senv = senv.Set(structfieldstring, actualType)
 				return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv // TODO perhaps use decl type
 			}
 		default:
