@@ -100,7 +100,8 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		} else {
 			return ErrorType{fmt.Sprintf("type %s is not declared", typ.TypId)}
 		}
-
+	case ERROR, NOTIMPLEMENTED:
+		return typ
 	default:
 		log.Fatal("compiler error, translateType case not matched")
 		return NotImplementedType{}
@@ -167,7 +168,7 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 		default:
 			return false
 		}
-	case -1:
+	case ERROR, NOTIMPLEMENTED:
 		return false
 	default:
 		log.Println("checkTypesEqual case not matched")
@@ -190,11 +191,17 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 	switch typ.Type() {
 	case TUPLE:
 		typ := typ.(TupleType)
+		if len(p.params) == 1 {
+			if !checkParamTypeAnno(p.params[0], typ, tenv) {
+				return venv, false
+			}
+			return venv_.Set(p.params[0].id, typ), true
+		}
 		if len(p.params) != len(typ.Typs) {
 			return venv, false
 		}
 		for i, v := range p.params {
-			if !checkAnnotation(v, typ.Typs[i]) {
+			if !checkParamTypeAnno(v, typ.Typs[i], tenv) {
 				return venv, false
 			}
 			venv_ = venv_.Set(v.id, typ.Typs[i])
@@ -208,9 +215,10 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 	}
 }
 
-func checkAnnotation(param Param, typ Type) bool {
+func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) bool {
 	if param.anno.opt {
-		return param.anno.typ.Type() == typ.Type()
+		actualanno := translateType(param.anno.typ, tenv)
+		return checkTypesEqual(actualanno, typ)
 	} else {
 		return true
 	}
@@ -435,7 +443,7 @@ func addTypes(
 				return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv // TODO perhaps use decl type
 			}
 		default:
-			tenv_ := tenv.Set(exp.id, exp.typ)
+			tenv_ := tenv.Set(exp.id, actualType)
 			return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv
 		}
 	case EntryExpression:
@@ -446,23 +454,24 @@ func addTypes(
 			if v.anno.opt != true {
 				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
 			}
-			venv_ = venv_.Set(v.id, translateType(v.anno.typ, tenv))
+			vartyp := translateType(v.anno.typ, tenv)
+			venv_ = venv_.Set(v.id, vartyp)
 		}
 		// check that storage pattern matches storage type
 		storagetype := lookupType("storage", tenv)
 		if storagetype == nil {
 			return TypedExp{ErrorExpression{}, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
 		}
-		venv_, ok := patternMatch(exp.Storage, storagetype, venv, tenv)
+		venv_, ok := patternMatch(exp.Storage, storagetype, venv_, tenv)
 		if !ok {
-			return TypedExp{ErrorExpression{}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
 		}
 		// add types with updated venv
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
 		// check that return type is operation list * storage
-		if !checkTypesEqual(body.Type, TupleType{[]Type{OperationType{}, storagetype}}) {
+		if !checkTypesEqual(body.Type, TupleType{[]Type{NewListType(OperationType{}), storagetype}}) {
 			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body},
-					ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}},
+					ErrorType{fmt.Sprintf("return type of entry must be operation list * %s, but was %s", storagetype.String(), body.Type.String())}},
 				venv, tenv, senv
 		}
 		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
@@ -480,6 +489,8 @@ func addTypes(
 		return TypedExp{exp, StringType{}}, venv, tenv, senv
 	case UnitLit:
 		return TypedExp{exp, UnitType{}}, venv, tenv, senv
+	case NatLit:
+		return TypedExp{exp, NatType{}}, venv, tenv, senv
 	case StructLit:
 		exp := exp.(StructLit)
 		definedStruct := lookupStruct(exp.FieldString(), senv)
@@ -553,9 +564,30 @@ func addTypes(
 	case CallExp:
 		return todo(exp, venv, tenv, senv)
 	case LetExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(LetExp)
+		defexp, _, _, _ := addTypes(exp.DefExp, venv, tenv, senv)
+		venv_, ok := patternMatch(exp.Patt, defexp.Type, venv, tenv)
+		if !ok {
+			return TypedExp{ErrorExpression{}, ErrorType{
+				fmt.Sprintf("variable declaration pattern %s can't be matched to type %s", exp.Patt.String(),
+					defexp.Type.String())}}, venv, tenv, senv
+		}
+		inexp, _, _, _ := addTypes(exp.InExp, venv_, tenv, senv)
+		return TypedExp{LetExp{exp.Patt, defexp, inexp}, inexp.Type}, venv, tenv, senv
 	case AnnoExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(AnnoExp)
+		texp, venv, tenv, senv := addTypes(exp.Exp, venv, tenv, senv)
+		actualAnno := translateType(exp.Anno, tenv)
+		if actualAnno.Type() == LIST {
+			if texp.Type.Type() == LIST && texp.Type.(ListType).Typ.Type() == UNIT {
+				return TypedExp{texp, actualAnno}, venv, tenv, senv
+			}
+		}
+		typesEqual := checkTypesEqual(texp.Type, actualAnno)
+		if !typesEqual {
+			return TypedExp{ErrorExpression{}, ErrorType{"expression type doesn't match annotated type"}}, venv, tenv, senv
+		}
+		return TypedExp{texp, exp.Anno}, venv, tenv, senv
 	case TupleExp:
 		exp := exp.(TupleExp)
 		var texplist []Exp
@@ -568,7 +600,12 @@ func addTypes(
 		texp := TupleExp{texplist}
 		return TypedExp{texp, NewTupleType(typelist)}, venv, tenv, senv
 	case VarExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(VarExp)
+		vartyp, ok := venv.Lookup(exp.Id)
+		if !ok {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("variable %s used but not defined", exp.Id)}}, venv, tenv, senv
+		}
+		return TypedExp{exp, vartyp.(Type)}, venv, tenv, senv
 	case ExpSeq:
 		exp := exp.(ExpSeq)
 		typedLeftExp, _, _, _ := addTypes(exp.Left, venv, tenv, senv)

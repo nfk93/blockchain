@@ -22,6 +22,8 @@ type mytriple = int * string list * key
 
 type mydeclaredlongtuple = int * int * string * string * (string * string)
 
+type nestedtuple = (int * (int * int) * int)
+
 type crazy = (mydeclaredtype1 * mydeclaredtype) list list
 
 type crazy1 = mydeclaredtype1 * mydeclaredtype list list

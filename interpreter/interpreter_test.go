@@ -28,6 +28,10 @@ func TestFundme(t *testing.T) {
 	testFileNoError(t, "test_cases/fundme")
 }
 
+func TestPattern(t *testing.T) {
+	testFileNoError(t, "test_cases/patterns_semant")
+}
+
 func TestTuples(t *testing.T) {
 	testFileNoError(t, "test_cases/tupletest")
 }

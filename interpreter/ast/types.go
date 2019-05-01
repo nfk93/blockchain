@@ -27,6 +27,8 @@ const (
 	STRUCT
 	UNIT
 	OPTION
+	ERROR
+	NOTIMPLEMENTED
 )
 
 type StringType struct{}
@@ -174,15 +176,15 @@ func (t TupleType) Type() Typecode {
 	return TUPLE
 }
 func (t TupleType) String() string {
-	s := ""
+	s := "("
 	for i, t := range t.Typs {
 		if i == 0 {
-			s = fmt.Sprintf("%s", t.String())
+			s = s + fmt.Sprintf("%s", t.String())
 		} else {
 			s = s + fmt.Sprintf(" * %s", t.String())
 		}
 	}
-	return s
+	return s + ")"
 }
 func NewTupleType(typlist interface{}) TupleType {
 	return TupleType{typlist.([]Type)}
@@ -253,12 +255,12 @@ type ErrorType struct {
 func (t ErrorType) String() string {
 	return fmt.Sprintf("ErrorType(err: %s)", t.err)
 }
-func (t ErrorType) Type() Typecode { return -1 }
+func (t ErrorType) Type() Typecode { return ERROR }
 
 type NotImplementedType struct{}
 
 func (t NotImplementedType) String() string { return "NotImplementedType" }
-func (t NotImplementedType) Type() Typecode { return -1 }
+func (t NotImplementedType) Type() Typecode { return NOTIMPLEMENTED }
 
 type TypeOption struct {
 	opt bool

@@ -86,6 +86,23 @@ func TestTypeDecl(t *testing.T) {
 	}
 }
 
+func TestTranslateType(t *testing.T) {
+	tenv := InitialTypeEnv()
+	tenv = tenv.Set("myint", IntType{})
+	tupletyp := TupleType{[]Type{IntType{}, IntType{}, NewDeclaredType("myint")}}
+
+	actualtyp := translateType(tupletyp, tenv)
+	actualtype := actualtyp.(TupleType)
+	if len(actualtype.Typs) != 3 {
+		t.Errorf("Tuple not correct length")
+		for _, v := range actualtype.Typs {
+			if v.Type() != actualtyp.Type() {
+				t.Fail()
+			}
+		}
+	}
+}
+
 func TestTypeDeclStruct(t *testing.T) {
 	// check that struct with same names can't be used
 	// check that types with same names can't be used
