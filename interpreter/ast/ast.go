@@ -311,6 +311,14 @@ func (e StructLit) String() string {
 	return res
 }
 
+func (e StructLit) FieldString() string {
+	s := ""
+	for _, id := range e.Ids {
+		s = s + id
+	}
+	return s
+}
+
 func NewStructLit(id string, exp interface{}) (Exp, error) {
 	return StructLit{[]string{id}, []Exp{exp.(Exp)}}, nil
 }

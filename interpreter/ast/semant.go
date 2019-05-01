@@ -58,6 +58,15 @@ func lookupVar(id string, venv VarEnv) Type {
 	}
 }
 
+func lookupStruct(fieldIds string, senv StructEnv) Type {
+	val, contained := senv.Lookup(fieldIds)
+	if contained {
+		return val.(Type)
+	} else {
+		return nil
+	}
+}
+
 func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
 	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
@@ -470,7 +479,28 @@ func addTypes(
 	case UnitLit:
 		return TypedExp{exp, UnitType{}}, venv, tenv, senv
 	case StructLit:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(StructLit)
+		definedStruct := lookupStruct(exp.FieldString(), senv)
+		if definedStruct == nil {
+			return TypedExp{exp,
+					ErrorType{"No struct type is defined with the given field names " + exp.FieldString()}},
+				venv, tenv, senv
+		} else {
+			definedStruct := definedStruct.(StructType)
+			var texplist []Exp
+			for i, e := range exp.Vals {
+				typedE, _, _, _ := addTypes(e, venv, tenv, senv)
+				field := definedStruct.Fields[i]
+				if !checkTypesEqual(typedE.Type, field.Typ) {
+					return TypedExp{exp,
+							ErrorType{fmt.Sprintf("Field %s expected %s but received %s", field.Id, field.Typ.String(), typedE.Type.String())}},
+						venv, tenv, senv
+				}
+				texplist = append(texplist, typedE)
+			}
+			texp := StructLit{exp.Ids, texplist}
+			return TypedExp{texp, definedStruct}, venv, tenv, senv
+		}
 	case ListLit:
 		exp := exp.(ListLit)
 		var texplist []Exp

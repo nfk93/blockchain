@@ -36,6 +36,10 @@ func TestIfThenElse(t *testing.T) {
 	testFileNoError(t, "test_cases/ifthenelse")
 }
 
+func TestStructLit(t *testing.T) {
+	testFileNoError(t, "test_cases/StructLit")
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }
