@@ -27,6 +27,8 @@ const (
 	STRUCT
 	UNIT
 	OPTION
+	ERROR
+	NOTIMPLEMENTED
 )
 
 type StringType struct{}
@@ -252,12 +254,12 @@ type ErrorType struct {
 func (t ErrorType) String() string {
 	return fmt.Sprintf("ErrorType(err: %s)", t.err)
 }
-func (t ErrorType) Type() Typecode { return -1 }
+func (t ErrorType) Type() Typecode { return ERROR }
 
 type NotImplementedType struct{}
 
 func (t NotImplementedType) String() string { return "NotImplementedType" }
-func (t NotImplementedType) Type() Typecode { return -1 }
+func (t NotImplementedType) Type() Typecode { return NOTIMPLEMENTED }
 
 type TypeOption struct {
 	opt bool

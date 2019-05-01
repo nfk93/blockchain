@@ -24,6 +24,10 @@ func TestFundme(t *testing.T) {
 	testFileNoError(t, "test_cases/fundme")
 }
 
+func TestPattern(t *testing.T) {
+	testFileNoError(t, "test_cases/patterns_semant")
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }

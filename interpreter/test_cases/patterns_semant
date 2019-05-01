@@ -1,0 +1,9 @@
+type storage = (int * int)
+type tupleintuple = (int * (int * int))
+
+let%init storage = (2, 3)
+
+let%entry main () ((a: int), (b: int)) = ([], (a, b))
+
+let%entry test1 (t : tupleintuple) s =
+    let (a, b) = t in ([], b)
