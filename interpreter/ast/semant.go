@@ -62,14 +62,19 @@ func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
 	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
 		return typ
+	case OPTION:
+		typ := typ.(OptionType)
+		return OptionType{translateType(typ.Typ, tenv)}
 	case LIST:
 		typ := typ.(ListType)
 		return ListType{translateType(typ.Typ, tenv)}
 	case TUPLE:
 		typ := typ.(TupleType)
-		typ1 := translateType(typ.Typ1, tenv)
-		typ2 := translateType(typ.Typ2, tenv)
-		return TupleType{typ1, typ2}
+		typs := make([]Type, len(typ.Typs))
+		for i, t := range typ.Typs {
+			typs[i] = translateType(t, tenv)
+		}
+		return TupleType{typs}
 	case STRUCT:
 		typ := typ.(StructType)
 		fields := make([]StructField, 0)
@@ -122,12 +127,25 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 		default:
 			return false
 		}
+	case OPTION:
+		switch typ2.Type() {
+		case OPTION:
+			typ1 := typ1.(OptionType)
+			typ2 := typ2.(OptionType)
+			return checkTypesEqual(typ1.Typ, typ2.Typ)
+		default:
+			return false
+		}
 	case TUPLE:
 		switch typ2.Type() {
 		case TUPLE:
+			equal := true
 			typ1 := typ1.(TupleType)
 			typ2 := typ2.(TupleType)
-			return checkTypesEqual(typ1.Typ1, typ2.Typ1) && checkTypesEqual(typ1.Typ2, typ2.Typ2)
+			for i, v := range typ1.Typs {
+				equal = equal && checkTypesEqual(v, typ2.Typs[i])
+			}
+			return equal
 		default:
 			return false
 		}
@@ -163,15 +181,14 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 	switch typ.Type() {
 	case TUPLE:
 		typ := typ.(TupleType)
-		types := unpackTuple(typ, []Type{typ.Typ1})
-		if len(p.params) != len(types) {
+		if len(p.params) != len(typ.Typs) {
 			return venv, false
 		}
 		for i, v := range p.params {
-			if !checkAnnotation(v, types[i]) {
+			if !checkAnnotation(v, typ.Typs[i]) {
 				return venv, false
 			}
-			venv_ = venv_.Set(v.id, types[i])
+			venv_ = venv_.Set(v.id, typ.Typs[i])
 		}
 		return venv_, true
 	default:
@@ -179,15 +196,6 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 			return venv, false
 		}
 		return venv_.Set(p.params[0].id, typ), true
-	}
-}
-func unpackTuple(typ TupleType, types []Type) []Type {
-	switch typ.Typ2.Type() {
-	case TUPLE:
-		typ2 := typ.Typ2.(TupleType)
-		return unpackTuple(typ2, append(types, typ2.Typ1))
-	default:
-		return append(types, typ.Typ2)
 	}
 }
 
@@ -344,9 +352,9 @@ func addTypes(
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, NewTupleType(NewNatType(), NewKoinType())}, venv, tenv, senv
+					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewKoinType()})}, venv, tenv, senv
 				case NAT:
-					return TypedExp{texp, NewTupleType(NewKoinType(), NewKoinType())}, venv, tenv, senv
+					return TypedExp{texp, NewTupleType([]Type{NewKoinType(), NewKoinType()})}, venv, tenv, senv
 				default:
 					return TypedExp{texp,
 							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
@@ -355,9 +363,9 @@ func addTypes(
 			case NAT:
 				switch rightTyped.Type.Type() {
 				case INT:
-					return TypedExp{texp, NewTupleType(NewIntType(), NewNatType())}, venv, tenv, senv
+					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv
 				case NAT:
-					return TypedExp{texp, NewTupleType(NewNatType(), NewNatType())}, venv, tenv, senv
+					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewNatType()})}, venv, tenv, senv
 				default:
 					return TypedExp{texp,
 							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
@@ -366,7 +374,7 @@ func addTypes(
 			case INT:
 				switch rightTyped.Type.Type() {
 				case NAT, INT:
-					return TypedExp{texp, NewTupleType(NewIntType(), NewNatType())}, venv, tenv, senv
+					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv
 				default:
 					return TypedExp{texp,
 							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
@@ -441,7 +449,7 @@ func addTypes(
 		// add types with updated venv
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
 		// check that return type is operation list * storage
-		if !checkTypesEqual(body.Type, TupleType{OperationType{}, storagetype}) {
+		if !checkTypesEqual(body.Type, TupleType{[]Type{OperationType{}, storagetype}}) {
 			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body},
 					ErrorType{fmt.Sprintf("return type of entry must be operation list * storage, but was %s", body.Type.String())}},
 				venv, tenv, senv
@@ -517,12 +525,16 @@ func addTypes(
 	case AnnoExp:
 		return todo(exp, venv, tenv, senv)
 	case TupleExp:
-		/* exp := exp.(TupleExp)
+		exp := exp.(TupleExp)
 		var texplist []Exp
+		var typelist []Type
 		for _, e := range exp.Exps {
 			typedE, _, _, _ := addTypes(e, venv, tenv, senv)
-		}*/
-		return todo(exp, venv, tenv, senv)
+			texplist = append(texplist, typedE)
+			typelist = append(typelist, typedE.Type)
+		}
+		texp := TupleExp{texplist}
+		return TypedExp{texp, NewTupleType(typelist)}, venv, tenv, senv
 	case VarExp:
 		return todo(exp, venv, tenv, senv)
 	case ExpSeq:

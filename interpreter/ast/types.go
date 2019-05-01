@@ -26,6 +26,7 @@ const (
 	DECLARED
 	STRUCT
 	UNIT
+	OPTION
 )
 
 type StringType struct{}
@@ -124,6 +125,22 @@ func NewOperationType() OperationType {
 	return OperationType{}
 }
 
+/* OptionType */
+type OptionType struct {
+	Typ Type
+}
+
+func (t OptionType) Type() Typecode {
+	return OPTION
+}
+func (t OptionType) String() string {
+	return fmt.Sprintf("%s option", t.Typ.String())
+}
+func NewOptionType(typ interface{}) OptionType {
+	return OptionType{typ.(Type)}
+}
+
+/* ListType */
 type ListType struct {
 	Typ Type
 }
@@ -132,7 +149,7 @@ func (t ListType) Type() Typecode {
 	return LIST
 }
 func (t ListType) String() string {
-	return fmt.Sprintf("%s List", t.Typ.String())
+	return fmt.Sprintf("%s list", t.Typ.String())
 }
 func NewListType(typ interface{}) ListType {
 	return ListType{typ.(Type)}
@@ -147,20 +164,38 @@ func (t UnitType) String() string {
 	return "unit"
 }
 
+/* TupleType */
+
 type TupleType struct {
-	Typ1 Type
-	Typ2 Type
+	Typs []Type
 }
 
 func (t TupleType) Type() Typecode {
 	return TUPLE
 }
 func (t TupleType) String() string {
-	return fmt.Sprintf("(%s, %s)", t.Typ1.String(), t.Typ2.String())
+	s := ""
+	for i, t := range t.Typs {
+		if i == 0 {
+			s = fmt.Sprintf("%s", t.String())
+		} else {
+			s = s + fmt.Sprintf(" * %s", t.String())
+		}
+	}
+	return s
 }
-func NewTupleType(typ1, typ2 interface{}) TupleType {
-	return TupleType{typ1.(Type), typ2.(Type)}
+func NewTupleType(typlist interface{}) TupleType {
+	return TupleType{typlist.([]Type)}
 }
+func NewTypeList(typ1, typ2 interface{}) []Type {
+	return []Type{typ1.(Type), typ2.(Type)}
+}
+func PrependTypeList(typ, typlist interface{}) []Type {
+	list := typlist.([]Type)
+	return append([]Type{typ.(Type)}, list...)
+}
+
+/* DeclaredType */
 
 type DeclaredType struct {
 	TypId string

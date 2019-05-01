@@ -24,6 +24,18 @@ func TestExpSeq(t *testing.T) {
 	testFileNoError(t, "test_cases/ExpSeq")
 }
 
+func TestFundme(t *testing.T) {
+	testFileNoError(t, "test_cases/fundme")
+}
+
+func TestTuples(t *testing.T) {
+	testFileNoError(t, "test_cases/tupletest")
+}
+
+func TestIfThenElse(t *testing.T) {
+	testFileNoError(t, "test_cases/ifthenelse")
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }
