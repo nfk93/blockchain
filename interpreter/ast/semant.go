@@ -393,8 +393,26 @@ func addTypes(
 						ErrorType{"Can't divide expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
+		case OR, AND:
+			switch leftTyped.Type.Type() {
+			case NAT, BOOL:
+				break
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't use logical binop on expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+			if leftTyped.Type == rightTyped.Type {
+				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
+			} else {
+				return TypedExp{texp, ErrorType{"Types of logical binop are not equal"}},
+					venv, tenv, senv
+			}
+		default:
+			return TypedExp{texp,
+					ErrorType{"Unrecogized Binop, Should not happen!"}},
+				venv, tenv, senv
 		}
-		return todo(exp, venv, tenv, senv)
 	case TypeDecl:
 		exp := exp.(TypeDecl)
 		if lookupType(exp.id, tenv) != nil {
@@ -522,15 +540,62 @@ func addTypes(
 	case AnnoExp:
 		return todo(exp, venv, tenv, senv)
 	case TupleExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(TupleExp)
+		var texplist []Exp
+		var typelist []Type
+		for _, e := range exp.Exps {
+			typedE, _, _, _ := addTypes(e, venv, tenv, senv)
+			texplist = append(texplist, typedE)
+			typelist = append(typelist, typedE.Type)
+		}
+		texp := TupleExp{texplist}
+		return TypedExp{texp, NewTupleType(typelist)}, venv, tenv, senv
 	case VarExp:
 		return todo(exp, venv, tenv, senv)
 	case ExpSeq:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(ExpSeq)
+		typedLeftExp, _, _, _ := addTypes(exp.Left, venv, tenv, senv)
+		typedRightExp, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
+		texp := ExpSeq{typedLeftExp, typedRightExp}
+		if typedLeftExp.Type.Type() != UNIT {
+			return TypedExp{texp,
+					ErrorType{"All expresssion in ExpSeq, except the last, must be of type UNIT!"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv
 	case IfThenElseExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(IfThenElseExp)
+		typedIf, _, _, _ := addTypes(exp.If, venv, tenv, senv)
+		typedThen, _, _, _ := addTypes(exp.Then, venv, tenv, senv)
+		typedElse, _, _, _ := addTypes(exp.Else, venv, tenv, senv)
+		texp := IfThenElseExp{typedIf, typedThen, typedElse}
+		if typedIf.Type.Type() != BOOL {
+			return TypedExp{texp,
+					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
+				venv, tenv, senv
+		}
+		if !checkTypesEqual(typedThen.Type, typedElse.Type) {
+			return TypedExp{texp,
+					ErrorType{"Return types in if and else branch should be equal!"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, typedThen.Type}, venv, tenv, senv
 	case IfThenExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(IfThenExp)
+		typedIf, _, _, _ := addTypes(exp.If, venv, tenv, senv)
+		typedThen, _, _, _ := addTypes(exp.Then, venv, tenv, senv)
+		texp := IfThenExp{typedIf, typedThen}
+		if typedIf.Type.Type() != BOOL {
+			return TypedExp{texp,
+					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
+				venv, tenv, senv
+		}
+		if typedThen.Type.Type() != UNIT {
+			return TypedExp{texp,
+					ErrorType{"'Then' expression in IfThen is of type " + typedThen.Type.String() + " should be UNIT"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, UnitType{}}, venv, tenv, senv
 	case ModuleLookupExp:
 		return todo(exp, venv, tenv, senv)
 	case LookupExp:

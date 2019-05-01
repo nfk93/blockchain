@@ -20,12 +20,24 @@ func TestConcatList(t *testing.T) {
 	testFileNoError(t, "test_cases/ConcatList")
 }
 
+func TestExpSeq(t *testing.T) {
+	testFileNoError(t, "test_cases/ExpSeq")
+}
+
 func TestFundme(t *testing.T) {
 	testFileNoError(t, "test_cases/fundme")
 }
 
 func TestPattern(t *testing.T) {
 	testFileNoError(t, "test_cases/patterns_semant")
+}
+
+func TestTuples(t *testing.T) {
+	testFileNoError(t, "test_cases/tupletest")
+}
+
+func TestIfThenElse(t *testing.T) {
+	testFileNoError(t, "test_cases/ifthenelse")
 }
 
 func testFileNoError(t *testing.T, testpath string) {

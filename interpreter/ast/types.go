@@ -177,13 +177,14 @@ func (t TupleType) Type() Typecode {
 }
 func (t TupleType) String() string {
 	s := ""
-	var typ Type
-	typs := t.Typs
-	for len(typs) > 1 {
-		typ, typs = typs[0], typs[1:]
-		s = s + fmt.Sprintf("%s * ", typ.String())
+	for i, t := range t.Typs {
+		if i == 0 {
+			s = fmt.Sprintf("%s", t.String())
+		} else {
+			s = s + fmt.Sprintf(" * %s", t.String())
+		}
 	}
-	return fmt.Sprintf(s+"%s", typ.String())
+	return s
 }
 func NewTupleType(typlist interface{}) TupleType {
 	return TupleType{typlist.([]Type)}
