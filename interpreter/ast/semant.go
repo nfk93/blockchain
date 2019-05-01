@@ -537,9 +537,38 @@ func addTypes(
 		}
 		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv
 	case IfThenElseExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(IfThenElseExp)
+		typedIf, _, _, _ := addTypes(exp.If, venv, tenv, senv)
+		typedThen, _, _, _ := addTypes(exp.Then, venv, tenv, senv)
+		typedElse, _, _, _ := addTypes(exp.Else, venv, tenv, senv)
+		texp := IfThenElseExp{typedIf, typedThen, typedElse}
+		if typedIf.Type.Type() != BOOL {
+			return TypedExp{texp,
+					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
+				venv, tenv, senv
+		}
+		if !checkTypesEqual(typedThen.Type, typedElse.Type) {
+			return TypedExp{texp,
+					ErrorType{"Return types in if and else branch should be equal!"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, typedThen.Type}, venv, tenv, senv
 	case IfThenExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(IfThenExp)
+		typedIf, _, _, _ := addTypes(exp.If, venv, tenv, senv)
+		typedThen, _, _, _ := addTypes(exp.Then, venv, tenv, senv)
+		texp := IfThenExp{typedIf, typedThen}
+		if typedIf.Type.Type() != BOOL {
+			return TypedExp{texp,
+					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
+				venv, tenv, senv
+		}
+		if typedThen.Type.Type() != UNIT {
+			return TypedExp{texp,
+					ErrorType{"'Then' expression in IfThen is of type " + typedThen.Type.String() + " should be UNIT"}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, UnitType{}}, venv, tenv, senv
 	case ModuleLookupExp:
 		return todo(exp, venv, tenv, senv)
 	case LookupExp:
