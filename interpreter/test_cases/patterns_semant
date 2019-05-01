@@ -1,9 +1,15 @@
 type storage = (int * int)
 type tupleintuple = (int * (int * int))
+type triple = (int * string * nat)
 
 let%init storage = (2, 3)
 
-let%entry main () ((a: int), (b: int)) = ([], (a, b))
+let%entry main () ((a: int), (b: int)) = (([]: operation list), (a, b))
 
 let%entry test1 (t : tupleintuple) s =
-    let (a, b) = t in ([], b)
+    let (a, b) = t in (([] : operation list), b)
+
+let%entry test2 () storage =
+    let a = (12, "hey", 14p) in
+    let (b : triple) = a in
+    (([]: operation list), (1, 3))
