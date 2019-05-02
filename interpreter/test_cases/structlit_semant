@@ -1,6 +1,6 @@
-type storage = int
 type record = {a: int; b: string;}
+type storage = record
 
-let%init storage = 1
+let%init storage = {a = 15; b = "asdaq";}
 
-let%entry main () s = {a = 2; b = "tis";}
+let%entry main () s = (([]: operation list), {a = 2; b = "tis";})

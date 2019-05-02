@@ -86,24 +86,22 @@ func TestStructLit(t *testing.T) {
 }
 
 func TestLookupExp(t *testing.T) {
-	testFileNoError(t, "test_cases/LookupExp")
+	testFileNoError(t, "test_cases/lookupexp_semant")
 }
 
 func TestLookupExpFail(t *testing.T) {
-	testFileError(t, "test_cases/LookupExpFail")
+	testFileError(t, "test_cases/lookupexp1_semant")
 }
 
 func TestUpdateStructExp(t *testing.T) {
-	testFileNoError(t, "test_cases/UpdateStructExp")
+	testFileNoError(t, "test_cases/updatestructexp_semant")
 }
 
 func TestUpdateStructExpFail(t *testing.T) {
-	testFileError(t, "test_cases/UpdateStructExpFail")
+	testFileError(t, "test_cases/updatestructexp1_semant")
 }
 
 /* Helper functions */
-
-
 
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)

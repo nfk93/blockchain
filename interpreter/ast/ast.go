@@ -520,14 +520,14 @@ func NewModuleLookupExp(mod, field string) (Exp, error) {
 	return ModuleLookupExp{mod, field}, nil
 }
 
-/* LookupExp */
+/* lookupexp_semant */
 type LookupExp struct {
 	PathIds []string
 	LeafId  string
 }
 
 func (e LookupExp) String() string {
-	res := "LookupExp(PathIds: ["
+	res := "lookupexp_semant(PathIds: ["
 	var s string
 	idpath := e.PathIds
 	for len(idpath) > 1 {
@@ -549,14 +549,14 @@ func AddPathElement(list interface{}, id string) []string {
 	return append(list.([]string), id)
 }
 
-/* UpdateStructExp */
+/* updatestructexp_semant */
 type UpdateStructExp struct {
 	Lookup Exp
 	Exp    Exp
 }
 
 func (e UpdateStructExp) String() string {
-	return fmt.Sprintf("UpdateStructExp(Lookup: %s, Exp: %s)", e.Lookup.String(), e.Exp.String())
+	return fmt.Sprintf("updatestructexp_semant(Lookup: %s, Exp: %s)", e.Lookup.String(), e.Exp.String())
 }
 
 func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, error) {
