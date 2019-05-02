@@ -42,6 +42,7 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			trans := <-channels.TransFromP2P
+			fmt.Printf("Transaction of %v K from %v to %v.\n ", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
 			go handleTransaction(trans)
 		}
 	}()
@@ -68,7 +69,13 @@ func handleBlock(b o.Block) {
 		handleGenesisBlock(b)
 		return
 	}
-	if !b.ValidateBlock() || !ValidateDraw(b, leadershipNonce, hardness) {
+
+	if !b.ValidateBlock() {
+		fmt.Println("CL REJECTED! Block didn't validate...")
+		return
+	}
+	if !ValidateDraw(b, leadershipNonce, hardness) {
+		fmt.Println("CL REJECTED! DRAW didn't validate...")
 		return
 	}
 
@@ -205,6 +212,9 @@ func sendBranchToTL(branch []o.Block) {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
+	if block.BakerID.String() == pk.String() {
+	}
+
 	channels.BlockToTrans <- block
 }
 
@@ -221,7 +231,7 @@ func updateHead(b o.Block) {
 	} else {
 		comparePathWeight(b)
 	}
-	log() //Used for testing purposes
+	//log() //Used for testing purposes
 }
 
 // Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block

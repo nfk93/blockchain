@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"fmt"
-	. "github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 )
 
@@ -23,10 +22,11 @@ var blockReward = 100
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), ""}
 
-	// Process a NodeBlock coming from the consensus layer
+	// Process a Block coming from the consensus layer
 	go func() {
 		for {
 			b := <-channels.BlockToTrans
+
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
@@ -45,11 +45,14 @@ func StartTransactionLayer(channels ChannelStruct) {
 		for {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
+				fmt.Println("Finalized Successfully")
+				printFinalizedLedger(finalizedNode.state.Ledger)
 				channels.StateFromTrans <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
 				channels.StateFromTrans <- State{}
 			}
+
 		}
 	}()
 
@@ -68,7 +71,7 @@ func (t *Tree) processBlock(b Block) {
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	if s.Ledger == nil {
-		s.Ledger = make(map[PublicKey]int)
+		s.Ledger = make(map[string]int)
 	}
 
 	// Update state
@@ -111,7 +114,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 
 	noOfTrans := len(blockData.TransList)
 
-	for i := 0; i < min(10, noOfTrans); i++ { //TODO: Change to only run i X time
+	for i := 0; i < min(1000, noOfTrans); i++ { //TODO: Change to only run i X time
 		newTrans := blockData.TransList[i]
 		s.AddTransaction(newTrans, transactionFee)
 		addedTransactions = append(addedTransactions, newTrans)
@@ -140,14 +143,20 @@ func min(a, b int) int {
 	return b
 }
 
-func copyMap(originalMap map[PublicKey]int) map[PublicKey]int {
-	newMap := make(map[PublicKey]int)
+func copyMap(originalMap map[string]int) map[string]int {
+	newMap := make(map[string]int)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}
 	return newMap
 }
 
-func GetCurrentLedger() map[PublicKey]int {
+func GetCurrentLedger() map[string]int {
 	return tree.treeMap[tree.head].state.Ledger
+}
+
+func printFinalizedLedger(ledger map[string]int) {
+	for l := range ledger {
+		fmt.Printf("Amount %v is owned by %v\n", ledger[l], l[4:14])
+	}
 }

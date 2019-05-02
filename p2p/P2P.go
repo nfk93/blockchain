@@ -322,7 +322,6 @@ func handleTransaction(trans objects.Transaction) {
 		transSeen.add(transHash(trans))
 
 		// TODO: handle the trans more?
-		//fmt.Println("Received Transaction: ", trans)
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}

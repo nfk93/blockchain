@@ -27,7 +27,7 @@ func main() {
 	var addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	var port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", int(time.Second*1), "Specify the slot length (default=10sec)")
-	hardness = flag.Float64("hardness", 0.25, "Specify hardness (default=0.90)")
+	hardness = flag.Float64("hardness", 0.30, "Specify hardness (default=0.90)")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	flag.Parse()
 	secretKey, publicKey = crypto.KeyGen(2048)
@@ -39,6 +39,7 @@ func main() {
 }
 
 func cliLoop() {
+	slot := 0
 	for {
 		// TODO use a variable to track latest printed cmdline entry, to always have '>' as the latest line printed
 		var commandline string
@@ -65,7 +66,7 @@ func cliLoop() {
 		case "-ledger":
 			ledger := transaction.GetCurrentLedger()
 			for l := range ledger {
-				fmt.Printf("Amount %v is owned by %v\n", ledger[l], l)
+				fmt.Printf("Amount %v is owned by %v\n", ledger[l], l[4:14])
 			}
 		case "-start": //"-start_network":
 			if *newNetwork {
@@ -78,17 +79,46 @@ func cliLoop() {
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}
-		case "-test1":
+		case "-test1000":
 			for _, p := range p2p.GetPublicKeys() {
+				if p.String() != publicKey.String() {
+
+					trans := objects.CreateTransaction(publicKey,
+						p,
+						1000,
+						publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+						secretKey)
+					channels.TransClientInput <- trans
+				}
+			}
+		case "-test250":
+			currentStake := consensus.GetLastFinalState()[publicKey.String()]
+			for _, p := range p2p.GetPublicKeys() {
+
 				trans := objects.CreateTransaction(publicKey,
 					p,
-					100000,
+					currentStake/len(p2p.GetPublicKeys()),
 					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
 					secretKey)
 				channels.TransClientInput <- trans
+
 			}
 		case "-test2":
-			currentStake := consensus.GetLastFinalState()[publicKey]
+			if slot == 0 {
+				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
+				if err != nil {
+					log.Fatal(err)
+				}
+				genesisblock := objects.Block{Slot: 0, BlockData: objects.Data{GenesisData: genesisdata}}
+				channels.BlockToP2P <- genesisblock
+				slot++
+				time.Sleep(time.Second * 5)
+			}
+			go consensus.TestDrawLottery(slot)
+			slot++
+
+		case "-test3":
+			currentStake := consensus.GetLastFinalState()[publicKey.String()]
 			pkList := p2p.GetPublicKeys()
 
 			if currentStake == 0 {
@@ -105,6 +135,29 @@ func cliLoop() {
 					secretKey)
 				channels.TransClientInput <- trans
 			}
+
+		case "-test5":
+			go func() {
+				for {
+					currentStake := consensus.GetLastFinalState()[publicKey.String()]
+					pkList := p2p.GetPublicKeys()
+
+					if currentStake == 0 {
+						continue
+					}
+					//noTrans := rand.Intn(5)
+					for i := 0; i < 2; i++ {
+						receiverPK := pkList[rand.Intn(len(pkList))]
+						trans := objects.CreateTransaction(publicKey,
+							receiverPK,
+							rand.Intn(currentStake/50),
+							publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+							secretKey)
+						channels.TransClientInput <- trans
+					}
+					time.Sleep(time.Second * 10)
+				}
+			}()
 
 		default:
 			fmt.Println(commandline, "is not a known command. Type -h for help")

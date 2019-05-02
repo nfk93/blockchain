@@ -9,15 +9,15 @@ import (
 )
 
 type State struct {
-	Ledger     map[PublicKey]int
+	Ledger     map[string]int
 	ParentHash string
 	TotalStake int
 }
 
 func NewInitialState(key PublicKey) State {
 	initialStake := 1000000 // 1 mil
-	ledger := make(map[PublicKey]int)
-	ledger[key] = initialStake
+	ledger := make(map[string]int)
+	ledger[key.String()] = initialStake
 	return State{ledger, "", initialStake}
 }
 
@@ -36,19 +36,19 @@ func (s *State) AddTransaction(t Transaction, transFee int) bool {
 	}
 
 	// Sender has to be able to pay both the amount and the fee
-	if s.Ledger[t.From] < amountWithFees {
+	if s.Ledger[t.From.String()] < amountWithFees {
 		fmt.Println("Not enough money on senders account")
 		return false
 	}
 
-	s.Ledger[t.From] -= amountWithFees
-	s.Ledger[t.To] += t.Amount
+	s.Ledger[t.From.String()] -= amountWithFees
+	s.Ledger[t.To.String()] += t.Amount
 	s.TotalStake -= transFee // Take the fee out of the system
 	return true
 }
 
 func (s *State) AddBlockRewardAndTransFees(pk PublicKey, reward int) {
-	s.Ledger[pk] += reward
+	s.Ledger[pk.String()] += reward
 	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
 
@@ -59,8 +59,8 @@ func (s State) StateAsString() string {
 
 	keys := make([]string, 0, len(s.Ledger))
 	for k := range s.Ledger {
-		sortedLedger[k.String()] = s.Ledger[k]
-		keys = append(keys, k.String())
+		sortedLedger[k] = s.Ledger[k]
+		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 

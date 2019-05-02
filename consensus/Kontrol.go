@@ -19,16 +19,17 @@ var hardness float64
 var genesisTime time.Time
 var sk SecretKey
 var pk PublicKey
-var lastFinalizedLedger map[PublicKey]int
+var lastFinalizedLedger map[string]int
 var ledgerLock sync.RWMutex
 var leadershipNonce string
 var leadershipLock sync.RWMutex
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
+	finalizeInterval := 50
 	for {
-		if (currentSlot)%100 == 0 {
-			finalize(currentSlot - 50)
+		if (currentSlot)%finalizeInterval == 0 {
+			finalize(currentSlot - (finalizeInterval / 2))
 		}
 		go drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime)
@@ -54,7 +55,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	slotLength = genesisData.SlotDuration
 	lastFinalizedLedger = genesisData.InitialState.Ledger
 	leadershipNonce = genesisData.Nonce
-	currentStake = lastFinalizedLedger[pk]
+	currentStake = lastFinalizedLedger[pk.String()]
 	systemStake = genesisData.InitialState.TotalStake
 	genesisTime = genesisData.GenesisTime
 	go runSlot()
@@ -81,8 +82,11 @@ func updateStake() {
 	state := <-channels.StateFromTrans
 	ledgerLock.Lock()
 	defer ledgerLock.Unlock()
-	//fmt.Println(state)
 	lastFinalizedLedger = state.Ledger
+}
+
+func TestDrawLottery(slot int) {
+	drawLottery(slot)
 }
 
 func drawLottery(slot int) {
@@ -116,9 +120,9 @@ func sendBlock() {
 func getLotteryPower(pk PublicKey) float64 {
 	ledgerLock.RLock()
 	defer ledgerLock.RUnlock()
-	return float64(lastFinalizedLedger[pk]) / float64(systemStake)
+	return float64(lastFinalizedLedger[pk.String()]) / float64(systemStake)
 }
 
-func GetLastFinalState() map[PublicKey]int {
+func GetLastFinalState() map[string]int {
 	return lastFinalizedLedger
 }
