@@ -1,0 +1,8 @@
+(* should fail! *)
+
+type storage = int * int * int
+
+let%init storage = (1, 2, 3)
+
+let%entry main () s =
+    let (a, b) = s in (([]: operation list), s)

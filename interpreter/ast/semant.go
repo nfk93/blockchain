@@ -580,14 +580,14 @@ func addTypes(
 		actualAnno := translateType(exp.Anno, tenv)
 		if actualAnno.Type() == LIST {
 			if texp.Type.Type() == LIST && texp.Type.(ListType).Typ.Type() == UNIT {
-				return TypedExp{texp, actualAnno}, venv, tenv, senv
+				return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv
 			}
 		}
 		typesEqual := checkTypesEqual(texp.Type, actualAnno)
 		if !typesEqual {
 			return TypedExp{ErrorExpression{}, ErrorType{"expression type doesn't match annotated type"}}, venv, tenv, senv
 		}
-		return TypedExp{texp, exp.Anno}, venv, tenv, senv
+		return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv
 	case TupleExp:
 		exp := exp.(TupleExp)
 		var texplist []Exp
@@ -688,7 +688,16 @@ func addTypes(
 	case UpdateStructExp:
 		return todo(exp, venv, tenv, senv)
 	case StorageInitExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(StorageInitExp)
+		texp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
+		storagetype := lookupType("storage", tenv)
+		if storagetype == nil {
+			return TypedExp{exp, ErrorType{"storage type is undefined - define it before initializing it"}}, venv, tenv, senv
+		}
+		if !checkTypesEqual(storagetype, texp.Type) {
+			return TypedExp{exp, ErrorType{"storage initilization doesn't match storage type"}}, venv, tenv, senv
+		}
+		return TypedExp{StorageInitExp{texp}, UnitType{}}, venv, tenv, senv
 	default:
 		return todo(exp, venv, tenv, senv)
 	}
