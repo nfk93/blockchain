@@ -13,6 +13,10 @@ func ParseKey(key interface{}) []byte {
 	return key.(*token.Token).Lit
 }
 
+func ParseAddress(add interface{}) []byte {
+	return add.(*token.Token).Lit
+}
+
 func ParseFloat(float interface{}) float64 {
 	f, _ := strconv.ParseFloat(string(float.(*token.Token).Lit), 64)
 	return f

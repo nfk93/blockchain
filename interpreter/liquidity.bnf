@@ -37,6 +37,7 @@ bool        : 'b' 'o' 'o' 'l' ;
 unit        : 'u' 'n' 'i' 't' ;
 nat         : 'n' 'a' 't' ;
 int         : 'i' 'n' 't' ;
+address     : 'a' 'd' 'd' 'r' 'e' 's' 's' ;
 string      : 's' 't' 'r' 'i' 'n' 'g' ;
 false       : 'f' 'a' 'l' 's' 'e' ;
 true        : 't' 'r' 'u' 'e' ;
@@ -53,6 +54,7 @@ koin        : 'k' 'o' 'i' 'n' ;
 /* TODO: make sure hashes without capital letters can be distinguished from ids */
 _b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 key_lit     : 'k' 'n' '1' _b58char { _b58char } ;
+address_lit : 'k' 'n' '2' _b58char { _b58char } ;
 
 /* id's are all minor case in liquidity, starting with a letter */
 _idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;
@@ -67,9 +69,7 @@ _amount     : _digit { _digit } ;
 koin_lit    : _amount 'k' 'n' ;
 nat_lit     : _amount 'p' ;
 int_lit     : {'-'} _digit { _digit } ;
-float_lit   : _digit { _digit } '.' { _digit } ;
 
-/* This must go below float detection, for obvious reasons */
 dot         : '.' ;
 
 /* Comments are treated as whitespace. As are version identifier TODO */
@@ -162,6 +162,7 @@ Type1       : lparen Type rparen                                << $1, nil >>
             | string                                            << ast.NewStringType(), nil >>
             | key                                               << ast.NewKeyType(), nil >>
             | operation                                         << ast.NewOperationType(), nil >>
+            | address                                           << ast.NewAddressType(), nil >>
             | Type1 option                                      << ast.NewOptionType($0), nil >>
             | Type1 list                                        << ast.NewListType($0), nil >>
             | lident                                            << ast.NewDeclaredType(util.ParseString($0)), nil >> ;
@@ -170,11 +171,11 @@ Tupletype   : Type1 ast Tupletype                               << ast.PrependTy
             | Type1 ast Type1                                   << ast.NewTypeList($0, $2), nil >> ;
 
 Constant    : key_lit                                           << ast.NewKeyLit(util.ParseKey($0)) >>
+            | address_lit                                       << ast.NewAddressLit(util.ParseAddress($0)) >>
             | true                                              << ast.NewBoolLit(true) >>
             | false                                             << ast.NewBoolLit(false) >>
             | int_lit                                           << ast.NewIntLit(util.ParseInt($0)) >>
             | nat_lit                                           << ast.NewNatLit(util.ParseNat($0)) >>
-            | float_lit                                         << ast.NewFloatLit(util.ParseFloat($0)) >>
             | koin_lit                                          << ast.NewKoinLit(util.ParseKoin($0)) >>
             | string_lit                                        << ast.NewStringLit(util.ParseString($0)) >>
             | lparen rparen                                     << ast.NewUnitLit() >>

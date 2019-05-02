@@ -101,6 +101,10 @@ func TestUpdateStructExpFail(t *testing.T) {
 	testFileError(t, "test_cases/updatestructexp1_semant")
 }
 
+func TestCallExp(t *testing.T) {
+	testFileNoError(t, "test_cases/callexp_semant")
+}
+
 /* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {
@@ -221,7 +225,7 @@ func checkForErrorTypes(texp_ Exp) bool {
 	case UnOpExp:
 		e := e.(UnOpExp)
 		return checkForErrorTypes(e.Exp)
-	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
+	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp, NatLit:
 		return true
 	default:

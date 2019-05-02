@@ -26,6 +26,7 @@ const (
 	STRUCT
 	UNIT
 	OPTION
+	ADDRESS
 	LAMBDA
 	ERROR
 	NOTIMPLEMENTED
@@ -65,6 +66,18 @@ func (t NatType) String() string {
 }
 func NewNatType() NatType {
 	return NatType{}
+}
+
+type AddressType struct{}
+
+func (t AddressType) Type() Typecode {
+	return ADDRESS
+}
+func (t AddressType) String() string {
+	return "address"
+}
+func NewAddressType() AddressType {
+	return AddressType{}
 }
 
 type KeyType struct{}

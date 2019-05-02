@@ -91,7 +91,7 @@ func lookupStruct(fieldIds string, senv StructEnv) Type {
 
 func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
-	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
+	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT, ADDRESS:
 		return typ
 	case OPTION:
 		typ := typ.(OptionType)
@@ -153,7 +153,7 @@ func translateType(typ Type, tenv TypeEnv) Type {
 // ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
 func checkTypesEqual(typ1, typ2 Type) bool {
 	switch typ1.Type() {
-	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
+	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT, ADDRESS:
 		return typ1.Type() == typ2.Type()
 	case LIST:
 		switch typ2.Type() {
