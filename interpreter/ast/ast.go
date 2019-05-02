@@ -551,24 +551,16 @@ func AddPathElement(list interface{}, id string) []string {
 
 /* UpdateStructExp */
 type UpdateStructExp struct {
-	PathIds []string
-	LeafId  string
-	Exp     Exp
+	Lookup Exp
+	Exp    Exp
 }
 
 func (e UpdateStructExp) String() string {
-	res := "UpdateStructExp(PathIds: ["
-	var s string
-	idpath := e.PathIds
-	for len(idpath) > 1 {
-		s, idpath = idpath[0], idpath[1:]
-		res += s + ", "
-	}
-	return res + idpath[0] + "], LeafId: " + e.LeafId + ", Exp: " + e.Exp.String() + ")"
+	return fmt.Sprintf("UpdateStructExp(Lookup: %s, Exp: %s)", e.Lookup.String(), e.Exp.String())
 }
 
 func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, error) {
-	return UpdateStructExp{path.([]string), leafid, exp.(Exp)}, nil
+	return UpdateStructExp{LookupExp{path.([]string), leafid}, exp.(Exp)}, nil
 }
 
 /* StorageInitExp */

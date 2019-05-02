@@ -653,9 +653,49 @@ func addTypes(
 	case ModuleLookupExp:
 		return todo(exp, venv, tenv, senv)
 	case LookupExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(LookupExp)
+		var typ Type
+		var currentStruct StructType
+		for i, id := range exp.PathIds {
+			if i == 0 {
+				typ = lookupVar(id, venv)
+			} else {
+				fieldType, exists := currentStruct.FindFieldType(id)
+				if exists {
+					typ = fieldType
+				} else {
+					return TypedExp{exp,
+							ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", id)}},
+						venv, tenv, senv
+				}
+			}
+			if typ.Type() != STRUCT {
+				return TypedExp{exp,
+						ErrorType{fmt.Sprintf("LookupExp expected %s to be of type STRUCT but found %s", id, typ.String())}},
+					venv, tenv, senv
+			} else {
+				currentStruct = typ.(StructType)
+			}
+		}
+		fieldType, exists := currentStruct.FindFieldType(exp.LeafId)
+		if exists {
+			return TypedExp{exp, fieldType}, venv, tenv, senv
+		} else {
+			return TypedExp{exp,
+					ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", exp.LeafId)}},
+				venv, tenv, senv
+		}
 	case UpdateStructExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(UpdateStructExp)
+		tLookup, _, _, _ := addTypes(exp.Lookup, venv, tenv, senv)
+		typedE, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
+		texp := UpdateStructExp{tLookup, typedE}
+		if !checkTypesEqual(tLookup.Type, typedE.Type) {
+			return TypedExp{texp,
+					ErrorType{fmt.Sprintf("Cannot update field of type %s to exp of type %s", tLookup.Type.String(), typedE.Type.String())}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, UnitType{}}, venv, tenv, senv
 	case StorageInitExp:
 		exp := exp.(StorageInitExp)
 		texp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)

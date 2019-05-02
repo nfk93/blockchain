@@ -237,6 +237,16 @@ func AddFieldToStruct(id string, typ, str interface{}) StructType {
 	fields := append([]StructField{field}, s.Fields...)
 	return StructType{fields}
 }
+
+func (t StructType) FindFieldType(id string) (Type, bool) {
+	for _, field := range t.Fields {
+		if field.Id == id {
+			return field.Typ, true
+		}
+	}
+	return nil, false
+}
+
 func (t StructType) String() string {
 	s := "{"
 	var field StructField

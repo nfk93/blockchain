@@ -85,7 +85,25 @@ func TestStructLit(t *testing.T) {
 	testFileNoError(t, "test_cases/structlit_semant")
 }
 
+func TestLookupExp(t *testing.T) {
+	testFileNoError(t, "test_cases/LookupExp")
+}
+
+func TestLookupExpFail(t *testing.T) {
+	testFileError(t, "test_cases/LookupExpFail")
+}
+
+func TestUpdateStructExp(t *testing.T) {
+	testFileNoError(t, "test_cases/UpdateStructExp")
+}
+
+func TestUpdateStructExpFail(t *testing.T) {
+	testFileError(t, "test_cases/UpdateStructExpFail")
+}
+
 /* Helper functions */
+
+
 
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
