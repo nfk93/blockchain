@@ -190,6 +190,8 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 			typ1 := typ1.(LambdaType)
 			typ2 := typ2.(LambdaType)
 			return checkTypesEqual(typ1.FromType, typ2.ToType) && checkTypesEqual(typ1.ToType, typ2.ToType)
+		default:
+			return false
 		}
 	case ERROR, NOTIMPLEMENTED:
 		return false
@@ -682,7 +684,22 @@ func addTypes(
 		}
 		return TypedExp{texp, UnitType{}}, venv, tenv, senv
 	case ModuleLookupExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(ModuleLookupExp)
+		module := lookupVar(exp.ModId, venv)
+		if module == nil || module.Type() != STRUCT {
+			return TypedExp{exp,
+					ErrorType{fmt.Sprintf("Module with name %s does not exist", exp.ModId)}},
+				venv, tenv, senv
+		} else {
+			module := module.(StructType)
+			fieldType, exists := module.FindFieldType(exp.FieldId)
+			if !exists {
+				return TypedExp{exp,
+						ErrorType{fmt.Sprintf("No field in module %s with name %s", exp.ModId, exp.FieldId)}},
+					venv, tenv, senv
+			}
+			return TypedExp{exp, fieldType}, venv, tenv, senv
+		}
 	case LookupExp:
 		exp := exp.(LookupExp)
 		var typ Type
