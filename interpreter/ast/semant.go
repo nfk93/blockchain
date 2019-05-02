@@ -24,11 +24,14 @@ func InitialTypeEnv() TypeEnv {
 }
 
 func InitialVarEnv() VarEnv {
-	return ps.NewMap() // TODO
+	initmap := ps.NewMap()
+	return initmap.Set("Current", GenerateCurrentModule())
 }
 
 func InitialStructEnv() StructEnv {
-	return ps.NewMap() // TODO
+	initmap := ps.NewMap()
+	current := GenerateCurrentModule()
+	return initmap.Set(getStructFieldString(current), GenerateCurrentModule())
 }
 
 func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv, TypeEnv, StructEnv) {
@@ -38,6 +41,14 @@ func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv,
 func AddTypes(exp Exp) TypedExp {
 	texp, _, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
 	return texp
+}
+
+func GenerateCurrentModule() StructType {
+	balance := StructField{"balance", LambdaType{UnitType{}, KoinType{}}}
+	amount := StructField{"amount", LambdaType{UnitType{}, KoinType{}}}
+	gas := StructField{"gas", LambdaType{UnitType{}, NatType{}}}
+	failwith := StructField{"failwith", LambdaType{StringType{}, UnitType{}}}
+	return StructType{[]StructField{balance, amount, gas, failwith}}
 }
 
 func lookupType(id string, tenv TypeEnv) Type {
