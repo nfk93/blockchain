@@ -27,6 +27,7 @@ const (
 	STRUCT
 	UNIT
 	OPTION
+	LAMBDA
 	ERROR
 	NOTIMPLEMENTED
 )
@@ -260,6 +261,22 @@ func (t StructType) String() string {
 func (t StructType) Type() Typecode {
 	return STRUCT
 }
+
+/* LambdaType */
+
+type LambdaType struct {
+	FromType Type
+	ToType   Type
+}
+
+func (t LambdaType) String() string {
+	return fmt.Sprintf("(%s -> %s)", t.FromType.String(), t.ToType.String())
+}
+func (t LambdaType) Type() Typecode {
+	return LAMBDA
+}
+
+/* Error */
 
 type ErrorType struct {
 	err string
