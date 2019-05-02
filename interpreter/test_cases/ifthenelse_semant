@@ -1,0 +1,9 @@
+type storage = int
+
+let%init storage = 1
+
+let%entry main () s = (([]: operation list), if true then 1 else 2)
+
+let%entry main1 () s = (([]: operation list), if false then 1 else 2)
+
+let%entry main2 () s = (([]: operation list), if true then 1 else 2)

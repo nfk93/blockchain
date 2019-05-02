@@ -291,14 +291,14 @@ func NewUnitLit() (Exp, error) {
 	return UnitLit{}, nil
 }
 
-/* StructLit */
+/* structlit_semant */
 type StructLit struct {
 	Ids  []string
 	Vals []Exp
 }
 
 func (e StructLit) String() string {
-	res := "StructLit("
+	res := "structlit_semant("
 	var id string
 	var exp Exp
 	idlist := e.Ids
@@ -461,14 +461,14 @@ func NewVarExp(id string) (Exp, error) {
 	return VarExp{id}, nil
 }
 
-/* ExpSeq */
+/* expseq_semant */
 type ExpSeq struct {
 	Left  Exp
 	Right Exp
 }
 
 func (e ExpSeq) String() string {
-	return fmt.Sprintf("ExpSeq(Left: %s, Right: %s)", e.Left.String(), e.Right.String())
+	return fmt.Sprintf("expseq_semant(Left: %s, Right: %s)", e.Left.String(), e.Right.String())
 }
 
 func NewExpSeq(exp1, exp2 interface{}) (Exp, error) {
@@ -582,8 +582,7 @@ func (e StorageInitExp) String() string {
 
 func NewStorageInitExp(id string, exp interface{}) (Exp, error) {
 	if id != "storage" {
-		return (ErrorExpression{"Inits must initialize storage only"}),
-			errors.Errorf("init is not initializing storage, but %s", id)
+		return (ErrorExpression{"Inits must initialize storage only"}), nil
 	}
 	return StorageInitExp{exp.(Exp)}, nil
 }

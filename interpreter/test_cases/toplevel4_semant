@@ -1,0 +1,5 @@
+type sto = int
+
+let%init sto = 123
+
+let%entry main () s = (([] : operation list), 0)

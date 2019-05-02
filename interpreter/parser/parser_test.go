@@ -5,6 +5,7 @@ import (
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -108,7 +109,7 @@ func TestCallExp(t *testing.T) {
 }
 
 func TestFundMe(t *testing.T) {
-	testFile(t, testdir+"fundme")
+	testFile(t, os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme")
 }
 
 func searchAstForErrorExps(t *testing.T, e Exp) {

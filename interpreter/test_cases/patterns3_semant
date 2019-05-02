@@ -1,0 +1,7 @@
+(* should fail! *)
+
+type storage = int * int * int
+
+let%init storage = (1, 2, 3)
+
+let%entry main () ((a: int), (b: int), (c: int), (d: int)) = (([]: operation list), s)

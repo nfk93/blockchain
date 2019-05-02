@@ -5,6 +5,7 @@ import (
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -12,41 +13,79 @@ func TestTopLevel(t *testing.T) {
 	testFileNoError(t, "test_cases/toplevel_semant")
 }
 
-func TestRemoveLater(t *testing.T) {
-	testFileNoError(t, "test_cases/binop_removelater")
+func TestTopLevelError1(t *testing.T) {
+	testFileError(t, "test_cases/toplevel1_semant")
+}
+
+func TestTopLevelError2(t *testing.T) {
+	testFileError(t, "test_cases/toplevel2_semant")
+}
+
+func TestTopLevelError3(t *testing.T) {
+	testFileError(t, "test_cases/toplevel3_semant")
+}
+
+func TestTopLevelError4(t *testing.T) {
+	testFileError(t, "test_cases/toplevel4_semant")
 }
 
 func TestConcatList(t *testing.T) {
-	testFileNoError(t, "test_cases/ConcatList")
+	testFileNoError(t, "test_cases/concatlist_semant")
 }
 
 func TestExpSeq(t *testing.T) {
-	testFileNoError(t, "test_cases/ExpSeq")
+	testFileNoError(t, "test_cases/expseq_semant")
 }
 
 func TestFundme(t *testing.T) {
-	testFileNoError(t, "test_cases/fundme")
+	testFileNoError(t, os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme")
 }
 
 func TestPattern(t *testing.T) {
 	testFileNoError(t, "test_cases/patterns_semant")
 }
 
-func TestPattern1(t *testing.T) {
-	testFileError(t, "test_cases/patterns_semant1")
+func TestPatternError1(t *testing.T) {
+	testFileError(t, "test_cases/patterns1_semant")
+}
+
+func TestPatternError2(t *testing.T) {
+	testFileError(t, "test_cases/patterns2_semant")
+}
+
+func TestPatternError3(t *testing.T) {
+	testFileError(t, "test_cases/patterns3_semant")
+}
+
+func TestAnnoExp(t *testing.T) {
+	testFileNoError(t, "test_cases/annoexp_semant")
+}
+
+func TestLetExp(t *testing.T) {
+	testFileNoError(t, "test_cases/letexp_semant")
+}
+
+func TestLetExpFail(t *testing.T) {
+	testFileError(t, "test_cases/letexp1_semant")
 }
 
 func TestTuples(t *testing.T) {
-	testFileNoError(t, "test_cases/tupletest")
+	testFileNoError(t, "test_cases/tuple_semant")
 }
 
 func TestIfThenElse(t *testing.T) {
-	testFileNoError(t, "test_cases/ifthenelse")
+	testFileNoError(t, "test_cases/ifthenelse_semant")
+}
+
+func TestIfThenElseError1(t *testing.T) {
+	testFileError(t, "test_cases/ifthenelse1_semant")
 }
 
 func TestStructLit(t *testing.T) {
-	testFileNoError(t, "test_cases/StructLit")
+	testFileNoError(t, "test_cases/structlit_semant")
 }
+
+/* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)

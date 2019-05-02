@@ -165,6 +165,9 @@ func (t UnitType) Type() Typecode {
 func (t UnitType) String() string {
 	return "unit"
 }
+func NewUnitType() UnitType {
+	return UnitType{}
+}
 
 /* TupleType */
 
