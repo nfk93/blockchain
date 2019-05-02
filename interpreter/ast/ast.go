@@ -245,8 +245,9 @@ func (a AddressLit) String() string {
 	return fmt.Sprintf("AddressLit(val: %s)", a.val)
 }
 
-func NewAddressLit(val string) (Exp, error) {
-	return AddressLit{val}, nil
+func NewAddressLit(val []byte) (Exp, error) {
+	actualaddr := string(val)[3:]
+	return AddressLit{actualaddr}, nil
 }
 
 /* KoinType Lit */
