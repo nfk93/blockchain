@@ -25,13 +25,13 @@ func InitialTypeEnv() TypeEnv {
 
 func InitialVarEnv() VarEnv {
 	initmap := ps.NewMap()
-	return initmap.Set("Current", GenerateCurrentModule())
+	i1 := initmap.Set("Current", GenerateCurrentModule())
+	i2 := i1.Set("Contract", GenerateContractModule())
+	return i2.Set("Account", GenerateAccountModule())
 }
 
 func InitialStructEnv() StructEnv {
-	initmap := ps.NewMap()
-	current := GenerateCurrentModule()
-	return initmap.Set(getStructFieldString(current), GenerateCurrentModule())
+	return ps.NewMap() // TODO
 }
 
 func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv, TypeEnv, StructEnv) {
@@ -49,6 +49,17 @@ func GenerateCurrentModule() StructType {
 	gas := StructField{"gas", LambdaType{UnitType{}, NatType{}}}
 	failwith := StructField{"failwith", LambdaType{StringType{}, UnitType{}}}
 	return StructType{[]StructField{balance, amount, gas, failwith}}
+}
+
+func GenerateContractModule() StructType {
+	call := StructField{"call", LambdaType{AddressType{}, LambdaType{KoinType{}, LambdaType{GenericType{}, OperationType{}}}}}
+	return StructType{[]StructField{call}}
+}
+
+func GenerateAccountModule() StructType {
+	transfer := StructField{"transfer", LambdaType{KeyType{}, LambdaType{KoinType{}, OperationType{}}}}
+	default_ := StructField{"default", LambdaType{KeyType{}, AddressType{}}}
+	return StructType{[]StructField{transfer, default_}}
 }
 
 func lookupType(id string, tenv TypeEnv) Type {
