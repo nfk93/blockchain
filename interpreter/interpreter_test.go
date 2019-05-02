@@ -44,6 +44,10 @@ func TestStructLit(t *testing.T) {
 	testFileNoError(t, "test_cases/StructLit")
 }
 
+func TestLookupExp(t *testing.T) {
+	testFileNoError(t, "test_cases/LookupExp")
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }

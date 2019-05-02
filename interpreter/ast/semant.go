@@ -653,7 +653,38 @@ func addTypes(
 	case ModuleLookupExp:
 		return todo(exp, venv, tenv, senv)
 	case LookupExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(LookupExp)
+		var typ Type
+		var currentStruct StructType
+		for i, id := range exp.PathIds {
+			if i == 0 {
+				typ = lookupVar(id, venv)
+			} else {
+				fieldType, exists := currentStruct.FindFieldType(id)
+				if exists {
+					typ = fieldType
+				} else {
+					return TypedExp{exp,
+							ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", id)}},
+						venv, tenv, senv
+				}
+			}
+			if typ.Type() != STRUCT {
+				return TypedExp{exp,
+						ErrorType{fmt.Sprintf("LookupExp expected %s to be of type STRUCT but found %s", id, typ.String())}},
+					venv, tenv, senv
+			} else {
+				currentStruct = typ.(StructType)
+			}
+		}
+		fieldType, exists := currentStruct.FindFieldType(exp.LeafId)
+		if exists {
+			return TypedExp{exp, fieldType}, venv, tenv, senv
+		} else {
+			return TypedExp{exp,
+					ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", exp.LeafId)}},
+				venv, tenv, senv
+		}
 	case UpdateStructExp:
 		return todo(exp, venv, tenv, senv)
 	case StorageInitExp:
