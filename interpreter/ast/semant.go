@@ -657,7 +657,16 @@ func addTypes(
 	case UpdateStructExp:
 		return todo(exp, venv, tenv, senv)
 	case StorageInitExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(StorageInitExp)
+		texp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
+		storagetype := lookupType("storage", tenv)
+		if storagetype == nil {
+			return TypedExp{exp, ErrorType{"storage type is undefined - define it before initializing it"}}, venv, tenv, senv
+		}
+		if !checkTypesEqual(storagetype, texp.Type) {
+			return TypedExp{exp, ErrorType{"storage initilization doesn't match storage type"}}, venv, tenv, senv
+		}
+		return TypedExp{StorageInitExp{texp}, UnitType{}}, venv, tenv, senv
 	default:
 		return todo(exp, venv, tenv, senv)
 	}

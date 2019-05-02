@@ -52,7 +52,7 @@ func testFileError(t *testing.T, testpath string) {
 	testFile(t, testpath, true)
 }
 
-func testFile(t *testing.T, testpath string, er bool) {
+func testFile(t *testing.T, testpath string, shouldFail bool) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
 		t.Error("Error reading testfile:", testpath)
@@ -61,18 +61,18 @@ func testFile(t *testing.T, testpath string, er bool) {
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		t.Errorf("can't parse this program")
+		t.Errorf("parse error: " + err.Error())
 	} else {
 		parsed := par.(Exp)
 		typed := AddTypes(parsed)
 		print("\n" + typed.String() + "\n")
 		errors := checkForErrorTypes(typed)
-		if er {
-			if errors {
+		if shouldFail {
+			if !errors {
 				t.Errorf("Found ErrorType")
 			}
 		} else {
-			if !errors {
+			if errors {
 				t.Errorf("Found ErrorType")
 			}
 		}
