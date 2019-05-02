@@ -42,7 +42,7 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			trans := <-channels.TransFromP2P
-			fmt.Printf("Transaction of %v K from %v to %v.\n ", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
+			fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
 			go handleTransaction(trans)
 		}
 	}()

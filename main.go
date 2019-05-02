@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"github.com/nfk93/blockchain/consensus"
@@ -39,7 +40,6 @@ func main() {
 }
 
 func cliLoop() {
-	slot := 0
 	for {
 		// TODO use a variable to track latest printed cmdline entry, to always have '>' as the latest line printed
 		var commandline string
@@ -48,15 +48,21 @@ func cliLoop() {
 		fmt.Scanln(&commandline)
 		switch commandline {
 		case "-h":
-			fmt.Println("NOT IMPLEMENTED")
+			prettyPrint("-q", "Exit this program")
+			prettyPrint("-start", "Begins the blockchain protocol")
+			prettyPrint("-n", "Print out the network list of who you are connected to")
+			prettyPrint("-trans", "Print list of seen transactions")
+			prettyPrint("-peers", "Print list of all peers in the network")
+			prettyPrint("-public-keys", "Print list of know Public keys in network")
+			prettyPrint("-ledger", "Print the current ledger")
+			prettyPrint("-trans1000", "Transfer 1000k to all known public keys in the network")
+			prettyPrint("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
+			prettyPrint("-trans5", "Transfer 5 random amounts to random accounts")
+			prettyPrint("-autotrans", "Starts a routine that makes to random transfers every 10 second as long as you have money.")
 		case "-q":
 			return
 		case "-n":
 			p2p.PrintNetworkList()
-		case "-send-test-block":
-			fmt.Println("Not Implemented")
-		case "-send-test-trans":
-			channels.TransClientInput <- objects.Transaction{publicKey, pk2, 123, "id1", "sign1"}
 		case "-trans":
 			p2p.PrintTransHashList()
 		case "-peers":
@@ -79,19 +85,19 @@ func cliLoop() {
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}
-		case "-test1000":
+		case "-trans1000":
 			for _, p := range p2p.GetPublicKeys() {
 				if p.String() != publicKey.String() {
 
 					trans := objects.CreateTransaction(publicKey,
 						p,
 						1000,
-						publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+						publicKey.String()+time.Now().String(),
 						secretKey)
 					channels.TransClientInput <- trans
 				}
 			}
-		case "-test250":
+		case "-trans2":
 			currentStake := consensus.GetLastFinalState()[publicKey.String()]
 			for _, p := range p2p.GetPublicKeys() {
 
@@ -103,22 +109,8 @@ func cliLoop() {
 				channels.TransClientInput <- trans
 
 			}
-		case "-test2":
-			if slot == 0 {
-				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
-				if err != nil {
-					log.Fatal(err)
-				}
-				genesisblock := objects.Block{Slot: 0, BlockData: objects.Data{GenesisData: genesisdata}}
-				channels.BlockToP2P <- genesisblock
-				slot++
-				time.Sleep(time.Second * 5)
-			}
-			go consensus.TestDrawLottery(slot)
-			slot++
-
-		case "-test3":
-			currentStake := consensus.GetLastFinalState()[publicKey.String()]
+		case "-trans5":
+			currentStake := transaction.GetCurrentLedger()[publicKey.String()]
 			pkList := p2p.GetPublicKeys()
 
 			if currentStake == 0 {
@@ -136,10 +128,11 @@ func cliLoop() {
 				channels.TransClientInput <- trans
 			}
 
-		case "-test5":
+			// starts Go routine that randomly keeps making transactions to others
+		case "-autotrans":
 			go func() {
 				for {
-					currentStake := consensus.GetLastFinalState()[publicKey.String()]
+					currentStake := transaction.GetCurrentLedger()[publicKey.String()]
 					pkList := p2p.GetPublicKeys()
 
 					if currentStake == 0 {
@@ -151,7 +144,7 @@ func cliLoop() {
 						trans := objects.CreateTransaction(publicKey,
 							receiverPK,
 							rand.Intn(currentStake/50),
-							publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+							publicKey.String()+time.Now().String(),
 							secretKey)
 						channels.TransClientInput <- trans
 					}
@@ -163,4 +156,18 @@ func cliLoop() {
 			fmt.Println(commandline, "is not a known command. Type -h for help")
 		}
 	}
+}
+
+func prettyPrint(command string, explain string) {
+	var buf bytes.Buffer
+	buf.WriteString("Command: ")
+	buf.WriteString(command)
+	for i := 0; i < 15-len(command); i++ {
+		buf.WriteString(" ")
+	}
+	buf.WriteString("-> Action: ")
+	buf.WriteString(explain)
+	buf.WriteString("\n")
+
+	fmt.Println(buf.String())
 }
