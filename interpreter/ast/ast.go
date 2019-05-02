@@ -236,17 +236,17 @@ func NewNatLit(val uint64) (Exp, error) {
 	return NatLit{val}, nil
 }
 
-/* FloatLit */
-type FloatLit struct {
-	val float64
+/* AddressLit */
+type AddressLit struct {
+	val string
 }
 
-func (f FloatLit) String() string {
-	return fmt.Sprintf("FloatLit(val: %e)", f.val)
+func (a AddressLit) String() string {
+	return fmt.Sprintf("AddressLit(val: %s)", a.val)
 }
 
-func NewFloatLit(val float64) (Exp, error) {
-	return FloatLit{val}, nil
+func NewAddressLit(val string) (Exp, error) {
+	return AddressLit{val}, nil
 }
 
 /* KoinType Lit */
