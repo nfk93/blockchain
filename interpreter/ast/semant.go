@@ -69,7 +69,7 @@ func lookupStruct(fieldIds string, senv StructEnv) Type {
 
 func translateType(typ Type, tenv TypeEnv) Type {
 	switch typ.Type() {
-	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
+	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
 		return typ
 	case OPTION:
 		typ := typ.(OptionType)
@@ -126,7 +126,7 @@ func translateType(typ Type, tenv TypeEnv) Type {
 // ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
 func checkTypesEqual(typ1, typ2 Type) bool {
 	switch typ1.Type() {
-	case STRING, INT, FLOAT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
+	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT:
 		return typ1.Type() == typ2.Type()
 	case LIST:
 		switch typ2.Type() {
@@ -364,14 +364,14 @@ func addTypes(
 						ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
-		case DIVIDE: // TODO make the returned type from division an option to account for divide by zero
+		case DIVIDE:
 			switch leftTyped.Type.Type() {
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewKoinType()})}, venv, tenv, senv
+					return TypedExp{texp, OptionType{NewTupleType([]Type{NewNatType(), NewKoinType()})}}, venv, tenv, senv
 				case NAT:
-					return TypedExp{texp, NewTupleType([]Type{NewKoinType(), NewKoinType()})}, venv, tenv, senv
+					return TypedExp{texp, OptionType{NewTupleType([]Type{NewKoinType(), NewKoinType()})}}, venv, tenv, senv
 				default:
 					return TypedExp{texp,
 							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
@@ -481,8 +481,6 @@ func addTypes(
 		return TypedExp{exp, BoolType{}}, venv, tenv, senv
 	case IntLit:
 		return TypedExp{exp, IntType{}}, venv, tenv, senv
-	case FloatLit:
-		return TypedExp{exp, FloatType{}}, venv, tenv, senv
 	case KoinLit:
 		return TypedExp{exp, KoinType{}}, venv, tenv, senv
 	case StringLit:

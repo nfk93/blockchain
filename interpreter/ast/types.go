@@ -15,7 +15,6 @@ const (
 	// Types
 	STRING Typecode = iota
 	INT
-	FLOAT
 	KEY
 	NAT
 	BOOL
@@ -65,18 +64,6 @@ func (t NatType) String() string {
 }
 func NewNatType() NatType {
 	return NatType{}
-}
-
-type FloatType struct{}
-
-func (t FloatType) Type() Typecode {
-	return FLOAT
-}
-func (t FloatType) String() string {
-	return "float"
-}
-func NewFloatType() FloatType {
-	return FloatType{}
 }
 
 type KeyType struct{}
