@@ -51,8 +51,8 @@ func GenerateCurrentModule() StructType {
 	return StructType{[]StructField{balance, amount, gas, failwith}}
 }
 
-func GenerateContractModule() StructType {
-	call := StructField{"call", LambdaType{AddressType{}, LambdaType{KoinType{}, LambdaType{GenericType{}, OperationType{}}}}}
+func GenerateContractModule() StructType { //TODO change UnitType in call structfield to some generic type
+	call := StructField{"call", LambdaType{AddressType{}, LambdaType{KoinType{}, LambdaType{UnitType{}, OperationType{}}}}}
 	return StructType{[]StructField{call}}
 }
 
