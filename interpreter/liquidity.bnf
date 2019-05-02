@@ -25,6 +25,7 @@ lbrack      : '[' ;
 rbrack      : ']' ;
 lparen      : '(' ;
 rparen      : ')' ;
+concat      : ':' ':' ;
 colon       : ':' ;
 semicolon   : ';' ;
 ast         : '*' ;
@@ -33,6 +34,7 @@ operation   : 'o' 'p' 'e' 'r' 'a' 't' 'i' 'o' 'n' ;
 option      : 'o' 'p' 't' 'i' 'o' 'n' ;
 list        : 'l' 'i' 's' 't' ;
 bool        : 'b' 'o' 'o' 'l' ;
+unit        : 'u' 'n' 'i' 't' ;
 nat         : 'n' 'a' 't' ;
 int         : 'i' 'n' 't' ;
 string      : 's' 't' 'r' 'i' 'n' 'g' ;
@@ -102,15 +104,15 @@ ExpSeq      : Exp                                               << $0, nil >>
 
 Exp         : lident                                            << ast.NewVarExp(util.ParseId($0)) // idexp >>
             | uident dot lident                                 << ast.NewModuleLookupExp(util.ParseId($0), util.ParseId($2)) // external lookup exp >>
+            | lparen Exp colon Type rparen                      << ast.NewAnnoExp($1, $3) // annotatedExp >>
             | lparen ExpSeq rparen                              << $1, nil // parenthesis >>
             | Lookup lident larrow Exp                          << ast.NewUpdateStructExp($0, util.ParseId($1), $3) // lookupexp >>
             | Lookup lident                                     << ast.NewLookupExp($0, util.ParseId($1)) // lookupexp >>
             | if Exp then Exp else Exp                          << ast.NewIfThenElseExp($1, $3, $5) // ifthenelse exp >>
             | if Exp then Exp                                   << ast.NewIfThenExp($1, $3) // ifthen exp >>
-            | Exp colon colon Exp                               << ast.NewListConcat($0, $3) // >>
+            | Exp concat Exp                                    << ast.NewListConcat($0, $2) // >>
             | let Pattern eq Exp in Exp                         << ast.NewLetExp($1, $3, $5) // letexp >>
             | lparen Tuple rparen                               << $1, nil // tupleexp >>
-            | lparen Exp colon Type rparen                      << ast.NewAnnoExp($1, $3) // annotatedExp >>
             | Exp Binop Exp                                     << ast.NewBinOpExp($0, $1, $2) // BinopExp >>
             | Unop Exp                                          << ast.NewUnOpExp($0, $1) >>
             | Exp Exp                                           << ast.NewCallExp($0, $1) >>
@@ -155,6 +157,7 @@ Type1       : lparen Type rparen                                << $1, nil >>
             | bool                                              << ast.NewBoolType(), nil >>
             | int                                               << ast.NewIntType(), nil >>
             | nat                                               << ast.NewNatType(), nil >>
+            | unit                                              << ast.NewUnitType(), nil >>
             | koin                                              << ast.NewKoinType(), nil >>
             | string                                            << ast.NewStringType(), nil >>
             | key                                               << ast.NewKeyType(), nil >>

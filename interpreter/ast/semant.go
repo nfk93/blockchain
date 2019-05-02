@@ -611,7 +611,7 @@ func addTypes(
 		texp := ExpSeq{typedLeftExp, typedRightExp}
 		if typedLeftExp.Type.Type() != UNIT {
 			return TypedExp{texp,
-					ErrorType{"All expresssion in ExpSeq, except the last, must be of type UNIT!"}},
+					ErrorType{"All expresssion in expseq_semant, except the last, must be of type UNIT!"}},
 				venv, tenv, senv
 		}
 		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv
@@ -669,7 +669,7 @@ func addTypes(
 			}
 			if typ.Type() != STRUCT {
 				return TypedExp{exp,
-						ErrorType{fmt.Sprintf("LookupExp expected %s to be of type STRUCT but found %s", id, typ.String())}},
+						ErrorType{fmt.Sprintf("lookupexp_semant expected %s to be of type STRUCT but found %s", id, typ.String())}},
 					venv, tenv, senv
 			} else {
 				currentStruct = typ.(StructType)

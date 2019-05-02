@@ -2,4 +2,4 @@ type storage = int
 
 let%init storage = 15
 
-let%entry main () storage = 1
+let%entry main () storage = (([]: operation list), 123)

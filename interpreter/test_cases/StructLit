@@ -1,6 +1,0 @@
-type storage = int
-type record = {a: int; b: string;}
-
-let%init storage = 1
-
-let%entry main () s = {a = 2; b = "tis";}

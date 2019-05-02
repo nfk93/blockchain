@@ -1,0 +1,6 @@
+type record = {a: int; b: string;}
+type storage = record
+
+let%init storage = {a = 15; b = "asdaq";}
+
+let%entry main () s = (([]: operation list), {a = 2; b = "tis";})

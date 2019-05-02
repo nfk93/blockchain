@@ -1,5 +1,0 @@
-type storage = int
-
-let%init storage = 1
-
-let%entry main () s = (1, "string", (false, ()))
