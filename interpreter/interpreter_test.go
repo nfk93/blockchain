@@ -101,6 +101,10 @@ func TestUpdateStructExpFail(t *testing.T) {
 	testFileError(t, "test_cases/updatestructexp1_semant")
 }
 
+func TestCallExp(t *testing.T) {
+	testFileNoError(t, "test_cases/callexp_semant")
+}
+
 /* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {

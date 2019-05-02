@@ -190,6 +190,8 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 			typ1 := typ1.(LambdaType)
 			typ2 := typ2.(LambdaType)
 			return checkTypesEqual(typ1.FromType, typ2.ToType) && checkTypesEqual(typ1.ToType, typ2.ToType)
+		default:
+			return false
 		}
 	case ERROR, NOTIMPLEMENTED:
 		return false
