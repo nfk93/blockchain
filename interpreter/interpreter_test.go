@@ -32,6 +32,10 @@ func TestPattern(t *testing.T) {
 	testFileNoError(t, "test_cases/patterns_semant")
 }
 
+func TestPattern1(t *testing.T) {
+	testFileError(t, "test_cases/patterns_semant1")
+}
+
 func TestTuples(t *testing.T) {
 	testFileNoError(t, "test_cases/tupletest")
 }
@@ -66,13 +70,13 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 		parsed := par.(Exp)
 		typed := AddTypes(parsed)
 		print("\n" + typed.String() + "\n")
-		errors := checkForErrorTypes(typed)
+		noErrors := checkForErrorTypes(typed)
 		if shouldFail {
-			if !errors {
-				t.Errorf("Found ErrorType")
+			if noErrors {
+				t.Errorf("Didn't find any noErrors")
 			}
 		} else {
-			if errors {
+			if !noErrors {
 				t.Errorf("Found ErrorType")
 			}
 		}
@@ -87,7 +91,7 @@ func checkForErrorTypes(texp_ Exp) bool {
 		return false
 	}
 	texp := texp_.(TypedExp)
-	if texp.Type.Type() == -1 {
+	if texp.Type.Type() == ERROR || texp.Type.Type() == NOTIMPLEMENTED {
 		return false
 	}
 	e := texp.Exp
