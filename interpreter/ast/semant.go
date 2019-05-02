@@ -111,6 +111,11 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		} else {
 			return ErrorType{fmt.Sprintf("type %s is not declared", typ.TypId)}
 		}
+	case LAMBDA:
+		typ := typ.(LambdaType)
+		fromtyp := translateType(typ.FromType, tenv)
+		totyp := translateType(typ.ToType, tenv)
+		return LambdaType{fromtyp, totyp}
 	case ERROR, NOTIMPLEMENTED:
 		return typ
 	default:
@@ -178,6 +183,13 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 			return getStructFieldString(typ1) == getStructFieldString(typ2)
 		default:
 			return false
+		}
+	case LAMBDA:
+		switch typ2.Type() {
+		case LAMBDA:
+			typ1 := typ1.(LambdaType)
+			typ2 := typ2.(LambdaType)
+			return checkTypesEqual(typ1.FromType, typ2.ToType) && checkTypesEqual(typ1.ToType, typ2.ToType)
 		}
 	case ERROR, NOTIMPLEMENTED:
 		return false
@@ -571,7 +583,17 @@ func addTypes(
 		return TypedExp{texp, ListType{listtype}}, venv, tenv, senv
 
 	case CallExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(CallExp)
+		lambdafunction, _, _, _ := addTypes(exp.Exp1, venv, tenv, senv)
+		if lambdafunction.Type.Type() != LAMBDA {
+			return TypedExp{exp, ErrorType{"expression is not lambda type and can't be called"}}, venv, tenv, senv
+		}
+		lambdatype := lambdafunction.Type.(LambdaType)
+		argument, _, _, _ := addTypes(exp.Exp2, venv, tenv, senv)
+		if !checkTypesEqual(argument.Type, lambdatype.FromType) {
+			return TypedExp{exp, ErrorType{"argument type doesn't match lambda input type"}}, venv, tenv, senv
+		}
+		return TypedExp{CallExp{lambdafunction, argument}, lambdatype.ToType}, venv, tenv, senv
 	case LetExp:
 		exp := exp.(LetExp)
 		defexp, _, _, _ := addTypes(exp.DefExp, venv, tenv, senv)
