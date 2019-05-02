@@ -686,7 +686,16 @@ func addTypes(
 				venv, tenv, senv
 		}
 	case UpdateStructExp:
-		return todo(exp, venv, tenv, senv)
+		exp := exp.(UpdateStructExp)
+		tLookup, _, _, _ := addTypes(exp.Lookup, venv, tenv, senv)
+		typedE, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
+		texp := UpdateStructExp{tLookup, typedE}
+		if !checkTypesEqual(tLookup.Type, typedE.Type) {
+			return TypedExp{texp,
+					ErrorType{fmt.Sprintf("Cannot update field of type %s to exp of type %s", tLookup.Type.String(), typedE.Type.String())}},
+				venv, tenv, senv
+		}
+		return TypedExp{texp, UnitType{}}, venv, tenv, senv
 	case StorageInitExp:
 		exp := exp.(StorageInitExp)
 		texp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)

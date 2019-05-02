@@ -56,6 +56,14 @@ func TestLookupExpFail(t *testing.T) {
 	testFileError(t, "test_cases/LookupExpFail")
 }
 
+func TestUpdateStructExp(t *testing.T) {
+	testFileNoError(t, "test_cases/UpdateStructExp")
+}
+
+func TestUpdateStructExpFail(t *testing.T) {
+	testFileError(t, "test_cases/UpdateStructExpFail")
+}
+
 func testFileNoError(t *testing.T, testpath string) {
 	testFile(t, testpath, false)
 }
