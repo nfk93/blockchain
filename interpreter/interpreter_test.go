@@ -225,7 +225,7 @@ func checkForErrorTypes(texp_ Exp) bool {
 	case UnOpExp:
 		e := e.(UnOpExp)
 		return checkForErrorTypes(e.Exp)
-	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
+	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp, NatLit:
 		return true
 	default:
