@@ -105,6 +105,10 @@ func TestCallExp(t *testing.T) {
 	testFileNoError(t, "test_cases/callexp_semant")
 }
 
+func TestModule(t *testing.T) {
+	testFileNoError(t, "test_cases/ModuleTest")
+}
+
 /* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {

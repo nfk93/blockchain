@@ -107,15 +107,15 @@ func NewEntryExpression(id string, params, pattern, body interface{}) (Exp, erro
 
 /* Pattern */
 type Param struct {
-	id   string
-	anno TypeOption
+	Id   string
+	Anno TypeOption
 }
 
 func (p Param) String() string {
-	if p.anno.opt {
-		return fmt.Sprintf("(%s: %s)", p.id, p.anno.typ.String())
+	if p.Anno.opt {
+		return fmt.Sprintf("(%s: %s)", p.Id, p.Anno.typ.String())
 	} else {
-		return fmt.Sprintf("%s", p.id)
+		return fmt.Sprintf("%s", p.Id)
 	}
 }
 
@@ -175,11 +175,11 @@ func (p Pattern) String() string {
 
 /* KeyLit */
 type KeyLit struct {
-	key string
+	Key string
 }
 
 func (k KeyLit) String() string {
-	return fmt.Sprintf("KeyLit(key: %s)", k.key)
+	return fmt.Sprintf("KeyLit(key: %s)", k.Key)
 }
 
 func NewKeyLit(key []byte) (Exp, error) {
@@ -199,11 +199,11 @@ func checkKey(key []byte) bool {
 
 /* BoolLit */
 type BoolLit struct {
-	val bool
+	Val bool
 }
 
 func (b BoolLit) String() string {
-	return fmt.Sprintf("BoolLit(val: %t)", b.val)
+	return fmt.Sprintf("BoolLit(val: %t)", b.Val)
 }
 
 func NewBoolLit(val bool) (Exp, error) {
@@ -212,11 +212,11 @@ func NewBoolLit(val bool) (Exp, error) {
 
 /* IntLit */
 type IntLit struct {
-	val int64
+	Val int64
 }
 
 func (i IntLit) String() string {
-	return fmt.Sprintf("IntLit(val: %d)", i.val)
+	return fmt.Sprintf("IntLit(val: %d)", i.Val)
 }
 
 func NewIntLit(val int64) (Exp, error) {
@@ -225,11 +225,11 @@ func NewIntLit(val int64) (Exp, error) {
 
 /* NatLit */
 type NatLit struct {
-	val uint64
+	Val uint64
 }
 
 func (n NatLit) String() string {
-	return fmt.Sprintf("NatLit(val: %d)", n.val)
+	return fmt.Sprintf("NatLit(val: %d)", n.Val)
 }
 
 func NewNatLit(val uint64) (Exp, error) {
@@ -238,11 +238,11 @@ func NewNatLit(val uint64) (Exp, error) {
 
 /* AddressLit */
 type AddressLit struct {
-	val string
+	Val string
 }
 
 func (a AddressLit) String() string {
-	return fmt.Sprintf("AddressLit(val: %s)", a.val)
+	return fmt.Sprintf("AddressLit(val: %s)", a.Val)
 }
 
 func NewAddressLit(val []byte) (Exp, error) {
@@ -252,11 +252,11 @@ func NewAddressLit(val []byte) (Exp, error) {
 
 /* KoinType Lit */
 type KoinLit struct {
-	val int64
+	Val int64
 }
 
 func (k KoinLit) String() string {
-	return fmt.Sprintf("KoinLit(val: %d)", k.val)
+	return fmt.Sprintf("KoinLit(val: %d)", k.Val)
 }
 
 func NewKoinLit(koins int64) (Exp, error) {
@@ -270,11 +270,11 @@ func NewKoinLit(koins int64) (Exp, error) {
 
 /* StringType Lit */
 type StringLit struct {
-	val string
+	Val string
 }
 
 func (s StringLit) String() string {
-	return fmt.Sprintf("StringLit(val: %s)", s.val)
+	return fmt.Sprintf("StringLit(val: %s)", s.Val)
 }
 
 func NewStringLit(str string) (Exp, error) {

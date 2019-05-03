@@ -19,6 +19,10 @@ func (e TypedExp) String() string {
 	return fmt.Sprintf("{exp: %s, typ: %s}", e.Exp.String(), e.Type.String())
 }
 
+func GenInitEnvs() (VarEnv, TypeEnv, StructEnv) {
+	return InitialVarEnv(), InitialTypeEnv(), InitialStructEnv()
+}
+
 func InitialTypeEnv() TypeEnv {
 	return ps.NewMap() // TODO
 }
@@ -48,7 +52,8 @@ func GenerateCurrentModule() StructType {
 	amount := StructField{"amount", LambdaType{UnitType{}, KoinType{}}}
 	gas := StructField{"gas", LambdaType{UnitType{}, NatType{}}}
 	failwith := StructField{"failwith", LambdaType{StringType{}, UnitType{}}}
-	return StructType{[]StructField{balance, amount, gas, failwith}}
+	test := StructField{"test", LambdaType{IntType{}, LambdaType{IntType{}, IntType{}}}} // Only used for testing purposes
+	return StructType{[]StructField{balance, amount, gas, failwith, test}}
 }
 
 func GenerateContractModule() StructType { //TODO change UnitType in call structfield to some generic type
@@ -231,7 +236,7 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 			if !checkParamTypeAnno(p.params[0], typ, tenv) {
 				return venv, false
 			}
-			return venv_.Set(p.params[0].id, typ), true
+			return venv_.Set(p.params[0].Id, typ), true
 		}
 		if len(p.params) != len(typ.Typs) {
 			return venv, false
@@ -240,20 +245,20 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 			if !checkParamTypeAnno(v, typ.Typs[i], tenv) {
 				return venv, false
 			}
-			venv_ = venv_.Set(v.id, typ.Typs[i])
+			venv_ = venv_.Set(v.Id, typ.Typs[i])
 		}
 		return venv_, true
 	default:
 		if len(p.params) != 1 {
 			return venv, false
 		}
-		return venv_.Set(p.params[0].id, typ), true
+		return venv_.Set(p.params[0].Id, typ), true
 	}
 }
 
 func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) bool {
-	if param.anno.opt {
-		actualanno := translateType(param.anno.typ, tenv)
+	if param.Anno.opt {
+		actualanno := translateType(param.Anno.typ, tenv)
 		return checkTypesEqual(actualanno, typ)
 	} else {
 		return true
@@ -487,11 +492,11 @@ func addTypes(
 		// check that parameters are typeannotated and add them to variable environment
 		venv_ := venv
 		for _, v := range exp.Params.params {
-			if v.anno.opt != true {
+			if v.Anno.opt != true {
 				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
 			}
-			vartyp := translateType(v.anno.typ, tenv)
-			venv_ = venv_.Set(v.id, vartyp)
+			vartyp := translateType(v.Anno.typ, tenv)
+			venv_ = venv_.Set(v.Id, vartyp)
 		}
 		// check that storage pattern matches storage type
 		storagetype := lookupType("storage", tenv)
