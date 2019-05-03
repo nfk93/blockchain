@@ -6,8 +6,6 @@ let%entry entry_2 () () = true
 
 let%entry entry_3 () () = false
 
-let%entry entry_4 () () = 5.21312342
-
 let%entry entry_5 () () = 123151
 
 let%entry entry_6 () () = -444

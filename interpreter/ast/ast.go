@@ -382,16 +382,26 @@ func NewListConcat(exp, list interface{}) (Exp, error) {
 
 /* CallExp */
 type CallExp struct {
-	Exp1 Exp
-	Exp2 Exp
+	ModuleId  string
+	FieldId   string
+	Arguments []Exp
 }
 
 func (e CallExp) String() string {
-	return fmt.Sprintf("CallExp(Exp1: %s, Exp2: %s)", e.Exp1.String(), e.Exp2.String())
+	res := fmt.Sprintf("CallExp(ModuleId: %s, FieldId: %s, Arguments: [", e.ModuleId, e.FieldId)
+	var exp Exp
+	list := e.Arguments
+	for len(list) > 1 {
+		exp, list = list[0], list[1:]
+		res = res + fmt.Sprintf("%s, ", exp.String())
+	}
+	exp = list[0]
+	res = res + fmt.Sprintf("%s])", exp.String())
+	return res
 }
 
-func NewCallExp(exp1, exp2 interface{}) (Exp, error) {
-	return CallExp{exp1.(Exp), exp2.(Exp)}, nil
+func NewCallExp(modid, fieldid string, arglist interface{}) (Exp, error) {
+	return CallExp{modid, fieldid, arglist.([]Exp)}, nil
 }
 
 /* LetExp */
@@ -581,6 +591,14 @@ func NewStorageInitExp(id string, exp interface{}) (Exp, error) {
 }
 
 // ---------------------------
+
+func NewExpList(exp interface{}) []Exp {
+	return []Exp{exp.(Exp)}
+}
+
+func ConcatExpList(list, exp interface{}) []Exp {
+	return append(list.([]Exp), exp.(Exp))
+}
 
 type ErrorExpression struct {
 	errormsg string

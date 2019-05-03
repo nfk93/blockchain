@@ -596,17 +596,19 @@ func addTypes(
 		return TypedExp{texp, ListType{listtype}}, venv, tenv, senv
 
 	case CallExp:
-		exp := exp.(CallExp)
-		lambdafunction, _, _, _ := addTypes(exp.Exp1, venv, tenv, senv)
-		if lambdafunction.Type.Type() != LAMBDA {
-			return TypedExp{exp, ErrorType{"expression is not lambda type and can't be called"}}, venv, tenv, senv
-		}
-		lambdatype := lambdafunction.Type.(LambdaType)
-		argument, _, _, _ := addTypes(exp.Exp2, venv, tenv, senv)
-		if !checkTypesEqual(argument.Type, lambdatype.FromType) {
-			return TypedExp{exp, ErrorType{"argument type doesn't match lambda input type"}}, venv, tenv, senv
-		}
-		return TypedExp{CallExp{lambdafunction, argument}, lambdatype.ToType}, venv, tenv, senv
+		return todo(exp, venv, tenv, senv) /*
+			exp := exp.(CallExp)
+			lambdafunction, _, _, _ := addTypes(exp.Exp1, venv, tenv, senv)
+			if lambdafunction.Type.Type() != LAMBDA {
+				return TypedExp{exp, ErrorType{"expression is not lambda type and can't be called"}}, venv, tenv, senv
+			}
+			lambdatype := lambdafunction.Type.(LambdaType)
+			argument, _, _, _ := addTypes(exp.Exp2, venv, tenv, senv)
+			if !checkTypesEqual(argument.Type, lambdatype.FromType) {
+				return TypedExp{exp, ErrorType{fmt.Sprintf("argument type of %s doesn't match lambda input type of %s",
+					argument.Type.String(), lambdatype.FromType.String())}}, venv, tenv, senv
+			}
+			return TypedExp{CallExp{lambdafunction, argument}, lambdatype.ToType}, venv, tenv, senv */
 	case LetExp:
 		exp := exp.(LetExp)
 		defexp, _, _, _ := addTypes(exp.DefExp, venv, tenv, senv)
