@@ -112,6 +112,10 @@ func TestOperatorPrecedence(t *testing.T) {
 	testFile(t, testdir+"operator_precedence")
 }
 
+func TestStructInStruct(t *testing.T) {
+	testFile(t, testdir+"structinstruct")
+}
+
 func TestFundMe(t *testing.T) {
 	testFile(t, os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme")
 }
@@ -178,9 +182,12 @@ func searchAstForErrorExps(t *testing.T, e Exp) {
 		}
 	case CallExp:
 		e := e.(CallExp)
-		for _, arg := range e.Arguments {
-			searchAstForErrorExps(t, arg)
+		for _, v := range e.ExpList {
+			searchAstForErrorExps(t, v)
 		}
+	case UnOpExp:
+		e := e.(UnOpExp)
+		searchAstForErrorExps(t, e.Exp)
 	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp:
 	default:

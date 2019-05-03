@@ -26,13 +26,6 @@ func TestIntLit(t *testing.T) {
 	checkTypeEquality(t, texp, expected)
 }
 
-func TestFloatLit(t *testing.T) {
-	exp := FloatLit{123.45}
-	texp := AddTypes(exp)
-	expected := TypedExp{exp, FloatType{}}
-	checkTypeEquality(t, texp, expected)
-}
-
 func TestKoinLit(t *testing.T) {
 	exp := KoinLit{123}
 	texp := AddTypes(exp)
@@ -114,7 +107,7 @@ func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	texp := texp_.(TypedExp)
 	expected := expected_.(TypedExp)
 	if texp.Type != expected.Type {
-		t.Errorf("Types not equal:\n"+
+		t.Errorf("ArgTypes not equal:\n"+
 			"\tactual..: %s\n"+
 			"\texpected: %s", texp_.String(), expected_.String())
 	}
@@ -199,9 +192,10 @@ func checkTypeEquality(t *testing.T, texp_, expected_ Exp) {
 	case CallExp:
 		e := e.(CallExp)
 		e_ := e_.(CallExp)
-		checkTypeEquality(t, e.Exp1, e_.Exp1)
-		checkTypeEquality(t, e.Exp2, e_.Exp2)
-	case KeyLit, BoolLit, IntLit, FloatLit, KoinLit, StringLit, UnitLit, VarExp,
+		for i, v := range e.ExpList {
+			checkTypeEquality(t, v, e_.ExpList[i])
+		}
+	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
 		ModuleLookupExp, LookupExp:
 	default:
 		t.Error("Encountered unknown expression:", e.String())

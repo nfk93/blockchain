@@ -12,7 +12,7 @@ type Type interface {
 type Typecode int
 
 const (
-	// Types
+	// ArgTypes
 	STRING Typecode = iota
 	INT
 	KEY
@@ -265,12 +265,16 @@ func (t StructType) Type() Typecode {
 /* LambdaType */
 
 type LambdaType struct {
-	FromType Type
-	ToType   Type
+	ArgTypes   []Type
+	ReturnType Type
 }
 
 func (t LambdaType) String() string {
-	return fmt.Sprintf("(%s -> %s)", t.FromType.String(), t.ToType.String())
+	res := fmt.Sprintf("(%s", t.ArgTypes[0].String())
+	for _, v := range t.ArgTypes[1:] {
+		res += fmt.Sprintf(" -> %s", v.String())
+	}
+	return res + fmt.Sprintf("-> %s)", t.ReturnType)
 }
 func (t LambdaType) Type() Typecode {
 	return LAMBDA

@@ -3,5 +3,7 @@ type record = {a: int; b: string;}
 
 let%init storage = 1
 
-let%entry main (storage : storage) s = let struct = {a = 2; b = "tis";} in
-(struct.a <- 5; ( ([] : operation list), storage))
+let%entry main (storage : storage) s =
+    let struct = {a = 2; b = "tis";} in
+    let newstruct = struct.a <- 5 in
+    ( ([] : operation list), newstruct.a)

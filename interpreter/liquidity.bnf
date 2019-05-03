@@ -7,7 +7,6 @@ leq         : '<' '=' ;
 larrow      : '<' '-' ;
 neq         : '<' '>' ;
 lt          : '<' ;
-rarrow      : '-' '>' ;
 and         : '&'
             | '&' '&'
             | 'l' 'a' 'n' 'd';
@@ -102,19 +101,22 @@ Struct      : lident colon Type semicolon Struct                << ast.AddFieldT
 
 Exp         : Exp1                                              << $0, nil >>
             | Exp semicolon Exp1                                << ast.NewExpSeq($0, $2) // seqexp >> ;
-Exp1        : VarExp                                            << $0, nil >>
+Exp1        : CallExp                                           << $0, nil >>
+            | VarExp                                            << $0, nil >>
             | AnnoExp                                           << $0, nil >>
             | ParenthExp                                        << $0, nil >>
             | UpdStruct                                         << $0, nil >>
             | LookupExp                                         << $0, nil >>
+            | ModLookup                                         << $0, nil >>
             | if Exp1 then Exp1 else Exp1                       << ast.NewIfThenElseExp($1, $3, $5) // ifthenelse exp >>
             | if Exp1 then Exp1                                 << ast.NewIfThenExp($1, $3) // ifthen exp >>
             | Exp1 concat Exp1                                  << ast.NewListConcat($0, $2) // >>
             | let Pattern eq Exp in Exp1                        << ast.NewLetExp($1, $3, $5) // letexp >>
             | BinOpExp                                          << $0, nil >>
             | UnopExp                                           << $0, nil >>
-            | CallExp                                           << $0, nil >>
             | Constant                                          << $0, nil >> ;
+
+ModLookup   : uident dot lident                                 << ast.NewModuleLookupExp(util.ParseId($0), util.ParseId($2)) // external lookup exp >> ;
 
 AnnoExp     : lparen Exp1 colon Type rparen                     << ast.NewAnnoExp($1, $3) // annotatedExp >> ;
 
@@ -122,9 +124,15 @@ UpdStruct   : Lookup lident larrow Exp                          << ast.NewUpdate
 
 VarExp      : lident                                            << ast.NewVarExp(util.ParseId($0)) // idexp >> ;
 
-CallExp     : uident dot lident Arguments                       << ast.NewCallExp(util.ParseId($0), util.ParseId($2), $3) >> ;
-Arguments   : Arguments Exp1                                    << ast.ConcatExpList($0, $1), nil >>
-            | Exp1                                              << ast.NewExpList($0), nil >> ;
+CallExp     : CallExp1                                          << ast.NewCallExp($0) >> ;
+CallExp1    : CallExp1 CallExp2                                 << ast.ConcatExpList($0, $1) >>
+            | CallHead CallExp2                                 << ast.NewExpList($0, $1) >> ;
+CallHead    : ModLookup                                         << $0, nil >> ;
+CallExp2    : VarExp                                            << $0, nil >>
+            | AnnoExp                                           << $0, nil >>
+            | ParenthExp                                        << $0, nil >>
+            | LookupExp                                         << $0, nil >>
+            | Constant                                          << $0, nil >> ;
 
 ParenthExp  : lparen Exp rparen                                 << $1, nil // parenthesis >> ;
 
@@ -141,6 +149,7 @@ BinOpExp4   : BinOpExp4 ast BinOpExp5                           << ast.NewBinOpE
             | BinOpExp4 slash BinOpExp5                         << ast.NewBinOpExp($0, ast.DIVIDE, $2) // BinopExp >>
             | BinOpExp5                                         << $0, nil >> ;
 BinOpExp5   : VarExp                                            << $0, nil >>
+            | AnnoExp                                           << $0, nil >>
             | Constant                                          << $0, nil >>
             | LookupExp                                         << $0, nil >>
             | ParenthExp                                        << $0, nil >>
