@@ -105,8 +105,8 @@ func TestCallExp(t *testing.T) {
 	testFileNoError(t, "test_cases/callexp_semant")
 }
 
-func TestModule(t *testing.T) {
-	testFileNoError(t, "test_cases/ModuleTest")
+func TestStructInStruct(t *testing.T) {
+	testFileNoError(t, "test_cases/structinstruct_semant")
 }
 
 /* Helper functions */
@@ -225,7 +225,12 @@ func checkForErrorTypes(texp_ Exp) bool {
 		return true
 	case CallExp:
 		e := e.(CallExp)
-		return checkForErrorTypes(e.Exp1) && checkForErrorTypes(e.Exp2)
+		for _, v := range e.ExpList {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
 	case UnOpExp:
 		e := e.(UnOpExp)
 		return checkForErrorTypes(e.Exp)

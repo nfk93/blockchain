@@ -22,13 +22,12 @@ let%entry main
     (parameter : key)
     (storage : storage) =
 
-  if storage.amount_raised >= storage.funding_goal then
-    if (Current.amount ()) > 0kn then
-      Current.failwith "funding goal already reached"
-    else
-      let owner_typed = Account.default storage.owner in
-      let owner_refund_op = Contract.call owner_typed storage.funding_goal () in
+  if storage.amount_raised >= storage.funding_goal then (
+    if Current.amount () > 0kn then
+      Current.failwith "funding goal already reached";
+    let owner_refund_op = Account.transfer storage.owner storage.funding_goal in
       ( [owner_refund_op], storage)
+  )
   else
     let amount = Current.amount() in
     let new_raise = amount + storage.amount_raised in

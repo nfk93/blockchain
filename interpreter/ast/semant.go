@@ -48,22 +48,21 @@ func AddTypes(exp Exp) TypedExp {
 }
 
 func GenerateCurrentModule() StructType {
-	balance := StructField{"balance", LambdaType{UnitType{}, KoinType{}}}
-	amount := StructField{"amount", LambdaType{UnitType{}, KoinType{}}}
-	gas := StructField{"gas", LambdaType{UnitType{}, NatType{}}}
-	failwith := StructField{"failwith", LambdaType{StringType{}, UnitType{}}}
-	test := StructField{"test", LambdaType{IntType{}, LambdaType{IntType{}, IntType{}}}} // Only used for testing purposes
-	return StructType{[]StructField{balance, amount, gas, failwith, test}}
+	balance := StructField{"balance", LambdaType{[]Type{UnitType{}}, KoinType{}}}
+	amount := StructField{"amount", LambdaType{[]Type{UnitType{}}, KoinType{}}}
+	gas := StructField{"gas", LambdaType{[]Type{UnitType{}}, NatType{}}}
+	failwith := StructField{"failwith", LambdaType{[]Type{StringType{}}, UnitType{}}}
+	return StructType{[]StructField{balance, amount, gas, failwith}}
 }
 
 func GenerateContractModule() StructType { //TODO change UnitType in call structfield to some generic type
-	call := StructField{"call", LambdaType{AddressType{}, LambdaType{KoinType{}, LambdaType{UnitType{}, OperationType{}}}}}
+	call := StructField{"call", LambdaType{[]Type{AddressType{}, KoinType{}, UnitType{}}, OperationType{}}}
 	return StructType{[]StructField{call}}
 }
 
 func GenerateAccountModule() StructType {
-	transfer := StructField{"transfer", LambdaType{KeyType{}, LambdaType{KoinType{}, OperationType{}}}}
-	default_ := StructField{"default", LambdaType{KeyType{}, AddressType{}}}
+	transfer := StructField{"transfer", LambdaType{[]Type{KeyType{}, KoinType{}}, OperationType{}}}
+	default_ := StructField{"default", LambdaType{[]Type{KeyType{}}, AddressType{}}}
 	return StructType{[]StructField{transfer, default_}}
 }
 
@@ -129,9 +128,12 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		}
 	case LAMBDA:
 		typ := typ.(LambdaType)
-		fromtyp := translateType(typ.FromType, tenv)
-		totyp := translateType(typ.ToType, tenv)
-		return LambdaType{fromtyp, totyp}
+		fromtypes := make([]Type, len(typ.ArgTypes))
+		for i, v := range typ.ArgTypes {
+			fromtypes[i] = translateType(v, tenv)
+		}
+		totyp := translateType(typ.ReturnType, tenv)
+		return LambdaType{fromtypes, totyp}
 	case ERROR, NOTIMPLEMENTED:
 		return typ
 	default:
@@ -203,9 +205,13 @@ func checkTypesEqual(typ1, typ2 Type) bool {
 	case LAMBDA:
 		switch typ2.Type() {
 		case LAMBDA:
+			equal := true
 			typ1 := typ1.(LambdaType)
 			typ2 := typ2.(LambdaType)
-			return checkTypesEqual(typ1.FromType, typ2.ToType) && checkTypesEqual(typ1.ToType, typ2.ToType)
+			for i, v := range typ1.ArgTypes {
+				equal = equal && checkTypesEqual(v, typ2.ArgTypes[i])
+			}
+			return equal && checkTypesEqual(typ1.ReturnType, typ2.ReturnType)
 		default:
 			return false
 		}
@@ -223,6 +229,24 @@ func getStructFieldString(structType StructType) string {
 		str = str + field.Id
 	}
 	return str
+}
+
+func traverseStruct(typ Type, path []string) Type {
+	if len(path) == 0 {
+		return typ
+	}
+	switch typ.Type() {
+	case STRUCT:
+		typ := typ.(StructType)
+		for i, v := range typ.Fields {
+			if v.Id == path[0] {
+				return traverseStruct(typ.Fields[i].Typ, path[1:])
+			}
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 // matches the pattern p to the type typ, doing pattern matching if typ is a tuple, and returning an updated venv
@@ -325,7 +349,7 @@ func addTypes(
 			if leftTyped.Type == rightTyped.Type {
 				return TypedExp{texp, NewBoolType()}, venv, tenv, senv
 			} else {
-				return TypedExp{texp, ErrorType{"Types of comparison are not equal"}},
+				return TypedExp{texp, ErrorType{"ArgTypes of comparison are not equal"}},
 					venv, tenv, senv
 			}
 		case PLUS:
@@ -340,7 +364,7 @@ func addTypes(
 			if leftTyped.Type == rightTyped.Type {
 				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
 			} else {
-				return TypedExp{texp, ErrorType{"Types of plus or minus operation are not equal"}},
+				return TypedExp{texp, ErrorType{"ArgTypes of plus or minus operation are not equal"}},
 					venv, tenv, senv
 			}
 
@@ -455,7 +479,7 @@ func addTypes(
 			if leftTyped.Type == rightTyped.Type {
 				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
 			} else {
-				return TypedExp{texp, ErrorType{"Types of logical binop are not equal"}},
+				return TypedExp{texp, ErrorType{"ArgTypes of logical binop are not equal"}},
 					venv, tenv, senv
 			}
 		default:
@@ -602,16 +626,24 @@ func addTypes(
 
 	case CallExp:
 		exp := exp.(CallExp)
-		lambdafunction, _, _, _ := addTypes(exp.Exp1, venv, tenv, senv)
+		lambdafunction, _, _, _ := addTypes(exp.ExpList[0], venv, tenv, senv)
 		if lambdafunction.Type.Type() != LAMBDA {
 			return TypedExp{exp, ErrorType{"expression is not lambda type and can't be called"}}, venv, tenv, senv
 		}
 		lambdatype := lambdafunction.Type.(LambdaType)
-		argument, _, _, _ := addTypes(exp.Exp2, venv, tenv, senv)
-		if !checkTypesEqual(argument.Type, lambdatype.FromType) {
-			return TypedExp{exp, ErrorType{"argument type doesn't match lambda input type"}}, venv, tenv, senv
+		texps := []Exp{lambdafunction}
+		if len(exp.ExpList[1:]) != len(lambdatype.ArgTypes) {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("not enough arguments to call function %s", exp.ExpList[0])}}, venv, tenv, senv
 		}
-		return TypedExp{CallExp{lambdafunction, argument}, lambdatype.ToType}, venv, tenv, senv
+		for i, e := range exp.ExpList[1:] {
+			argument, _, _, _ := addTypes(e, venv, tenv, senv)
+			if !checkTypesEqual(argument.Type, lambdatype.ArgTypes[i]) {
+				return TypedExp{exp, ErrorType{fmt.Sprintf("argument type of %s doesn't match lambda input type of %s",
+					argument.Type.String(), lambdatype.ArgTypes[i].String())}}, venv, tenv, senv
+			}
+			texps = append(texps, argument)
+		}
+		return TypedExp{CallExp{texps}, lambdatype.ReturnType}, venv, tenv, senv
 	case LetExp:
 		exp := exp.(LetExp)
 		defexp, _, _, _ := addTypes(exp.DefExp, venv, tenv, senv)
@@ -679,7 +711,7 @@ func addTypes(
 		}
 		if !checkTypesEqual(typedThen.Type, typedElse.Type) {
 			return TypedExp{texp,
-					ErrorType{"Return types in if and else branch should be equal!"}},
+					ErrorType{fmt.Sprintf("Return types of then and else branch must match but were %s and %s", typedThen.Type.String(), typedElse.Type.String())}},
 				venv, tenv, senv
 		}
 		return TypedExp{texp, typedThen.Type}, venv, tenv, senv
@@ -751,15 +783,21 @@ func addTypes(
 		}
 	case UpdateStructExp:
 		exp := exp.(UpdateStructExp)
-		tLookup, _, _, _ := addTypes(exp.Lookup, venv, tenv, senv)
+		roottype := lookupVar(exp.Root, venv)
+		if roottype == nil {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("no variable %s in variable env", exp.Root)}}, venv, tenv, senv
+		}
+		leaftype := traverseStruct(roottype, exp.Path)
+		if leaftype == nil {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("variable %s has no matching fields", exp.Root)}}, venv, tenv, senv
+		}
 		typedE, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)
-		texp := UpdateStructExp{tLookup, typedE}
-		if !checkTypesEqual(tLookup.Type, typedE.Type) {
-			return TypedExp{texp,
-					ErrorType{fmt.Sprintf("Cannot update field of type %s to exp of type %s", tLookup.Type.String(), typedE.Type.String())}},
+		if !checkTypesEqual(leaftype, typedE.Type) {
+			return TypedExp{exp,
+					ErrorType{fmt.Sprintf("Cannot update field of type %s to exp of type %s", leaftype.String(), typedE.Type.String())}},
 				venv, tenv, senv
 		}
-		return TypedExp{texp, UnitType{}}, venv, tenv, senv
+		return TypedExp{UpdateStructExp{exp.Root, exp.Path, typedE}, roottype}, venv, tenv, senv
 	case StorageInitExp:
 		exp := exp.(StorageInitExp)
 		texp, _, _, _ := addTypes(exp.Exp, venv, tenv, senv)

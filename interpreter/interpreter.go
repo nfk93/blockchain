@@ -11,6 +11,14 @@ func todo() int {
 	return 0
 }
 
+type InterpreterStruct struct {
+	Field map[string]interface{}
+}
+
+type Tuple struct {
+	Values []interface{}
+}
+
 func InterpretContractCall(texp TypedExp, param Parameter, entry string, stor Storage) ([]Operation, Storage) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
@@ -20,14 +28,13 @@ func InterpretContractCall(texp TypedExp, param Parameter, entry string, stor St
 
 		case EntryExpression:
 			e := e.(EntryExpression)
-			interpret(e.Body.(TypedExp), venv, tenv, senv)
+			if e.Id == entry { //TODO add parameters to VarEnv
+				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(Tuple)
+				return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
+			}
 		}
 	}
-	return nil, createStruct() // TODO this is just a dummy return value
-}
-
-type InterpreterStruct struct {
-	Field map[string]interface{}
+	return nil, 1 // TODO this is just a dummy return value
 }
 
 func createStruct() InterpreterStruct {
@@ -143,7 +150,13 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case AnnoExp:
 		return todo()
 	case TupleExp:
-		return todo()
+		exp := exp.(TupleExp)
+		var tupleValues []interface{}
+		for _, e := range exp.Exps {
+			interE := interpret(e.(TypedExp), venv, tenv, senv)
+			tupleValues = append(tupleValues, interE)
+		}
+		return Tuple{tupleValues}
 	case VarExp:
 		return todo()
 	case ExpSeq:

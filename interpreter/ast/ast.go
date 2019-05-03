@@ -299,7 +299,7 @@ type StructLit struct {
 }
 
 func (e StructLit) String() string {
-	res := "structlit_semant("
+	res := "StructLit("
 	var id string
 	var exp Exp
 	idlist := e.Ids
@@ -380,18 +380,25 @@ func NewListConcat(exp, list interface{}) (Exp, error) {
 	return ListConcat{exp.(Exp), list.(Exp)}, nil
 }
 
-/* CallExp */
 type CallExp struct {
-	Exp1 Exp
-	Exp2 Exp
+	ExpList []Exp
 }
 
 func (e CallExp) String() string {
-	return fmt.Sprintf("CallExp(Exp1: %s, Exp2: %s)", e.Exp1.String(), e.Exp2.String())
+	res := fmt.Sprintf("CallExp(ExpList: [")
+	var exp Exp
+	list := e.ExpList
+	for len(list) > 1 {
+		exp, list = list[0], list[1:]
+		res = res + fmt.Sprintf("%s, ", exp.String())
+	}
+	exp = list[0]
+	res = res + fmt.Sprintf("%s])", exp.String())
+	return res
 }
 
-func NewCallExp(exp1, exp2 interface{}) (Exp, error) {
-	return CallExp{exp1.(Exp), exp2.(Exp)}, nil
+func NewCallExp(explist interface{}) (Exp, error) {
+	return CallExp{explist.([]Exp)}, nil
 }
 
 /* LetExp */
@@ -469,7 +476,7 @@ type ExpSeq struct {
 }
 
 func (e ExpSeq) String() string {
-	return fmt.Sprintf("expseq_semant(Left: %s, Right: %s)", e.Left.String(), e.Right.String())
+	return fmt.Sprintf("ExpSeq(Left: %s, Right: %s)", e.Left.String(), e.Right.String())
 }
 
 func NewExpSeq(exp1, exp2 interface{}) (Exp, error) {
@@ -528,7 +535,7 @@ type LookupExp struct {
 }
 
 func (e LookupExp) String() string {
-	res := "lookupexp_semant(PathIds: ["
+	res := "LookupExp(PathIds: ["
 	var s string
 	idpath := e.PathIds
 	for len(idpath) > 1 {
@@ -552,16 +559,19 @@ func AddPathElement(list interface{}, id string) []string {
 
 /* updatestructexp_semant */
 type UpdateStructExp struct {
-	Lookup Exp
-	Exp    Exp
+	Root string
+	Path []string
+	Exp  Exp
 }
 
 func (e UpdateStructExp) String() string {
-	return fmt.Sprintf("updatestructexp_semant(Lookup: %s, Exp: %s)", e.Lookup.String(), e.Exp.String())
+	return fmt.Sprintf("UpdateStructExp(Root: %s, Path: %s, Exp: %s)", e.Root, e.Path, e.Exp.String())
 }
 
 func NewUpdateStructExp(path interface{}, leafid string, exp interface{}) (Exp, error) {
-	return UpdateStructExp{LookupExp{path.([]string), leafid}, exp.(Exp)}, nil
+	fullpath := append(path.([]string), leafid)
+	root, rest := fullpath[0], fullpath[1:]
+	return UpdateStructExp{root, rest, exp.(Exp)}, nil
 }
 
 /* StorageInitExp */
@@ -581,6 +591,14 @@ func NewStorageInitExp(id string, exp interface{}) (Exp, error) {
 }
 
 // ---------------------------
+
+func NewExpList(exp1, exp2 interface{}) ([]Exp, error) {
+	return []Exp{exp1.(Exp), exp2.(Exp)}, nil
+}
+
+func ConcatExpList(list, exp interface{}) ([]Exp, error) {
+	return append(list.([]Exp), exp.(Exp)), nil
+}
 
 type ErrorExpression struct {
 	errormsg string
