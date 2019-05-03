@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"log"
 	"net"
@@ -9,6 +10,7 @@ import (
 	"net/rpc"
 	"sort"
 	"sync"
+	"time"
 )
 
 const (
@@ -31,6 +33,9 @@ var deliverBlock chan objects.Block
 var deliverTrans chan objects.Transaction
 var inputBlock chan objects.Block
 var inputTrans chan objects.Transaction
+var myKey crypto.PublicKey
+var publicKeys map[crypto.PublicKey]bool
+var pkLock sync.RWMutex
 
 type stringSet struct {
 	m map[string]bool
@@ -67,29 +72,34 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blockOut chan objects.Block,
-	transIn chan objects.Transaction, transOut chan objects.Transaction) {
+// TODO: The current public key list is not forwarded to new peers.
+
+func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
 	myIp = getIP().String()
 	myHostPort = hostPort
-	deliverBlock = blockOut
-	deliverTrans = transOut
-	inputBlock = blockIn
-	inputTrans = transIn
+	deliverBlock = channels.BlockFromP2P
+	deliverTrans = channels.TransFromP2P
+	inputBlock = channels.BlockToP2P
+	inputTrans = channels.TransClientInput
+	myKey = mypk
+	publicKeys = make(map[crypto.PublicKey]bool)
 
 	if connectTo == "" {
 		fmt.Println("STARTING OWN NETWORK!")
 		networkList[myIp+":"+myHostPort] = true
+		publicKeys[myKey] = true
 		determinePeers()
 		go listenForRPC(myHostPort)
-		fmt.Println("Listening on port " + myHostPort)
+		fmt.Printf("Listening on %v:%v ", myIp, myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
-		connectToNetwork(connectTo)
 		go listenForRPC(myHostPort)
+		time.Sleep(1 * time.Second)
+		connectToNetwork(connectTo)
 	}
 
 	// Pull user-input transactions and send via p2p
@@ -103,20 +113,46 @@ func StartP2P(connectTo string, hostPort string, blockIn chan objects.Block, blo
 	go func() {
 		for {
 			block := <-inputBlock
-			go handleBlockWithoutDelivering(block)
+			go handleBlock(block)
 		}
 	}()
 }
 
 func PrintNetworkList() {
+	nLock.RLock()
+	defer nLock.RUnlock()
 	for _, k := range setAsList(networkList) {
 		fmt.Println(k)
 	}
 }
 
 func PrintTransHashList() {
+	transSeen.rlock()
+	defer transSeen.runlock()
 	for _, k := range setAsList(transSeen.m) {
 		fmt.Println(k)
+	}
+}
+
+func GetPublicKeys() []crypto.PublicKey {
+	var pkList []crypto.PublicKey
+	for pk := range publicKeys {
+		pkList = append(pkList, pk)
+	}
+	return pkList
+}
+
+func PrintPublicKeys() {
+	pkLock.RLock()
+	defer pkLock.RUnlock()
+	list := make([]crypto.PublicKey, 0, len(publicKeys))
+	for k := range publicKeys {
+		if publicKeys[k] == true {
+			list = append(list, k)
+		}
+	}
+	for _, k := range list {
+		fmt.Println(k.String())
 	}
 }
 
@@ -145,20 +181,30 @@ func listenForRPC(port string) {
 // -----------------------------------------------------------
 type RPCHandler int
 
-func (r *RPCHandler) RequestNetworkList(_ struct{}, reply *map[string]bool) error {
+type RequestNetworkListReply struct {
+	NetworkList map[string]bool
+	PublicKeys  map[crypto.PublicKey]bool
+}
+
+func (r *RPCHandler) RequestNetworkList(_ struct{}, reply *RequestNetworkListReply) error {
 	nLock.RLock()
 	defer nLock.RUnlock()
-	*reply = networkList
+	*reply = RequestNetworkListReply{networkList, publicKeys}
 	return nil
 }
 
-func (r *RPCHandler) NewConnection(newAddr string, _ *struct{}) error {
+type NewConnectionData struct {
+	NewAddr string
+	Pk      crypto.PublicKey
+}
+
+func (r *RPCHandler) NewConnection(data NewConnectionData, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
 	alreadyKnown := false
 	func() {
 		nLock.RLock()
 		defer nLock.RUnlock()
-		if networkList[newAddr] {
+		if networkList[data.NewAddr] {
 			alreadyKnown = true
 		}
 	}()
@@ -170,16 +216,19 @@ func (r *RPCHandler) NewConnection(newAddr string, _ *struct{}) error {
 	nLock.Lock()
 	defer nLock.Unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if networkList[newAddr] != true {
-		networkList[newAddr] = true
+	if networkList[data.NewAddr] != true {
+		networkList[data.NewAddr] = true
 		determinePeers()
 
-		go broadcastNewConnection(newAddr)
+		go broadcastNewConnection(data)
+		pkLock.Lock()
+		defer pkLock.Unlock()
+		publicKeys[data.Pk] = true
 	}
 	return nil
 }
 
-func broadcastNewConnection(newAddr string) {
+func broadcastNewConnection(data NewConnectionData) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
@@ -188,7 +237,7 @@ func broadcastNewConnection(newAddr string) {
 			fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
-			client.Call(RPC_NEW_CONNECTION, newAddr, &void)
+			client.Call(RPC_NEW_CONNECTION, data, &void)
 		}
 	}
 }
@@ -223,15 +272,15 @@ func handleBlock(block objects.Block) {
 	}
 }
 
-func handleBlockWithoutDelivering(block objects.Block) {
-	blocksSeen.lock()
-	defer blocksSeen.unlock()
-	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if blocksSeen.contains(block.CalculateBlockHash()) != true {
-		blocksSeen.add(block.CalculateBlockHash())
-		go broadcastBlock(block)
-	}
-}
+//func handleBlockWithoutDelivering(block objects.Block) {
+//	blocksSeen.lock()
+//	defer blocksSeen.unlock()
+//	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
+//	if blocksSeen.contains(block.CalculateBlockHash()) != true {
+//		blocksSeen.add(block.CalculateBlockHash())
+//		go broadcastBlock(block)
+//	}
+//}
 
 func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
@@ -249,7 +298,7 @@ func broadcastBlock(block objects.Block) {
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	fmt.Println("received SendTransaction RPC")
+	//fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
@@ -273,7 +322,6 @@ func handleTransaction(trans objects.Transaction) {
 		transSeen.add(transHash(trans))
 
 		// TODO: handle the trans more?
-		fmt.Println("Received Transaction: ", trans)
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}
@@ -288,7 +336,7 @@ func broadcastTrans(trans objects.Transaction) {
 			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
-			err := client.Call("RPCHandler.SendTransaction", trans, &void)
+			err := client.Call(RPC_SEND_TRANSACTION, trans, &void)
 			if err != nil {
 				fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
 			}
@@ -306,12 +354,14 @@ func connectToNetwork(addr string) {
 		// TODO: handle error
 		log.Fatal(err)
 	} else {
-		var reply map[string]bool
+		var reply RequestNetworkListReply
 		client.Call(RPC_REQUEST_NETWORK_LIST, struct{}{}, &reply)
-		networkList = reply
+		networkList = reply.NetworkList
+		publicKeys = reply.PublicKeys
 		networkList[myIp+":"+myHostPort] = true
+		publicKeys[myKey] = true
 		determinePeers()
-		broadcastNewConnection(myIp + ":" + myHostPort)
+		broadcastNewConnection(NewConnectionData{myIp + ":" + myHostPort, myKey})
 	}
 }
 

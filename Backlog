@@ -3,3 +3,10 @@ Implement a way for users to get the publickey for a given network address, to m
 Networking:
     Make sure a new node joining will not miss any nodes inbetween him requesting the current tree, processing it, and
     starts listening for nodes.
+
+
+
+
+
+- Does the blockchain also work on the other peers? 
+- Why do they not win?
