@@ -42,7 +42,9 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			trans := <-channels.TransFromP2P
-			fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
+			if isVerbose {
+				fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
+			}
 			go handleTransaction(trans)
 		}
 	}()
@@ -277,6 +279,94 @@ func getUnusedTransactions() []o.Transaction {
 	return trans
 }
 
+type treeEntry struct {
+	blockHash  string
+	parentHash string
+	isMain     bool
+	used       bool
+	maxDepth   int
+}
+
+func prettyFuckingPrinter() {
+
+	skovMap := blocks.m
+
+	head := currentHead
+	final := lastFinalized
+
+	HPlMap := make(map[string]int)
+	HPlMap[final] = 0
+	PlHMap := make(map[int]map[string]treeEntry)
+
+	currentPath := setCurrentPath(skovMap, head, final)
+
+	for b := range skovMap {
+		pathLenght := calcPL(skovMap, b, HPlMap)
+		HPlMap[b] = pathLenght
+		_, inPath := currentPath[b]
+		PlHMap[pathLenght][b] = treeEntry{b,
+			skovMap[b].ParentPointer,
+			inPath,
+			false,
+			pathLenght}
+	}
+
+	for l := range PlHMap {
+		for b := range PlHMap[l] {
+			updateMaxDept(PlHMap, b, l)
+		}
+	}
+
+	//printMap := make(map[int]string)
+
+}
+func updateMaxDept(plhMap map[int]map[string]treeEntry, b string, l int) map[int]map[string]treeEntry {
+	updateMap := plhMap
+	bestDepth := plhMap[l][b].maxDepth
+	parentEntry := plhMap[l][b]
+
+	for i := l; i > 0; i-- {
+		if updateMap[l][parentEntry.parentHash].maxDepth > bestDepth {
+			return updateMap
+		}
+		updatedEntry := parentEntry
+		updatedEntry.maxDepth = bestDepth
+		updateMap[l][parentEntry.parentHash] = updatedEntry
+		parentEntry = updateMap[l][parentEntry.parentHash]
+
+	}
+
+	return nil
+}
+
+func setCurrentPath(skovMap map[string]o.Block, headHash string, genHash string) map[string]bool {
+	var path map[string]bool
+	currentHash := headHash
+	for {
+		if currentHash == genHash {
+			return path
+		} else {
+			path[currentHash] = true
+			currentHash = skovMap[currentHash].ParentPointer
+		}
+	}
+}
+
+func calcPL(skovMap map[string]o.Block, start string, lengthMap map[string]int) int {
+
+	pathLenght := 1
+	parentHash := skovMap[start].ParentPointer
+	for {
+		if parentLength, ok := lengthMap[parentHash]; ok {
+			return parentLength + pathLenght
+		} else {
+			parentHash = skovMap[parentHash].ParentPointer
+			pathLenght++
+		}
+	}
+
+}
+
 type skov struct {
 	m map[string]o.Block
 	l sync.RWMutex
@@ -310,4 +400,8 @@ func (s *skov) rlock() {
 
 func (s *skov) runlock() {
 	s.l.RUnlock()
+}
+
+func SwitchVerbose() {
+	isVerbose = !isVerbose
 }

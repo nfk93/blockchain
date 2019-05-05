@@ -3,6 +3,7 @@ package transaction
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/objects"
+	"sort"
 )
 
 type TLNode struct {
@@ -21,7 +22,6 @@ var blockReward = 100
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TLNode), ""}
-
 	// Process a Block coming from the consensus layer
 	go func() {
 		for {
@@ -45,8 +45,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 		for {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
-				fmt.Println("Finalized Successfully")
-				printFinalizedLedger(finalizedNode.state.Ledger)
 				channels.StateFromTrans <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
@@ -155,8 +153,16 @@ func GetCurrentLedger() map[string]int {
 	return tree.treeMap[tree.head].state.Ledger
 }
 
-func printFinalizedLedger(ledger map[string]int) {
-	for l := range ledger {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[l], l[4:14])
+func PrintCurrentLedger() {
+	ledger := tree.treeMap[tree.head].state.Ledger
+
+	var keyList []string
+	for k := range ledger {
+		keyList = append(keyList, k)
+	}
+	sort.Strings(keyList)
+
+	for _, k := range keyList {
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
 	}
 }

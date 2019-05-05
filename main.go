@@ -22,11 +22,13 @@ var pk2 crypto.PublicKey
 var slotduration *int
 var hardness *float64
 var newNetwork *bool
-var genesisBlock objects.Block
+var addr *string
+var port *string
+var autoTransStatus = false
 
 func main() {
-	var addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
-	var port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
+	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
+	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", int(time.Second*1), "Specify the slot length (default=10sec)")
 	hardness = flag.Float64("hardness", 0.30, "Specify hardness (default=0.90)")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
@@ -36,6 +38,11 @@ func main() {
 	channels = objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, true)
+	if *addr == "" {
+		fmt.Println("When all other clients are ready, use -start to begin the Blockchain protocol or -h for help with further commands!")
+	} else {
+		fmt.Println("This client is ready for the Blockchain protocol to start. Use -h for further commands!")
+	}
 	cliLoop()
 }
 
@@ -48,17 +55,20 @@ func cliLoop() {
 		fmt.Scanln(&commandline)
 		switch commandline {
 		case "-h":
-			prettyPrint("-q", "Exit this program")
-			prettyPrint("-start", "Begins the blockchain protocol")
-			prettyPrint("-n", "Print out the network list of who you are connected to")
-			prettyPrint("-trans", "Print list of seen transactions")
-			prettyPrint("-peers", "Print list of all peers in the network")
-			prettyPrint("-public-keys", "Print list of know Public keys in network")
-			prettyPrint("-ledger", "Print the current ledger")
-			prettyPrint("-trans1000", "Transfer 1000k to all known public keys in the network")
-			prettyPrint("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
-			prettyPrint("-trans5", "Transfer 5 random amounts to random accounts")
-			prettyPrint("-autotrans", "Starts a routine that makes to random transfers every 10 second as long as you have money.")
+			prettyPrintHelpMessage("-q", "Exit this program")
+			prettyPrintHelpMessage("-start", "Begins the blockchain protocol")
+			prettyPrintHelpMessage("-verbose", "Switches verbose mode between on and off")
+			prettyPrintHelpMessage("-id", "Show your public key in short and which port you are listening on")
+			prettyPrintHelpMessage("-n", "Print out the network list of who you are connected to")
+			prettyPrintHelpMessage("-trans", "Print list of seen transactions")
+			prettyPrintHelpMessage("-peers", "Print list of all peers in the network")
+			prettyPrintHelpMessage("-public-keys", "Print list of know Public keys in network")
+			prettyPrintHelpMessage("-ledger", "Print the current ledger")
+			prettyPrintHelpMessage("-final", "Print the last finalized ledger")
+			prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
+			prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
+			prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
+			prettyPrintHelpMessage("-autotrans", "Starts or stops automatic transfers to random accounts every 5 second")
 		case "-q":
 			return
 		case "-n":
@@ -70,10 +80,9 @@ func cliLoop() {
 		case "-public-keys":
 			p2p.PrintPublicKeys()
 		case "-ledger":
-			ledger := transaction.GetCurrentLedger()
-			for l := range ledger {
-				fmt.Printf("Amount %v is owned by %v\n", ledger[l], l[4:14])
-			}
+			transaction.PrintCurrentLedger()
+		case "-final":
+			consensus.PrintFinalizedLedger()
 		case "-start": //"-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
@@ -130,27 +139,12 @@ func cliLoop() {
 
 			// starts Go routine that randomly keeps making transactions to others
 		case "-autotrans":
-			go func() {
-				for {
-					currentStake := transaction.GetCurrentLedger()[publicKey.String()]
-					pkList := p2p.GetPublicKeys()
-
-					if currentStake == 0 {
-						continue
-					}
-					//noTrans := rand.Intn(5)
-					for i := 0; i < 2; i++ {
-						receiverPK := pkList[rand.Intn(len(pkList))]
-						trans := objects.CreateTransaction(publicKey,
-							receiverPK,
-							rand.Intn(currentStake/50),
-							publicKey.String()+time.Now().String(),
-							secretKey)
-						channels.TransClientInput <- trans
-					}
-					time.Sleep(time.Second * 10)
-				}
-			}()
+			autoTransStatus = !autoTransStatus
+			go autoTrans()
+		case "-id":
+			fmt.Printf("Your ID is: \n    Public Key short: %v\n    Port: %v\n", publicKey.N.String()[:10], *port)
+		case "-verbose":
+			consensus.SwitchVerbose()
 
 		default:
 			fmt.Println(commandline, "is not a known command. Type -h for help")
@@ -158,7 +152,7 @@ func cliLoop() {
 	}
 }
 
-func prettyPrint(command string, explain string) {
+func prettyPrintHelpMessage(command string, explain string) {
 	var buf bytes.Buffer
 	buf.WriteString("Command: ")
 	buf.WriteString(command)
@@ -170,4 +164,31 @@ func prettyPrint(command string, explain string) {
 	buf.WriteString("\n")
 
 	fmt.Println(buf.String())
+}
+
+func autoTrans() {
+
+	for {
+		// checks if autotrans should stop
+		if !autoTransStatus {
+			return
+		}
+		currentStake := transaction.GetCurrentLedger()[publicKey.String()]
+		if currentStake == 0 {
+			continue
+		}
+
+		pkList := p2p.GetPublicKeys()
+		for i := 0; i < 2; i++ {
+			receiverPK := pkList[rand.Intn(len(pkList))]
+			trans := objects.CreateTransaction(publicKey,
+				receiverPK,
+				rand.Intn(currentStake/50),
+				publicKey.String()+time.Now().String(),
+				secretKey)
+			channels.TransClientInput <- trans
+		}
+		time.Sleep(time.Second * 5)
+	}
+
 }

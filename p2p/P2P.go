@@ -93,7 +93,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 		publicKeys[myKey] = true
 		determinePeers()
 		go listenForRPC(myHostPort)
-		fmt.Printf("Listening on %v:%v ", myIp, myHostPort)
+		fmt.Printf("Listening on %v:%v \n", myIp, myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
