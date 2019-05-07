@@ -111,6 +111,10 @@ func TestStructInStruct(t *testing.T) {
 
 /* Interpreter tests */
 
+func TestInterpretBinOps(t *testing.T) {
+
+}
+
 func TestCheckParams(t *testing.T) {
 	stringval := StringVal{"ey"}
 	stringtype := StringType{}

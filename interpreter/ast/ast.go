@@ -43,8 +43,8 @@ func NewUnOpExp(oper, exp interface{}) (Exp, error) {
 
 /* Simple Type Declaration */
 type TypeDecl struct {
-	id  string
-	typ Type
+	Id  string
+	Typ Type
 }
 
 func NewTypeDecl(id string, typ interface{}) (Exp, error) {
@@ -52,7 +52,7 @@ func NewTypeDecl(id string, typ interface{}) (Exp, error) {
 }
 
 func (e TypeDecl) String() string {
-	return fmt.Sprintf("TypeDecl(Id: %s, Typ: %s)", e.id, e.typ.String())
+	return fmt.Sprintf("TypeDecl(Id: %s, Typ: %s)", e.Id, e.Typ.String())
 }
 
 /* Top Level */

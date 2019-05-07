@@ -21,17 +21,29 @@ type Tuple struct {
 func InterpretContractCall(texp TypedExp, params []interface{}, entry string, stor []interface{}) ([]Operation, interface{}) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
+	var storagetype Type
 	for _, e := range exp.Roots {
 		switch e.(type) {
 		case TypeDecl:
-
+			typdecl := e.(TypeDecl)
+			if typdecl.Id == "storage" {
+				storagetype = typdecl.Typ
+			}
 		case EntryExpression:
 			e := e.(EntryExpression)
 			if e.Id == entry {
+				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
 					return []Operation{failwith(err.Error())}, nil
-				} else {
+				}
+				// apply storage to venv
+				venv, err := applyParams(stor, storagetype, venv)
+				if err != nil {
+					return []Operation{failwith("storage doesn't match storage type definition")}, nil
+				}
+
+				else {
 					bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(Tuple)
 					return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
 				}

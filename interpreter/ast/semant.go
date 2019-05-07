@@ -250,42 +250,50 @@ func traverseStruct(typ Type, path []string) Type {
 }
 
 // matches the pattern p to the type Typ, doing pattern matching if Typ is a tuple, and returning an updated venv
-func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool) {
+func PatternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (Pattern, VarEnv, bool) {
 	venv_ := venv
 	typ = translateType(typ, tenv)
 	switch typ.Type() {
 	case TUPLE:
 		typ := typ.(TupleType)
 		if len(p.Params) == 1 {
-			if !checkParamTypeAnno(p.Params[0], typ, tenv) {
-				return venv, false
+			par, ok := checkParamTypeAnno(p.Params[0], typ, tenv)
+			if !ok {
+				return p, venv, false
 			}
-			return venv_.Set(p.Params[0].Id, typ), true
+			return Pattern{[]Param{par}}, venv_.Set(p.Params[0].Id, typ), true
 		}
 		if len(p.Params) != len(typ.Typs) {
-			return venv, false
+			return p, venv, false
 		}
+		pars := make([]Param, 0)
 		for i, v := range p.Params {
-			if !checkParamTypeAnno(v, typ.Typs[i], tenv) {
-				return venv, false
+			par, ok := checkParamTypeAnno(v, typ.Typs[i], tenv)
+			if !ok {
+				return p, venv, false
 			}
 			venv_ = venv_.Set(v.Id, typ.Typs[i])
+			pars = append(pars, par)
 		}
-		return venv_, true
+		return Pattern{pars}, venv_, true
 	default:
 		if len(p.Params) != 1 {
-			return venv, false
+			return p, venv, false
 		}
-		return venv_.Set(p.Params[0].Id, typ), true
+		par, ok := checkParamTypeAnno(p.Params[0], typ, tenv)
+		if !ok {
+			return p, venv, false
+		}
+		return Pattern{[]Param{par}}, venv_.Set(p.Params[0].Id, typ), true
 	}
 }
 
-func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) bool {
+func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) (Param, bool) {
 	if param.Anno.Opt {
 		actualanno := translateType(param.Anno.Typ, tenv)
-		return checkTypesEqual(actualanno, typ)
+		return param, checkTypesEqual(actualanno, typ)
 	} else {
-		return true
+		return Param{param.Id, TypeOption{true, typ}}, true
 	}
 }
 
@@ -308,7 +316,7 @@ func addTypes(
 				typedecl := exp1.(TypeDecl)
 				texp, venv, tenv, senv = addTypes(exp1, venv, tenv, senv)
 				roots = append(roots, texp)
-				if typedecl.id == "storage" {
+				if typedecl.Id == "storage" {
 					storageDefined = true
 				}
 			case EntryExpression:
@@ -489,57 +497,61 @@ func addTypes(
 		}
 	case TypeDecl:
 		exp := exp.(TypeDecl)
-		if lookupType(exp.id, tenv) != nil {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.id)}},
+		if lookupType(exp.Id, tenv) != nil {
+			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.Id)}},
 				venv, tenv, senv
 		}
-		actualType := translateType(exp.typ, tenv)
-		switch exp.typ.Type() {
+		actualType := translateType(exp.Typ, tenv)
+		switch exp.Typ.Type() {
 		case STRUCT:
 			actualType := actualType.(StructType)
 			structfieldstring := getStructFieldString(actualType)
 			_, contains := senv.Lookup(structfieldstring)
 			if contains {
-				return TypedExp{TypeDecl{exp.id, actualType}, ErrorType{fmt.Sprintf("struct field names already used")}},
+				return TypedExp{TypeDecl{exp.Id, actualType}, ErrorType{fmt.Sprintf("struct field names already used")}},
 					venv, tenv, senv
 			} else {
-				tenv_ := tenv.Set(exp.id, actualType)
+				tenv_ := tenv.Set(exp.Id, actualType)
 				senv = senv.Set(structfieldstring, actualType)
-				return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv // TODO perhaps use decl type
+				return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv // TODO perhaps use decl type
 			}
 		default:
-			tenv_ := tenv.Set(exp.id, actualType)
-			return TypedExp{TypeDecl{exp.id, actualType}, UnitType{}}, venv, tenv_, senv
+			tenv_ := tenv.Set(exp.Id, actualType)
+			return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv
 		}
 	case EntryExpression:
+		// TODO make sure params and storage cant use same var id
 		exp := exp.(EntryExpression)
 		// check that parameters are typeannotated and add them to variable environment
 		venv_ := venv
+		paramlist := make([]Param, 0)
 		for _, v := range exp.Params.Params {
 			if v.Anno.Opt != true {
 				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
 			}
 			vartyp := translateType(v.Anno.Typ, tenv)
 			venv_ = venv_.Set(v.Id, vartyp)
+			paramlist = append(paramlist, Param{v.Id, TypeOption{true, vartyp}})
 		}
+		paramPattern := Pattern{paramlist}
 		// check that storage pattern matches storage type
 		storagetype := lookupType("storage", tenv)
 		if storagetype == nil {
 			return TypedExp{ErrorExpression{}, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv
 		}
-		venv_, ok := patternMatch(exp.Storage, storagetype, venv_, tenv)
+		storagePattern, venv_, ok := PatternMatch(exp.Storage, storagetype, venv_, tenv)
 		if !ok {
-			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
 		}
 		// add types with updated venv
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
 		// check that return type is operation list * storage
 		if !checkTypesEqual(body.Type, TupleType{[]Type{NewListType(OperationType{}), storagetype}}) {
-			return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body},
+			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body},
 					ErrorType{fmt.Sprintf("return type of entry must be operation list * %s, but was %s", storagetype.String(), body.Type.String())}},
 				venv, tenv, senv
 		}
-		return TypedExp{EntryExpression{exp.Id, exp.Params, exp.Storage, body}, storagetype}, venv, tenv, senv
+		return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body}, storagetype}, venv, tenv, senv
 	case KeyLit:
 		return TypedExp{exp, KeyType{}}, venv, tenv, senv
 	case BoolLit:
@@ -647,14 +659,14 @@ func addTypes(
 	case LetExp:
 		exp := exp.(LetExp)
 		defexp, _, _, _ := addTypes(exp.DefExp, venv, tenv, senv)
-		venv_, ok := patternMatch(exp.Patt, defexp.Type, venv, tenv)
+		pattern, venv_, ok := PatternMatch(exp.Patt, defexp.Type, venv, tenv)
 		if !ok {
 			return TypedExp{ErrorExpression{}, ErrorType{
 				fmt.Sprintf("variable declaration pattern %s can't be matched to type %s", exp.Patt.String(),
 					defexp.Type.String())}}, venv, tenv, senv
 		}
 		inexp, _, _, _ := addTypes(exp.InExp, venv_, tenv, senv)
-		return TypedExp{LetExp{exp.Patt, defexp, inexp}, inexp.Type}, venv, tenv, senv
+		return TypedExp{LetExp{pattern, defexp, inexp}, inexp.Type}, venv, tenv, senv
 	case AnnoExp:
 		exp := exp.(AnnoExp)
 		texp, venv, tenv, senv := addTypes(exp.Exp, venv, tenv, senv)
