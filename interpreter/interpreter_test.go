@@ -134,7 +134,6 @@ func TestInterpretConstant(t *testing.T) {
 	texp := getTypedAST(t, "test_cases/constant_interp")
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", emptylist)
-	print(sto.(int))
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 15 {
