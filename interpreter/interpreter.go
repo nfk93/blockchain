@@ -301,7 +301,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		}
 		return ListVal{returnlist}
 	case ListConcat:
-		return todo()
+		exp := exp.(ListConcat)
+		e := interpret(exp.Exp.(TypedExp), venv, tenv, senv)
+		list := interpret(exp.Exp.(TypedExp), venv, tenv, senv).(ListVal)
+		return ListVal{append(list.Values, e)}
 	case CallExp:
 		return todo()
 	case LetExp:
