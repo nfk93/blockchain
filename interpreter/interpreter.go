@@ -165,6 +165,8 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
 				case NAT:
 					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}
+				default:
+					return todo()
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -172,6 +174,8 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					return IntVal{int64(leftval.(NatVal).Value) - rightval.(IntVal).Value}
 				case NAT:
 					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}
+				default:
+					return todo()
 				}
 			case KOIN:
 				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
