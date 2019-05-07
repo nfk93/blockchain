@@ -14,6 +14,8 @@ let%entry entry_7 () () = 0090
 
 let%entry entry_8 () () = 1132kn
 
+let%entry entry_8 () () = 31.001kn
+
 let%entry entry_9 () () = "Hello there"
 
 let%entry entry_10 () () = "General Kenobi"

@@ -259,7 +259,7 @@ func (k KoinLit) String() string {
 	return fmt.Sprintf("KoinLit(val: %d)", k.Val)
 }
 
-func NewKoinLit(koins int64) (Exp, error) {
+func NewKoinLit(koins float64) (Exp, error) {
 	if koins < 0 {
 		err := "koin literal can't have negative value"
 		return ErrorExpression{err}, nil
