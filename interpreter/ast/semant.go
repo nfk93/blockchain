@@ -372,7 +372,7 @@ func addTypes(
 			if leftTyped.Type == rightTyped.Type {
 				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
 			} else {
-				return TypedExp{texp, ErrorType{"ArgTypes of plus or minus operation are not equal"}},
+				return TypedExp{texp, ErrorType{"ArgTypes of plus operation are not equal"}},
 					venv, tenv, senv
 			}
 
