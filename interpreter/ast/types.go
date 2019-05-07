@@ -297,6 +297,6 @@ func (t NotImplementedType) String() string { return "NotImplementedType" }
 func (t NotImplementedType) Type() Typecode { return NOTIMPLEMENTED }
 
 type TypeOption struct {
-	opt bool
-	typ Type
+	Opt bool
+	Typ Type
 }

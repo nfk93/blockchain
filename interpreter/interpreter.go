@@ -3,7 +3,6 @@ package interpreter
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/interpreter/ast"
-	. "github.com/nfk93/blockchain/objects"
 )
 
 func todo() int {
@@ -19,7 +18,7 @@ type Tuple struct {
 	Values []interface{}
 }
 
-func InterpretContractCall(texp TypedExp, param Parameter, entry string, stor Storage) ([]Operation, Storage) {
+func InterpretContractCall(texp TypedExp, params []interface{}, entry string, stor []interface{}) ([]Operation, interface{}) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
@@ -27,13 +26,117 @@ func InterpretContractCall(texp TypedExp, param Parameter, entry string, stor St
 		case TypeDecl:
 		case EntryExpression:
 			e := e.(EntryExpression)
-			if e.Id == entry { //TODO add parameters to VarEnv
-				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(Tuple)
-				return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
+			if e.Id == entry {
+				venv, err := applyParams(params, e.Params, venv)
+				if err != nil {
+					return []Operation{failwith(err.Error())}, nil
+				} else {
+					bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(Tuple)
+					return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
+				}
 			}
 		}
 	}
-	return nil, 1 // TODO this is just a dummy return value
+	return nil, 1 // TODO this is just a dummy return Value
+}
+func applyParams(paramVals []interface{}, pattern Pattern, venv VarEnv) (VarEnv, error) {
+	venv_ := venv
+	for i, param := range pattern.Params {
+		if checkParam(paramVals[i], param.Anno.Typ) {
+			venv_ = venv_.Set(param.Id, paramVals[i])
+		} else {
+			return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+		}
+	}
+	return venv_, nil
+}
+
+func checkParam(param interface{}, typ Type) bool {
+	switch typ.Type() {
+	case STRING:
+		_, ok := param.(StringVal)
+		return ok
+	case KEY:
+		_, ok := param.(KeyVal)
+		return ok
+	case INT:
+		_, ok := param.(IntVal)
+		return ok
+	case KOIN:
+		_, ok := param.(KoinVal)
+		return ok
+	case NAT:
+		_, ok := param.(NatVal)
+		return ok
+	case BOOL:
+		_, ok := param.(BoolVal)
+		return ok
+	case OPERATION:
+		_, ok := param.(OperationVal)
+		return ok
+	case UNIT:
+		_, ok := param.(UnitValue)
+		return ok
+	case TUPLE:
+		val, ok := param.(TupleValue)
+		if !ok {
+			return false
+		}
+		tupletypes := typ.(TupleType)
+		values := val.Values
+		if !ok {
+			return false
+		}
+		if len(values) != len(tupletypes.Typs) {
+			return false
+		}
+		for i, tupletype := range tupletypes.Typs {
+			ok = ok && checkParam(values[i], tupletype)
+		}
+		return ok
+	case LIST:
+		val, ok := param.(ListVal)
+		if !ok {
+			return false
+		}
+		listtype := typ.(ListType).Typ
+		values := val.Values
+		if !ok {
+			return false
+		}
+		for _, v := range values {
+			ok = ok && checkParam(v, listtype)
+		}
+		return ok
+	case OPTION:
+		val, ok := param.(OptionVal)
+		if !ok {
+			return false
+		}
+		if val.Opt == true {
+			ok = checkParam(val.Value, typ.(OptionType).Typ)
+		}
+		return ok
+	case STRUCT:
+		val, ok := param.(StructVal)
+		structtype := typ.(StructType)
+		if !ok {
+			return false
+		}
+		if len(val.Fields) != len(structtype.Fields) {
+			return false
+		}
+		for i, field := range val.Fields {
+			ok = ok && field.Id == structtype.Fields[i].Id && checkParam(field.Value, structtype.Fields[i].Typ)
+		}
+		return ok
+	default:
+		return false
+	}
+}
+
+func failwith(str string) FailWith {
+	return FailWith{str}
 }
 
 func createStruct() InterpreterStruct {

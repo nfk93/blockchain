@@ -109,6 +109,73 @@ func TestStructInStruct(t *testing.T) {
 	testFileNoError(t, "test_cases/structinstruct_semant")
 }
 
+/* Interpreter tests */
+
+func TestCheckParams(t *testing.T) {
+	stringval := StringVal{"ey"}
+	stringtype := StringType{}
+	if !checkParam(stringval, stringtype) {
+		t.Fail()
+	}
+	intval1 := IntVal{1}
+	if checkParam(intval1, stringtype) {
+		t.Fail()
+	}
+
+	lst := make([]interface{}, 0)
+	listVal1 := ListVal{append(lst, intval1)}
+	listVal2 := ListVal{append(lst, int64(12))}
+	if !checkParam(listVal1, ListType{IntType{}}) {
+		t.Errorf("1")
+	}
+	if checkParam(listVal2, ListType{IntType{}}) {
+		t.Errorf("2")
+	}
+	if checkParam(listVal1, ListType{StringType{}}) {
+		t.Errorf("3")
+	}
+	tupleval1 := TupleValue{[]Value{TupleValue{[]Value{IntVal{1}, IntVal{2}}}, StringVal{"ey"}}}
+	tupleval2 := TupleValue{[]Value{TupleValue{[]Value{IntVal{1}, IntVal{2}}}, IntVal{123}}}
+	tupletyp1 := TupleType{[]Type{TupleType{[]Type{IntType{}, IntType{}}}, StringType{}}}
+	if !checkParam(tupleval1, tupletyp1) {
+		t.Errorf("4")
+	}
+	if checkParam(tupleval2, tupletyp1) {
+		t.Errorf("5")
+	}
+
+	structval := StructVal{[]StructFieldVal{StructFieldVal{"a", IntVal{123}}, StructFieldVal{"b", StringVal{"eyyyyy"}}}}
+	structtyp1 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", StringType{}}}}
+	structtyp2 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"c", StringType{}}}}
+	structtyp3 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", IntType{}}}}
+	if !checkParam(structval, structtyp1) {
+		t.Errorf("6")
+	}
+	if checkParam(structval, structtyp2) {
+		t.Errorf("7")
+	}
+	if checkParam(structval, structtyp3) {
+		t.Errorf("8")
+	}
+
+	optval1 := OptionVal{tupleval1, true}
+	optval2 := OptionVal{UnitValue{}, false}
+	opttyp1 := OptionType{tupletyp1}
+	opttyp2 := OptionType{IntType{}}
+	if !checkParam(optval1, opttyp1) {
+		t.Errorf("9")
+	}
+	if !checkParam(optval2, opttyp1) {
+		t.Errorf("10")
+	}
+	if !checkParam(optval2, opttyp2) {
+		t.Errorf("11")
+	}
+	if checkParam(optval1, opttyp2) {
+		t.Errorf("12")
+	}
+}
+
 func TestBinopExp(t *testing.T) {
 	testFileNoError(t, "test_cases/binopexp_semant")
 }

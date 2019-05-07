@@ -16,7 +16,7 @@ type TypedExp struct {
 }
 
 func (e TypedExp) String() string {
-	return fmt.Sprintf("{exp: %s, typ: %s}", e.Exp.String(), e.Type.String())
+	return fmt.Sprintf("{exp: %s, Typ: %s}", e.Exp.String(), e.Type.String())
 }
 
 func GenInitEnvs() (VarEnv, TypeEnv, StructEnv) {
@@ -142,18 +142,18 @@ func translateType(typ Type, tenv TypeEnv) Type {
 	}
 }
 
-/*func actualType(typ Type, tenv TypeEnv) Type {
-	switch typ.Type() {
+/*func actualType(Typ Type, tenv TypeEnv) Type {
+	switch Typ.Type() {
 	case DECLARED:
-		typ := typ.(DeclaredType)
-		actualtyp := lookupType(typ.TypId, tenv)
+		Typ := Typ.(DeclaredType)
+		actualtyp := lookupType(Typ.TypId, tenv)
 		if actualtyp == nil {
-			return ErrorType{fmt.Sprintf("type %s is not declared", typ.TypId)}
+			return ErrorType{fmt.Sprintf("type %s is not declared", Typ.TypId)}
 		} else {
 			return actualtyp
 		}
 	default:
-		return typ
+		return Typ
 	}
 } */
 
@@ -249,23 +249,23 @@ func traverseStruct(typ Type, path []string) Type {
 	}
 }
 
-// matches the pattern p to the type typ, doing pattern matching if typ is a tuple, and returning an updated venv
+// matches the pattern p to the type Typ, doing pattern matching if Typ is a tuple, and returning an updated venv
 func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool) {
 	venv_ := venv
 	typ = translateType(typ, tenv)
 	switch typ.Type() {
 	case TUPLE:
 		typ := typ.(TupleType)
-		if len(p.params) == 1 {
-			if !checkParamTypeAnno(p.params[0], typ, tenv) {
+		if len(p.Params) == 1 {
+			if !checkParamTypeAnno(p.Params[0], typ, tenv) {
 				return venv, false
 			}
-			return venv_.Set(p.params[0].Id, typ), true
+			return venv_.Set(p.Params[0].Id, typ), true
 		}
-		if len(p.params) != len(typ.Typs) {
+		if len(p.Params) != len(typ.Typs) {
 			return venv, false
 		}
-		for i, v := range p.params {
+		for i, v := range p.Params {
 			if !checkParamTypeAnno(v, typ.Typs[i], tenv) {
 				return venv, false
 			}
@@ -273,16 +273,16 @@ func patternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (VarEnv, bool)
 		}
 		return venv_, true
 	default:
-		if len(p.params) != 1 {
+		if len(p.Params) != 1 {
 			return venv, false
 		}
-		return venv_.Set(p.params[0].Id, typ), true
+		return venv_.Set(p.Params[0].Id, typ), true
 	}
 }
 
 func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) bool {
-	if param.Anno.opt {
-		actualanno := translateType(param.Anno.typ, tenv)
+	if param.Anno.Opt {
+		actualanno := translateType(param.Anno.Typ, tenv)
 		return checkTypesEqual(actualanno, typ)
 	} else {
 		return true
@@ -515,11 +515,11 @@ func addTypes(
 		exp := exp.(EntryExpression)
 		// check that parameters are typeannotated and add them to variable environment
 		venv_ := venv
-		for _, v := range exp.Params.params {
-			if v.Anno.opt != true {
+		for _, v := range exp.Params.Params {
+			if v.Anno.Opt != true {
 				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv
 			}
-			vartyp := translateType(v.Anno.typ, tenv)
+			vartyp := translateType(v.Anno.Typ, tenv)
 			venv_ = venv_.Set(v.Id, vartyp)
 		}
 		// check that storage pattern matches storage type
