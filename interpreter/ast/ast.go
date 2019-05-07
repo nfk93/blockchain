@@ -52,7 +52,7 @@ func NewTypeDecl(id string, typ interface{}) (Exp, error) {
 }
 
 func (e TypeDecl) String() string {
-	return fmt.Sprintf("TypeDecl(Id: %s, typ: %s)", e.id, e.typ.String())
+	return fmt.Sprintf("TypeDecl(Id: %s, Typ: %s)", e.id, e.typ.String())
 }
 
 /* Top Level */
@@ -97,7 +97,7 @@ type EntryExpression struct {
 }
 
 func (e EntryExpression) String() string {
-	return fmt.Sprintf("EntryExpression(Id: %s, params: %s, storage: %s, body: %s)", e.Id, e.Params.String(),
+	return fmt.Sprintf("EntryExpression(Id: %s, Params: %s, storage: %s, body: %s)", e.Id, e.Params.String(),
 		e.Storage.String(), e.Body.String())
 }
 
@@ -112,8 +112,8 @@ type Param struct {
 }
 
 func (p Param) String() string {
-	if p.Anno.opt {
-		return fmt.Sprintf("(%s: %s)", p.Id, p.Anno.typ.String())
+	if p.Anno.Opt {
+		return fmt.Sprintf("(%s: %s)", p.Id, p.Anno.Typ.String())
 	} else {
 		return fmt.Sprintf("%s", p.Id)
 	}
@@ -138,7 +138,7 @@ func NewParamList(param interface{}) ([]Param, error) {
 }
 
 type Pattern struct {
-	params []Param
+	Params []Param
 }
 
 func NewPattern(params interface{}) (Pattern, error) {
@@ -157,12 +157,12 @@ func NewEmptyPattern() (Pattern, error) {
 }
 
 func (p Pattern) String() string {
-	if len(p.params) == 0 {
+	if len(p.Params) == 0 {
 		return "Pattern()"
 	} else {
 		res := "Pattern("
 		var par Param
-		params := p.params
+		params := p.Params
 		for len(params) > 1 {
 			par, params = params[0], params[1:]
 			res = res + fmt.Sprintf("%s, ", par.String())
