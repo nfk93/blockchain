@@ -345,13 +345,28 @@ func addTypes(
 		rightTyped, _, _, _ := addTypes(exp.Right, venv, tenv, senv)
 		texp := BinOpExp{leftTyped, exp.Op, rightTyped}
 		switch exp.Op {
-		case EQ, NEQ, GEQ, LEQ, LT, GT:
+		case EQ, NEQ:
 			switch leftTyped.Type.Type() {
 			case BOOL, INT, KOIN, STRING, KEY, NAT:
 				break
 			default:
 				return TypedExp{texp,
 						ErrorType{"Can't compare expressions of type " + leftTyped.Type.String()}},
+					venv, tenv, senv
+			}
+			if leftTyped.Type == rightTyped.Type {
+				return TypedExp{texp, NewBoolType()}, venv, tenv, senv
+			} else {
+				return TypedExp{texp, ErrorType{"ArgTypes of comparison are not equal"}},
+					venv, tenv, senv
+			}
+		case GEQ, LEQ, LT, GT:
+			switch leftTyped.Type.Type() {
+			case INT, KOIN, NAT:
+				break
+			default:
+				return TypedExp{texp,
+						ErrorType{"Can't compare expressions of type " + leftTyped.Type.String() + "with oper " + binOperToString(exp.Op)}},
 					venv, tenv, senv
 			}
 			if leftTyped.Type == rightTyped.Type {
