@@ -43,7 +43,7 @@ type ListVal struct {
 	Values []Value
 }
 
-type UnitValue struct{}
+type UnitVal struct{}
 
 type TupleValue struct {
 	Values []Value

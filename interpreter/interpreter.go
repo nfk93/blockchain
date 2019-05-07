@@ -76,7 +76,7 @@ func checkParam(param interface{}, typ Type) bool {
 		_, ok := param.(OperationVal)
 		return ok
 	case UNIT:
-		_, ok := param.(UnitValue)
+		_, ok := param.(UnitVal)
 		return ok
 	case TUPLE:
 		val, ok := param.(TupleValue)
@@ -150,16 +150,16 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case BinOpExp:
 		exp := exp.(BinOpExp)
 		switch exp.Op {
-		case PLUS:
+		case PLUS: // TODO: cast everything correctly
 			leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
 			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
-				return leftval.(float64) + rightval.(float64)
+				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}
 			case NAT:
-				return leftval.(uint64) + rightval.(uint64)
+				return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}
 			case INT:
-				return leftval.(int64) + rightval.(int64)
+				return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
 			default:
 				return todo()
 			}
@@ -167,10 +167,12 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
 			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch exp.Left.(TypedExp).Type.Type() {
-			case INT, NAT:
-				return leftval.(int64) - rightval.(int64)
+			case INT:
+				return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
+			case NAT:
+				return IntVal{int64(leftval.(NatVal).Value - rightval.(NatVal).Value)}
 			case KOIN:
-				return leftval.(float64) - rightval.(float64)
+				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
 			default:
 				return todo()
 			}
@@ -179,11 +181,11 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch texp.Type.Type() {
 			case INT:
-				return leftval.(int64) * rightval.(int64)
+				return IntVal{leftval.(IntVal).Value * rightval.(IntVal).Value}
 			case NAT:
-				return leftval.(uint64) * rightval.(uint64)
+				return NatVal{leftval.(uint64) * rightval.(uint64)}
 			case KOIN:
-				return leftval.(float64) * rightval.(float64)
+				return KoinVal{leftval.(float64) * rightval.(float64)}
 			default:
 				return todo()
 			}
@@ -212,21 +214,21 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return todo()
 	case KeyLit:
 		exp := exp.(KeyLit)
-		return exp.Key
+		return KeyVal{exp.Key}
 	case BoolLit:
 		exp := exp.(BoolLit)
-		return exp.Val
+		return BoolVal{exp.Val}
 	case IntLit:
 		exp := exp.(IntLit)
-		return exp.Val
+		return IntVal{exp.Val}
 	case KoinLit:
 		exp := exp.(KoinLit)
-		return exp.Val
+		return KoinVal{exp.Val}
 	case StringLit:
 		exp := exp.(StringLit)
-		return exp.Val
+		return StringVal{exp.Val}
 	case UnitLit:
-		return nil
+		return UnitVal{}
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()
