@@ -25,7 +25,6 @@ func InterpretContractCall(texp TypedExp, param Parameter, entry string, stor St
 	for _, e := range exp.Roots {
 		switch e.(type) {
 		case TypeDecl:
-
 		case EntryExpression:
 			e := e.(EntryExpression)
 			if e.Id == entry { //TODO add parameters to VarEnv
@@ -46,10 +45,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	switch exp.(type) {
 	case BinOpExp:
 		exp := exp.(BinOpExp)
+		leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
+		rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 		switch exp.Op {
 		case PLUS:
-			leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
-			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
 				return leftval.(float64) + rightval.(float64)
@@ -61,8 +60,6 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				return todo()
 			}
 		case MINUS:
-			leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
-			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch exp.Left.(TypedExp).Type.Type() {
 			case INT, NAT:
 				return leftval.(int64) - rightval.(int64)
@@ -72,8 +69,6 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				return todo()
 			}
 		case TIMES:
-			leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
-			rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
 			switch texp.Type.Type() {
 			case INT:
 				return leftval.(int64) * rightval.(int64)
@@ -85,11 +80,14 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				return todo()
 			}
 		case DIVIDE:
+			switch texp.Type.Type() {
+
+			}
 			return todo()
 		case EQ:
-			return todo()
+			return leftval == rightval
 		case NEQ:
-			return todo()
+			return leftval == rightval
 		case GEQ:
 			return todo()
 		case LEQ:

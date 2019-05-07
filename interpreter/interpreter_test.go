@@ -109,6 +109,10 @@ func TestStructInStruct(t *testing.T) {
 	testFileNoError(t, "test_cases/structinstruct_semant")
 }
 
+func TestBinopExp(t *testing.T) {
+	testFileNoError(t, "test_cases/binopexp_semant")
+}
+
 /* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {
