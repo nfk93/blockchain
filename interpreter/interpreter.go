@@ -196,21 +196,71 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		case DIVIDE:
 			return todo()
 		case EQ:
-			return leftval == rightval
+			return BoolVal{leftval == rightval}
 		case NEQ:
-			return leftval == rightval
+			return BoolVal{leftval == rightval}
 		case GEQ:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return BoolVal{leftval.(NatVal).Value >= rightval.(NatVal).Value}
+			case INT:
+				return BoolVal{leftval.(IntVal).Value >= rightval.(IntVal).Value}
+			case KOIN:
+				return BoolVal{leftval.(KoinVal).Value >= rightval.(KoinVal).Value}
+			default:
+				return todo()
+			}
 		case LEQ:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return BoolVal{leftval.(NatVal).Value <= rightval.(NatVal).Value}
+			case INT:
+				return BoolVal{leftval.(IntVal).Value <= rightval.(IntVal).Value}
+			case KOIN:
+				return BoolVal{leftval.(KoinVal).Value <= rightval.(KoinVal).Value}
+			default:
+				return todo()
+			}
 		case LT:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return BoolVal{leftval.(NatVal).Value < rightval.(NatVal).Value}
+			case INT:
+				return BoolVal{leftval.(IntVal).Value < rightval.(IntVal).Value}
+			case KOIN:
+				return BoolVal{leftval.(KoinVal).Value < rightval.(KoinVal).Value}
+			default:
+				return todo()
+			}
 		case GT:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return BoolVal{leftval.(NatVal).Value > rightval.(NatVal).Value}
+			case INT:
+				return BoolVal{leftval.(IntVal).Value > rightval.(IntVal).Value}
+			case KOIN:
+				return BoolVal{leftval.(KoinVal).Value > rightval.(KoinVal).Value}
+			default:
+				return todo()
+			}
 		case AND:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return NatVal{leftval.(NatVal).Value & rightval.(NatVal).Value}
+			case BOOL:
+				return BoolVal{leftval.(BoolVal).Value && rightval.(BoolVal).Value}
+			default:
+				return todo()
+			}
 		case OR:
-			return todo()
+			switch exp.Right.(TypedExp).Type.Type() {
+			case NAT:
+				return NatVal{leftval.(NatVal).Value | rightval.(NatVal).Value}
+			case BOOL:
+				return BoolVal{leftval.(BoolVal).Value || rightval.(BoolVal).Value}
+			default:
+				return todo()
+			}
 		default:
 			return todo()
 		}
