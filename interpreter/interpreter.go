@@ -160,9 +160,19 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		case MINUS:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case INT:
-				return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
+				switch exp.Right.(TypedExp).Type.Type() {
+				case INT:
+					return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
+				case NAT:
+					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}
+				}
 			case NAT:
-				return IntVal{int64(leftval.(NatVal).Value - rightval.(NatVal).Value)}
+				switch exp.Right.(TypedExp).Type.Type() {
+				case INT:
+					return IntVal{int64(leftval.(NatVal).Value) - rightval.(IntVal).Value}
+				case NAT:
+					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}
+				}
 			case KOIN:
 				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
 			default:
