@@ -133,7 +133,7 @@ func TestInterpretBinOps(t *testing.T) {
 func TestInterpretConstant(t *testing.T) {
 	texp := getTypedAST(t, "test_cases/constant_interp")
 	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", emptylist)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{IntVal{13}})
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 15 {

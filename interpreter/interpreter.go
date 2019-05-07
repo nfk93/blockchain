@@ -14,6 +14,7 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
+		e := e.(TypedExp).Exp
 		switch e.(type) {
 		case TypeDecl:
 		case EntryExpression:
