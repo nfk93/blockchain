@@ -6,6 +6,7 @@ import (
 	"github.com/nfk93/blockchain/interpreter/parser"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -111,6 +112,41 @@ func TestStructInStruct(t *testing.T) {
 
 /* Interpreter tests */
 
+func TestInterpretBinOps(t *testing.T) {
+	texp := getTypedAST(t, "test_cases/binop_interp")
+	params := []Value{IntVal{13}, IntVal{17}}
+	storage := []Value{IntVal{19}}
+	oplist, sto := InterpretContractCall(texp, params, "main", storage)
+	switch sto.(type) {
+	case IntVal:
+		if sto.(IntVal).Value != 13+17+19 {
+			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Error("oplist isn't empty")
+	}
+}
+
+func TestInterpretConstant(t *testing.T) {
+	texp := getTypedAST(t, "test_cases/constant_interp")
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", emptylist)
+	switch sto.(type) {
+	case IntVal:
+		if sto.(IntVal).Value != 15 {
+			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Error("oplist isn't empty")
+	}
+}
+
 func TestCheckParams(t *testing.T) {
 	stringval := StringVal{"ey"}
 	stringtype := StringType{}
@@ -134,8 +170,8 @@ func TestCheckParams(t *testing.T) {
 	if checkParam(listVal1, ListType{StringType{}}) {
 		t.Errorf("3")
 	}
-	tupleval1 := TupleValue{[]Value{TupleValue{[]Value{IntVal{1}, IntVal{2}}}, StringVal{"ey"}}}
-	tupleval2 := TupleValue{[]Value{TupleValue{[]Value{IntVal{1}, IntVal{2}}}, IntVal{123}}}
+	tupleval1 := TupleVal{[]Value{TupleVal{[]Value{IntVal{1}, IntVal{2}}}, StringVal{"ey"}}}
+	tupleval2 := TupleVal{[]Value{TupleVal{[]Value{IntVal{1}, IntVal{2}}}, IntVal{123}}}
 	tupletyp1 := TupleType{[]Type{TupleType{[]Type{IntType{}, IntType{}}}, StringType{}}}
 	if !checkParam(tupleval1, tupletyp1) {
 		t.Errorf("4")
@@ -144,7 +180,9 @@ func TestCheckParams(t *testing.T) {
 		t.Errorf("5")
 	}
 
-	structval := StructVal{[]StructFieldVal{StructFieldVal{"a", IntVal{123}}, StructFieldVal{"b", StringVal{"eyyyyy"}}}}
+	structval := createStruct()
+	structval.Field["a"] = IntVal{123}
+	structval.Field["b"] = StringVal{"eytyyyyy"}
 	structtyp1 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", StringType{}}}}
 	structtyp2 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"c", StringType{}}}}
 	structtyp3 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", IntType{}}}}
@@ -215,6 +253,20 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 			}
 		}
 	}
+}
+
+func getTypedAST(t *testing.T, testpath string) TypedExp {
+	dat, err := ioutil.ReadFile(testpath)
+	if err != nil {
+		t.Error("Error reading testfile:", testpath)
+	}
+	lex := lexer.NewLexer(dat)
+	p := parser.NewParser()
+	par, err := p.Parse(lex)
+	if err != nil {
+		t.Errorf("parse error: " + err.Error())
+	}
+	return AddTypes(par.(Exp))
 }
 
 func checkForErrorTypes(texp_ Exp) bool {

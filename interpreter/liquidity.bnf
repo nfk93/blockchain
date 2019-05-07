@@ -66,7 +66,8 @@ string_lit  : '"' {.} '"' ;
 
 _digit      : '0'-'9' ;
 _amount     : _digit { _digit } ;
-koin_lit    : _amount 'k' 'n' ;
+koin_lit    : _amount '.' _amount 'k' 'n'
+            | _amount 'k' 'n' ;
 nat_lit     : _amount 'p' ;
 int_lit     : {'-'} _digit { _digit } ;
 

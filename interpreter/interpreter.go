@@ -10,23 +10,27 @@ func todo() int {
 	return 0
 }
 
-func InterpretContractCall(texp TypedExp, params []interface{}, entry string, stor []interface{}) ([]Operation, interface{}) {
+func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []Value) ([]Operation, Value) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
 		switch e.(type) {
 		case TypeDecl:
-
 		case EntryExpression:
 			e := e.(EntryExpression)
 			if e.Id == entry {
+				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
 					return []Operation{failwith(err.Error())}, nil
-				} else {
-					bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
-					return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
 				}
+				// apply storage to venv
+				venv, err = applyParams(stor, e.Storage, venv)
+				if err != nil {
+					return []Operation{failwith("storage doesn't match storage type definition")}, nil
+				}
+				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
+				return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
 			}
 		}
 	}

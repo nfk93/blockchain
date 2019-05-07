@@ -43,8 +43,8 @@ func NewUnOpExp(oper, exp interface{}) (Exp, error) {
 
 /* Simple Type Declaration */
 type TypeDecl struct {
-	id  string
-	typ Type
+	Id  string
+	Typ Type
 }
 
 func NewTypeDecl(id string, typ interface{}) (Exp, error) {
@@ -52,7 +52,7 @@ func NewTypeDecl(id string, typ interface{}) (Exp, error) {
 }
 
 func (e TypeDecl) String() string {
-	return fmt.Sprintf("TypeDecl(Id: %s, Typ: %s)", e.id, e.typ.String())
+	return fmt.Sprintf("TypeDecl(Id: %s, Typ: %s)", e.Id, e.Typ.String())
 }
 
 /* Top Level */
@@ -259,7 +259,7 @@ func (k KoinLit) String() string {
 	return fmt.Sprintf("KoinLit(val: %d)", k.Val)
 }
 
-func NewKoinLit(koins int64) (Exp, error) {
+func NewKoinLit(koins float64) (Exp, error) {
 	if koins < 0 {
 		err := "koin literal can't have negative value"
 		return ErrorExpression{err}, nil

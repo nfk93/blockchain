@@ -31,9 +31,9 @@ func ParseString(str interface{}) string {
 	return string(str.(*token.Token).Lit)
 }
 
-func ParseKoin(kn interface{}) int64 {
+func ParseKoin(kn interface{}) float64 {
 	knstr := string(kn.(*token.Token).Lit)
-	knval, _ := strconv.ParseInt(knstr[:len(knstr)-2], 10, 64)
+	knval, _ := strconv.ParseFloat(knstr[:len(knstr)-2], 64)
 	return knval
 }
 
