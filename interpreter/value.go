@@ -27,7 +27,7 @@ type BoolVal struct {
 }
 
 type KoinVal struct {
-	Value int64
+	Value float64
 }
 
 type OperationVal struct {
@@ -43,16 +43,12 @@ type ListVal struct {
 	Values []Value
 }
 
-type UnitValue struct{}
+type UnitVal struct{}
 
-type TupleValue struct {
+type TupleVal struct {
 	Values []Value
 }
 
 type StructVal struct {
-	Fields []StructFieldVal
-}
-type StructFieldVal struct {
-	Id    string
-	Value interface{}
+	Field map[string]Value
 }

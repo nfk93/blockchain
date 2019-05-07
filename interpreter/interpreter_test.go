@@ -159,7 +159,7 @@ func TestCheckParams(t *testing.T) {
 	}
 
 	optval1 := OptionVal{tupleval1, true}
-	optval2 := OptionVal{UnitValue{}, false}
+	optval2 := OptionVal{UnitVal{}, false}
 	opttyp1 := OptionType{tupletyp1}
 	opttyp2 := OptionType{IntType{}}
 	if !checkParam(optval1, opttyp1) {

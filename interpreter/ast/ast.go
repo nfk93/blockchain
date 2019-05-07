@@ -252,7 +252,7 @@ func NewAddressLit(val []byte) (Exp, error) {
 
 /* KoinType Lit */
 type KoinLit struct {
-	Val int64
+	Val float64
 }
 
 func (k KoinLit) String() string {

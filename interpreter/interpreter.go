@@ -10,20 +10,13 @@ func todo() int {
 	return 0
 }
 
-type InterpreterStruct struct {
-	Field map[string]interface{}
-}
-
-type Tuple struct {
-	Values []interface{}
-}
-
 func InterpretContractCall(texp TypedExp, params []interface{}, entry string, stor []interface{}) ([]Operation, interface{}) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
 		switch e.(type) {
 		case TypeDecl:
+
 		case EntryExpression:
 			e := e.(EntryExpression)
 			if e.Id == entry {
@@ -31,7 +24,7 @@ func InterpretContractCall(texp TypedExp, params []interface{}, entry string, st
 				if err != nil {
 					return []Operation{failwith(err.Error())}, nil
 				} else {
-					bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(Tuple)
+					bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
 					return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
 				}
 			}
@@ -75,10 +68,10 @@ func checkParam(param interface{}, typ Type) bool {
 		_, ok := param.(OperationVal)
 		return ok
 	case UNIT:
-		_, ok := param.(UnitValue)
+		_, ok := param.(UnitVal)
 		return ok
 	case TUPLE:
-		val, ok := param.(TupleValue)
+		val, ok := param.(TupleVal)
 		if !ok {
 			return false
 		}
@@ -123,11 +116,13 @@ func checkParam(param interface{}, typ Type) bool {
 		if !ok {
 			return false
 		}
-		if len(val.Fields) != len(structtype.Fields) {
+		if len(val.Field) != len(structtype.Fields) {
 			return false
 		}
-		for i, field := range val.Fields {
-			ok = ok && field.Id == structtype.Fields[i].Id && checkParam(field.Value, structtype.Fields[i].Typ)
+		i := 0
+		for fieldname, value := range val.Field {
+			ok = ok && fieldname == structtype.Fields[i].Id && checkParam(value, structtype.Fields[i].Typ)
+			i++
 		}
 		return ok
 	default:
@@ -139,8 +134,8 @@ func failwith(str string) FailWith {
 	return FailWith{str}
 }
 
-func createStruct() InterpreterStruct {
-	return InterpreterStruct{make(map[string]interface{})}
+func createStruct() StructVal {
+	return StructVal{make(map[string]Value)}
 }
 
 func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interface{} {
@@ -154,38 +149,37 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		case PLUS:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
-				return leftval.(float64) + rightval.(float64)
+				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}
 			case NAT:
-				return leftval.(uint64) + rightval.(uint64)
+				return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}
 			case INT:
-				return leftval.(int64) + rightval.(int64)
+				return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
 			default:
 				return todo()
 			}
 		case MINUS:
 			switch exp.Left.(TypedExp).Type.Type() {
-			case INT, NAT:
-				return leftval.(int64) - rightval.(int64)
+			case INT:
+				return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
+			case NAT:
+				return IntVal{int64(leftval.(NatVal).Value - rightval.(NatVal).Value)}
 			case KOIN:
-				return leftval.(float64) - rightval.(float64)
+				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
 			default:
 				return todo()
 			}
 		case TIMES:
 			switch texp.Type.Type() {
 			case INT:
-				return leftval.(int64) * rightval.(int64)
+				return IntVal{leftval.(IntVal).Value * rightval.(IntVal).Value}
 			case NAT:
-				return leftval.(uint64) * rightval.(uint64)
+				return NatVal{leftval.(NatVal).Value * rightval.(NatVal).Value}
 			case KOIN:
-				return leftval.(float64) * rightval.(float64)
+				return KoinVal{leftval.(KoinVal).Value * rightval.(KoinVal).Value}
 			default:
 				return todo()
 			}
 		case DIVIDE:
-			switch texp.Type.Type() {
-
-			}
 			return todo()
 		case EQ:
 			return leftval == rightval
@@ -210,21 +204,21 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return todo()
 	case KeyLit:
 		exp := exp.(KeyLit)
-		return exp.Key
+		return KeyVal{exp.Key}
 	case BoolLit:
 		exp := exp.(BoolLit)
-		return exp.Val
+		return BoolVal{exp.Val}
 	case IntLit:
 		exp := exp.(IntLit)
-		return exp.Val
+		return IntVal{exp.Val}
 	case KoinLit:
 		exp := exp.(KoinLit)
-		return exp.Val
+		return KoinVal{exp.Val}
 	case StringLit:
 		exp := exp.(StringLit)
-		return exp.Val
+		return StringVal{exp.Val}
 	case UnitLit:
-		return nil
+		return UnitVal{}
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()
@@ -237,11 +231,11 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		if len(exp.List) == 0 {
 			return nil
 		}
-		var returnlist []interface{}
+		var returnlist []Value
 		for _, e := range exp.List {
 			returnlist = append(returnlist, interpret(e.(TypedExp), venv, tenv, senv))
 		}
-		return returnlist
+		return ListVal{returnlist}
 	case ListConcat:
 		return todo()
 	case CallExp:
@@ -252,31 +246,31 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return todo()
 	case TupleExp:
 		exp := exp.(TupleExp)
-		var tupleValues []interface{}
+		var tupleValues []Value
 		for _, e := range exp.Exps {
 			interE := interpret(e.(TypedExp), venv, tenv, senv)
 			tupleValues = append(tupleValues, interE)
 		}
-		return Tuple{tupleValues}
+		return TupleVal{tupleValues}
 	case VarExp:
 		return todo()
 	case ExpSeq:
 		return todo()
 	case IfThenElseExp:
 		exp := exp.(IfThenElseExp)
-		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(bool)
+		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(bool)
+			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		} else {
-			return interpret(exp.Else.(TypedExp), venv, tenv, senv).(bool)
+			return interpret(exp.Else.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		}
 	case IfThenExp:
 		exp := exp.(IfThenExp)
-		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(bool)
+		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(bool)
+			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		}
-		return nil
+		return UnitVal{}
 	case ModuleLookupExp:
 		return todo()
 	case LookupExp:
