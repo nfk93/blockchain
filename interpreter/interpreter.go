@@ -231,11 +231,12 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return UnitVal{}
 	case StructLit:
 		exp := exp.(StructLit)
-		newStruct := createStruct()
+		fieldlist := make([]StructFieldVal, len(exp.Vals))
 		for i, id := range exp.Ids {
-			newStruct.Field[id] = interpret(exp.Vals[i].(TypedExp), venv, tenv, senv)
+			fieldval := interpret(exp.Vals[i].(TypedExp), venv, tenv, senv)
+			fieldlist = append(fieldlist, StructFieldVal{id, fieldval})
 		}
-		return newStruct
+		return StructVal{fieldlist}
 	case ListLit:
 		exp := exp.(ListLit)
 		if len(exp.List) == 0 {
