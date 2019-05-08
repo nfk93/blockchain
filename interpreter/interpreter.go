@@ -23,12 +23,12 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
-					return []Operation{failwith(err.Error())}, nil
+					return []Operation{failwith(err.Error())}, stor // TODO return original storage
 				}
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, nil
+					return []Operation{failwith("storage doesn't match storage type definition")}, nil // TODO return original storage
 				}
 				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
 				opvallist := bodyTuple.Values[0].(ListVal).Values
@@ -76,6 +76,9 @@ func checkParam(param interface{}, typ Type) bool {
 		return ok
 	case OPERATION:
 		_, ok := param.(OperationVal)
+		return ok
+	case ADDRESS:
+		_, ok := param.(AddressVal)
 		return ok
 	case UNIT:
 		_, ok := param.(UnitVal)
@@ -291,8 +294,14 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case StringLit:
 		exp := exp.(StringLit)
 		return StringVal{exp.Val}
+	case NatLit:
+		exp := exp.(NatLit)
+		return NatVal{exp.Val}
 	case UnitLit:
 		return UnitVal{}
+	case AddressLit:
+		exp := exp.(AddressLit)
+		return AddressVal{exp.Val}
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()

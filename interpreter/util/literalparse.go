@@ -9,12 +9,12 @@ func ParseId(id interface{}) string {
 	return string(id.(*token.Token).Lit)
 }
 
-func ParseKey(key interface{}) []byte {
-	return key.(*token.Token).Lit
+func ParseKey(key interface{}) string {
+	return string(key.(*token.Token).Lit)[3:]
 }
 
-func ParseAddress(add interface{}) []byte {
-	return add.(*token.Token).Lit
+func ParseAddress(add interface{}) string {
+	return string(add.(*token.Token).Lit)[3:]
 }
 
 func ParseFloat(float interface{}) float64 {
@@ -40,6 +40,7 @@ func ParseKoin(kn interface{}) float64 {
 }
 
 func ParseNat(i interface{}) uint64 {
-	uint, _ := strconv.ParseUint(string(i.(*token.Token).Lit), 10, 64)
-	return uint
+	str := string(i.(*token.Token).Lit)
+	val, _ := strconv.ParseUint(str[:(len(str)-1)], 10, 64)
+	return val
 }
