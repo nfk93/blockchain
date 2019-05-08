@@ -195,7 +195,7 @@ Type1       : lparen Type rparen                                << $1, nil >>
             | address                                           << ast.NewAddressType(), nil >>
             | Type1 option                                      << ast.NewOptionType($0), nil >>
             | Type1 list                                        << ast.NewListType($0), nil >>
-            | lident                                            << ast.NewDeclaredType(util.ParseString($0)), nil >> ;
+            | lident                                            << ast.NewDeclaredType(util.ParseId($0)), nil >> ;
 Tupletype   : Type1 ast Tupletype                               << ast.PrependTypeList($0, $2), nil >>
             | Type1 ast Type1                                   << ast.NewTypeList($0, $2), nil >> ;
 

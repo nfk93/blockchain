@@ -18,6 +18,10 @@ func TestTopLevelError1(t *testing.T) {
 	testFileError(t, "test_cases/toplevel1_semant")
 }
 
+func TestBinopExp(t *testing.T) {
+	testFileNoError(t, "test_cases/binopexp_semant")
+}
+
 func TestTopLevelError2(t *testing.T) {
 	testFileError(t, "test_cases/toplevel2_semant")
 }
@@ -106,32 +110,15 @@ func TestCallExp(t *testing.T) {
 	testFileNoError(t, "test_cases/callexp_semant")
 }
 
+/* Interpreter tests */
+
 func TestStructInStruct(t *testing.T) {
 	testFileNoError(t, "test_cases/structinstruct_semant")
 }
 
-/* Interpreter tests */
-
-func TestInterpretBinOps(t *testing.T) {
-	texp := getTypedAST(t, "test_cases/binop_interp")
-	params := []Value{IntVal{13}, IntVal{17}}
-	storage := []Value{IntVal{19}}
-	oplist, sto := InterpretContractCall(texp, params, "main", storage)
-	switch sto.(type) {
-	case IntVal:
-		if sto.(IntVal).Value != 13+17+19 {
-			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
-		}
-	default:
-		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
-	}
-	if len(oplist) != 0 {
-		t.Error("oplist isn't empty")
-	}
-}
-
-func TestInterpretConstant(t *testing.T) {
-	texp := getTypedAST(t, "test_cases/constant_interp")
+func TestIntConstant(t *testing.T) {
+	testpath := "test_cases/constants/int"
+	texp := getTypedAST(t, testpath)
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{IntVal{13}})
 	switch sto.(type) {
@@ -143,7 +130,208 @@ func TestInterpretConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Error("oplist isn't empty")
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestAddressConstant(t *testing.T) {
+	testpath := "test_cases/constants/address"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{AddressVal{"123123aA"}})
+	switch sto.(type) {
+	case AddressVal:
+		if sto.(AddressVal).Value != "3132141AAAa" {
+			t.Errorf("storage has unexpected value of %s", sto.(AddressVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type")
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestBoolConstant(t *testing.T) {
+	testpath := "test_cases/constants/bool"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{BoolVal{true}})
+	switch sto.(type) {
+	case BoolVal:
+		if sto.(BoolVal).Value != false {
+			t.Errorf("storage has unexpected value of %t", sto.(BoolVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestDeclaredConstant(t *testing.T) {
+	testpath := "test_cases/constants/declared"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main",
+		[]Value{TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}}})
+	switch sto.(type) {
+	case TupleVal:
+		sto := sto.(TupleVal)
+		if sto.Values[0].(IntVal).Value != 4 {
+			t.Errorf("storage has unexpected value")
+		}
+		if sto.Values[1].(TupleVal).Values[0].(IntVal).Value != 5 {
+			t.Errorf("storage has unexpected value")
+		}
+		if sto.Values[1].(TupleVal).Values[1].(StringVal).Value != "bye" {
+			t.Errorf("storage has unexpected value of %s",
+				sto.Values[1].(TupleVal).Values[1].(StringVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestKeyConstant(t *testing.T) {
+	testpath := "test_cases/constants/key"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KeyVal{"1212Ddd"}})
+	switch sto.(type) {
+	case KeyVal:
+		if sto.(KeyVal).Value != "aaAAaaA" {
+			t.Errorf("storage has unexpected value of %s", sto.(KeyVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestKoinConstant(t *testing.T) {
+	testpath := "test_cases/constants/koin"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{1.1}})
+	switch sto.(type) {
+	case KoinVal:
+		if sto.(KoinVal).Value != 133.55 {
+			t.Errorf("storage has unexpected value of %f", sto.(KoinVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestListConstant(t *testing.T) {
+	testpath := "test_cases/constants/list"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{ListVal{[]Value{IntVal{2}}}})
+	switch sto.(type) {
+	case ListVal:
+		sto := sto.(ListVal)
+		if sto.Values[0].(IntVal).Value != 7 {
+			t.Errorf("storage has unexpected value")
+		}
+		if sto.Values[1].(IntVal).Value != 9 {
+			t.Errorf("storage has unexpected value")
+		}
+		if sto.Values[2].(IntVal).Value != 13 {
+			t.Errorf("storage has unexpected value of %d at index 2", sto.Values[2].(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestNatConstant(t *testing.T) {
+	testpath := "test_cases/constants/nat"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{NatVal{13}})
+	switch sto.(type) {
+	case NatVal:
+		if sto.(NatVal).Value != 117 {
+			t.Errorf("storage has unexpected value of %d", sto.(NatVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestStringConstant(t *testing.T) {
+	testpath := "test_cases/constants/string"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{StringVal{"eymom"}})
+	switch sto.(type) {
+	case StringVal:
+		if !(sto.(StringVal).Value == "dank") {
+			t.Errorf("storage has unexpected value of %s", sto.(StringVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestUnitConstant(t *testing.T) {
+	testpath := "test_cases/constants/string"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
+	switch sto.(type) {
+	case UnitVal:
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
+func TestStructConstant(t *testing.T) {
+	testpath := "test_cases/constants/string"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	storageinit := createStruct()
+	storageinit.Field["a"] = IntVal{1213}
+	storageinit.Field["b"] = StringVal{"ey mom"}
+	oplist, sto := InterpretContractCall(texp, emptylist, "main",
+		[]Value{storageinit})
+	switch sto.(type) {
+	case StructVal:
+		sto := sto.(StructVal)
+		if sto.Field["a"].(IntVal).Value != 1111 {
+			t.Errorf("storage has unexpected value of %d", sto.Field["a"])
+		}
+		if sto.Field["b"].(StringVal).Value != "asdasd" {
+			t.Errorf("storage has unexpected value of %d", sto.Field["b"])
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
 	}
 }
 
@@ -214,8 +402,22 @@ func TestCheckParams(t *testing.T) {
 	}
 }
 
-func TestBinopExp(t *testing.T) {
-	testFileNoError(t, "test_cases/binopexp_semant")
+func TestInterpretBinOps(t *testing.T) {
+	texp := getTypedAST(t, "test_cases/binop_interp")
+	params := []Value{IntVal{13}, IntVal{17}}
+	storage := []Value{IntVal{19}}
+	oplist, sto := InterpretContractCall(texp, params, "main", storage)
+	switch sto.(type) {
+	case IntVal:
+		if sto.(IntVal).Value != 13+17+19 {
+			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Error("oplist isn't empty")
+	}
 }
 
 /* Helper functions */

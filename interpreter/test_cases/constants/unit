@@ -1,0 +1,5 @@
+type storage = unit
+
+let%init storage = ()
+
+let%entry main () s = (([] : operation list), ())

@@ -1,0 +1,5 @@
+type storage = {a = int; b = string;}
+
+let%init storage = {a = 1; b = "hi";}
+
+let%entry main () s = (([] : operation list), {a = 1111; b = "asdasd";})
