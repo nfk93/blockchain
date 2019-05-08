@@ -10,6 +10,15 @@ func todo() int {
 	return 0
 }
 
+func lookupVar(id string, venv VarEnv) Value {
+	val, contained := venv.Lookup(id)
+	if contained {
+		return val
+	} else {
+		return nil
+	}
+}
+
 func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []Value) ([]Operation, Value) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
@@ -199,7 +208,38 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				return todo()
 			}
 		case DIVIDE:
-			return todo()
+			switch exp.Left.(TypedExp).Type.Type() {
+			case KOIN:
+				switch exp.Right.(TypedExp).Type.Type() {
+				case KOIN:
+					if rightval.(KoinVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
+					return todo()
+				default:
+					return todo()
+				}
+			case INT:
+				switch exp.Right.(TypedExp).Type.Type() {
+				case INT:
+					left := leftval.(IntVal).Value
+					right := rightval.(IntVal).Value
+					quotient, remainder := left/right, left%right
+					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
+					return OptionVal{TupleVal{values}, true}
+				case NAT:
+					left := leftval.(IntVal).Value
+					right := int64(rightval.(NatVal).Value)
+					quotient, remainder := left/right, left%right
+					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
+					return OptionVal{TupleVal{values}, true}
+				default:
+					return todo()
+				}
+
+			default:
+				return todo()
+			}
 		case EQ:
 			return BoolVal{leftval == rightval}
 		case NEQ:
@@ -288,6 +328,9 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return StringVal{exp.Val}
 	case UnitLit:
 		return UnitVal{}
+	case NatLit:
+		exp := exp.(NatLit)
+		return NatVal{exp.Val}
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()
@@ -332,21 +375,38 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		exp := exp.(IfThenElseExp)
 		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(BoolVal).Value
+			return interpret(exp.Then.(TypedExp), venv, tenv, senv)
 		} else {
-			return interpret(exp.Else.(TypedExp), venv, tenv, senv).(BoolVal).Value
+			return interpret(exp.Else.(TypedExp), venv, tenv, senv)
 		}
 	case IfThenExp:
 		exp := exp.(IfThenExp)
 		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv).(BoolVal).Value
+			return interpret(exp.Then.(TypedExp), venv, tenv, senv)
 		}
 		return UnitVal{}
 	case ModuleLookupExp:
+		exp := exp.(ModuleLookupExp)
+		switch exp.ModId {
+		case "current":
+			switch exp.FieldId {
+
+			}
+		}
 		return todo()
+
 	case LookupExp:
-		return todo()
+		exp := exp.(LookupExp)
+		var structVal StructVal
+		for i, id := range exp.PathIds {
+			if i == 0 {
+				structVal = lookupVar(id, venv).(StructVal)
+			} else {
+				structVal = structVal.Field[id].(StructVal)
+			}
+		}
+		return structVal.Field[exp.LeafId]
 	case UpdateStructExp:
 		return todo()
 	case StorageInitExp:
