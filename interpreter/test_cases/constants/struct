@@ -1,4 +1,4 @@
-type storage = {a = int; b = string;}
+type storage = {a : int; b : string;}
 
 let%init storage = {a = 1; b = "hi";}
 

@@ -145,7 +145,7 @@ func TestAddressConstant(t *testing.T) {
 			t.Errorf("storage has unexpected value of %s", sto.(AddressVal).Value)
 		}
 	default:
-		t.Errorf("storage isn't expected type")
+		t.Errorf("storage isn't expected type but of type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty for test %s", testpath)
@@ -295,7 +295,7 @@ func TestStringConstant(t *testing.T) {
 }
 
 func TestUnitConstant(t *testing.T) {
-	testpath := "test_cases/constants/string"
+	testpath := "test_cases/constants/unit"
 	texp := getTypedAST(t, testpath)
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
@@ -310,7 +310,7 @@ func TestUnitConstant(t *testing.T) {
 }
 
 func TestStructConstant(t *testing.T) {
-	testpath := "test_cases/constants/string"
+	testpath := "test_cases/constants/struct"
 	texp := getTypedAST(t, testpath)
 	emptylist := make([]Value, 0)
 	storageinit := createStruct()

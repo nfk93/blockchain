@@ -182,14 +182,8 @@ func (k KeyLit) String() string {
 	return fmt.Sprintf("KeyLit(key: %s)", k.Key)
 }
 
-func NewKeyLit(key []byte) (Exp, error) {
-	actualkey := string(key)[3:]
-	if checkKey(key) {
-		return KeyLit{actualkey}, nil
-	} else {
-		err := "key is not valid"
-		return ErrorExpression{err}, errors.Errorf(err)
-	}
+func NewKeyLit(key string) (Exp, error) {
+	return KeyLit{key}, nil
 }
 
 func checkKey(key []byte) bool {
@@ -245,9 +239,8 @@ func (a AddressLit) String() string {
 	return fmt.Sprintf("AddressLit(val: %s)", a.Val)
 }
 
-func NewAddressLit(val []byte) (Exp, error) {
-	actualaddr := string(val)[3:]
-	return AddressLit{actualaddr}, nil
+func NewAddressLit(val string) (Exp, error) {
+	return AddressLit{val}, nil
 }
 
 /* KoinType Lit */
