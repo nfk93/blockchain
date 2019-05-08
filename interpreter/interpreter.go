@@ -212,7 +212,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			default:
 				return todo()
 			}
-		case DIVIDE:
+		case DIVIDE: // TODO handle more cases
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -374,7 +374,8 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		}
 		return TupleVal{tupleValues}
 	case VarExp:
-		return todo()
+		exp := exp.(VarExp)
+		return lookupVar(exp.Id, venv)
 	case ExpSeq:
 		return todo()
 	case IfThenElseExp:
@@ -397,10 +398,36 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		switch exp.ModId {
 		case "current":
 			switch exp.FieldId {
-
+			case "balance":
+				return LambdaVal{CURRENT_BALANCE}
+			case "amount":
+				return LambdaVal{CURRENT_AMOUNT}
+			case "gas":
+				return LambdaVal{CURRENT_GAS}
+			case "failwith":
+				return LambdaVal{CURRENT_FAILWITH}
+			default:
+				return todo()
 			}
+		case "contract":
+			switch exp.FieldId {
+			case "call":
+				return LambdaVal{CONTRACT_CALL}
+			default:
+				return todo()
+			}
+		case "account":
+			switch exp.FieldId {
+			case "transfer":
+				return LambdaVal{ACCOUNT_TRANSFER}
+			case "default":
+				return LambdaVal{ACCOUNT_DEFAULT}
+			default:
+				return todo()
+			}
+		default:
+			return todo()
 		}
-		return todo()
 
 	case LookupExp:
 		exp := exp.(LookupExp)

@@ -52,3 +52,19 @@ type TupleVal struct {
 type StructVal struct {
 	Field map[string]Value
 }
+
+type LambdaVal struct {
+	Value ModuleLookup
+}
+
+type ModuleLookup int
+
+const (
+	CURRENT_BALANCE = iota
+	CURRENT_AMOUNT
+	CURRENT_GAS
+	CURRENT_FAILWITH
+	CONTRACT_CALL
+	ACCOUNT_TRANSFER
+	ACCOUNT_DEFAULT
+)
