@@ -31,7 +31,12 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 					return []Operation{failwith("storage doesn't match storage type definition")}, nil
 				}
 				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
-				return bodyTuple.Values[0].([]Operation), bodyTuple.Values[1]
+				opvallist := bodyTuple.Values[0].(ListVal).Values
+				var oplist []Operation
+				for _, v := range opvallist {
+					oplist = append(oplist, v.(OperationVal).Value)
+				}
+				return oplist, bodyTuple.Values[1]
 			}
 		}
 	}
@@ -298,7 +303,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case ListLit:
 		exp := exp.(ListLit)
 		if len(exp.List) == 0 {
-			return nil
+			return ListVal{make([]Value, 0)}
 		}
 		var returnlist []Value
 		for _, e := range exp.List {
@@ -315,7 +320,12 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case LetExp:
 		return todo()
 	case AnnoExp:
-		return todo()
+		exp := exp.(AnnoExp)
+		switch texp.Type.Type() {
+		case LIST:
+
+		}
+		return interpret(exp.Exp.(TypedExp), venv, tenv, senv)
 	case TupleExp:
 		exp := exp.(TupleExp)
 		var tupleValues []Value
