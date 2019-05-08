@@ -28,7 +28,9 @@ func ParseInt(i interface{}) int64 {
 }
 
 func ParseString(str interface{}) string {
-	return string(str.(*token.Token).Lit)
+	s := string(str.(*token.Token).Lit)[1:]
+	s = s[:(len(s) - 1)]
+	return s
 }
 
 func ParseKoin(kn interface{}) float64 {

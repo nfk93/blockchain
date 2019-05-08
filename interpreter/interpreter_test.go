@@ -294,6 +294,21 @@ func TestStringConstant(t *testing.T) {
 	}
 }
 
+func TestUnitConstant(t *testing.T) {
+	testpath := "test_cases/constants/string"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
+	switch sto.(type) {
+	case UnitVal:
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
 func TestStructConstant(t *testing.T) {
 	testpath := "test_cases/constants/string"
 	texp := getTypedAST(t, testpath)
@@ -312,21 +327,6 @@ func TestStructConstant(t *testing.T) {
 		if sto.Field["b"].(StringVal).Value != "asdasd" {
 			t.Errorf("storage has unexpected value of %d", sto.Field["b"])
 		}
-	default:
-		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
-	}
-	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
-	}
-}
-
-func TestUnitConstant(t *testing.T) {
-	testpath := "test_cases/constants/string"
-	texp := getTypedAST(t, testpath)
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
-	switch sto.(type) {
-	case UnitVal:
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}

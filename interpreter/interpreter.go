@@ -321,10 +321,6 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		return todo()
 	case AnnoExp:
 		exp := exp.(AnnoExp)
-		switch texp.Type.Type() {
-		case LIST:
-
-		}
 		return interpret(exp.Exp.(TypedExp), venv, tenv, senv)
 	case TupleExp:
 		exp := exp.(TupleExp)
