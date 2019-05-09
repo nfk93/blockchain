@@ -309,6 +309,25 @@ func TestUnitConstant(t *testing.T) {
 	}
 }
 
+func TestCurrentModule(t *testing.T) {
+	testpath := "test_cases/currentbalance_interp"
+	texp := getTypedAST(t, testpath)
+	emptylist := make([]Value, 0)
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
+	switch sto.(type) {
+	case KoinVal:
+		sto := sto.(KoinVal)
+		if sto.Value != 0.0 {
+			t.Errorf("return value is %f, expected 0.0", sto.Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty for test %s", testpath)
+	}
+}
+
 func TestStructConstant(t *testing.T) {
 	testpath := "test_cases/constants/struct"
 	texp := getTypedAST(t, testpath)

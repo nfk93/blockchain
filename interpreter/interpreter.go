@@ -10,6 +10,34 @@ func todo() int {
 	return 0
 }
 
+func currentBalance() KoinVal {
+	return KoinVal{0.0} //TODO return proper value
+}
+
+func currentAmount() KoinVal {
+	return KoinVal{0.0} //TODO return proper value
+}
+
+func currentGas() NatVal {
+	return NatVal{0} //TODO return proper value
+}
+
+func currentFailWith(failmessage StringVal) Operation {
+	return FailWith{failmessage.Value} //TODO add proper functionality
+}
+
+func contractCall(address AddressVal, gas KoinVal, param Value) Operation {
+	return FailWith{"dummmy"} //TODO add proper functionality
+}
+
+func accountTransfer(key KeyVal, amount KoinVal) Operation {
+	return FailWith{"dummmy"} //TODO add proper functionality
+}
+
+func accountDefault(key KeyVal) AddressVal {
+	return AddressVal{"dummy"} //TODO add proper funcitonality
+}
+
 func lookupVar(id string, venv VarEnv) Value {
 	val, contained := venv.Lookup(id)
 	if contained {
@@ -365,9 +393,39 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		list := interpret(exp.Exp.(TypedExp), venv, tenv, senv).(ListVal)
 		return ListVal{append(list.Values, e)}
 	case CallExp:
-		return todo()
+		exp := exp.(CallExp)
+		name := interpret(exp.ExpList[0].(TypedExp), venv, tenv, senv).(LambdaVal)
+		switch name.Value {
+		case CURRENT_BALANCE:
+			return currentBalance()
+		case CURRENT_AMOUNT:
+			return currentAmount()
+		case CURRENT_GAS:
+			return currentGas()
+		case CURRENT_FAILWITH:
+			failmessage := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(StringVal)
+			return currentFailWith(failmessage)
+		case CONTRACT_CALL:
+			address := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(AddressVal)
+			gas := interpret(exp.ExpList[2].(TypedExp), venv, tenv, senv).(KoinVal)
+			param := interpret(exp.ExpList[3].(TypedExp), venv, tenv, senv)
+			return contractCall(address, gas, param)
+		case ACCOUNT_TRANSFER:
+			key := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(KeyVal)
+			amount := interpret(exp.ExpList[2].(TypedExp), venv, tenv, senv).(KoinVal)
+			return accountTransfer(key, amount)
+		case ACCOUNT_DEFAULT:
+			key := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(KeyVal)
+			return accountDefault(key)
+		default:
+			return todo()
+		}
 	case LetExp:
-		return todo()
+		exp := exp.(LetExp)
+		varname := exp.Patt.Params[0].Id
+		value := interpret(exp.DefExp.(TypedExp), venv, tenv, senv)
+		venv_ := venv.Set(varname, value)
+		return interpret(exp.InExp.(TypedExp), venv_, tenv, senv)
 	case AnnoExp:
 		exp := exp.(AnnoExp)
 		return interpret(exp.Exp.(TypedExp), venv, tenv, senv)
