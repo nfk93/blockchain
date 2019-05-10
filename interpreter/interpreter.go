@@ -170,11 +170,20 @@ func checkParam(param interface{}, typ Type) bool {
 		if len(val.Field) != len(structtype.Fields) {
 			return false
 		}
-		i := 0
 		for fieldname, value := range val.Field {
-			ok = ok && fieldname == structtype.Fields[i].Id && checkParam(value, structtype.Fields[i].Typ)
-			i++
+			found := false
+			for _, f := range structtype.Fields {
+				if f.Id == fieldname {
+					ok = ok && checkParam(value, f.Typ)
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
 		}
+
 		return ok
 	default:
 		return false
@@ -186,7 +195,8 @@ func failwith(str string) FailWith {
 }
 
 func createStruct() StructVal {
-	return StructVal{make(map[string]Value)}
+	m := make(map[string]Value)
+	return StructVal{m}
 }
 
 func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interface{} {
