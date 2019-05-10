@@ -127,8 +127,8 @@ func TestIntConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{IntVal{13}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", IntVal{13})
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 15 {
@@ -138,7 +138,7 @@ func TestIntConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -149,8 +149,8 @@ func TestAddressConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{AddressVal{"123123aA"}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", AddressVal{"123123aA"})
 	switch sto.(type) {
 	case AddressVal:
 		if sto.(AddressVal).Value != "3132141AAAa" {
@@ -160,7 +160,7 @@ func TestAddressConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type but of type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -171,8 +171,8 @@ func TestBoolConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{BoolVal{true}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", BoolVal{true})
 	switch sto.(type) {
 	case BoolVal:
 		if sto.(BoolVal).Value != false {
@@ -182,7 +182,7 @@ func TestBoolConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -193,9 +193,9 @@ func TestDeclaredConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main",
-		[]Value{TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main",
+		TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}})
 	switch sto.(type) {
 	case TupleVal:
 		sto := sto.(TupleVal)
@@ -213,7 +213,7 @@ func TestDeclaredConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -224,8 +224,8 @@ func TestKeyConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KeyVal{"1212Ddd"}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KeyVal{"1212Ddd"})
 	switch sto.(type) {
 	case KeyVal:
 		if sto.(KeyVal).Value != "aaAAaaA" {
@@ -235,7 +235,7 @@ func TestKeyConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -246,8 +246,8 @@ func TestKoinConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{1.1}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{1.1})
 	switch sto.(type) {
 	case KoinVal:
 		if sto.(KoinVal).Value != 133.55 {
@@ -257,7 +257,7 @@ func TestKoinConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -268,8 +268,8 @@ func TestListConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{ListVal{[]Value{IntVal{2}}}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", ListVal{[]Value{IntVal{2}}})
 	switch sto.(type) {
 	case ListVal:
 		sto := sto.(ListVal)
@@ -286,7 +286,7 @@ func TestListConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -297,8 +297,8 @@ func TestNatConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{NatVal{13}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", NatVal{13})
 	switch sto.(type) {
 	case NatVal:
 		if sto.(NatVal).Value != 117 {
@@ -308,7 +308,7 @@ func TestNatConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -319,8 +319,8 @@ func TestStringConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{StringVal{"eymom"}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", StringVal{"eymom"})
 	switch sto.(type) {
 	case StringVal:
 		if !(sto.(StringVal).Value == "dank") {
@@ -330,7 +330,7 @@ func TestStringConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -341,15 +341,15 @@ func TestUnitConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", UnitVal{})
 	switch sto.(type) {
 	case UnitVal:
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -360,12 +360,12 @@ func TestStructConstant(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
+	unitval := UnitVal{}
 	storageinit := createStruct()
 	storageinit.Field["a"] = IntVal{1213}
 	storageinit.Field["b"] = TupleVal{[]Value{IntVal{5}, IntVal{6}}}
-	oplist, sto := InterpretContractCall(texp, emptylist, "main",
-		[]Value{storageinit})
+	oplist, sto := InterpretContractCall(texp, unitval, "main",
+		storageinit)
 	switch sto.(type) {
 	case StructVal:
 		sto, oksto := sto.(StructVal)
@@ -391,7 +391,7 @@ func TestStructConstant(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -402,8 +402,8 @@ func TestCurrentModule(t *testing.T) {
 		t.Fail()
 		return
 	}
-	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{10.0}})
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{10.0})
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
@@ -414,7 +414,7 @@ func TestCurrentModule(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty for test %s", testpath)
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -492,7 +492,7 @@ func TestInterpretUpdateStruct(t *testing.T) {
 		t.Fail()
 		return
 	}
-	params := []Value{IntVal{173}, StringVal{"newinner"}, StringVal{"newa"}}
+	params := TupleVal{[]Value{IntVal{173}, StringVal{"newinner"}, StringVal{"newa"}}}
 	innermost := createStruct()
 	innermost.Field["buried"] = IntVal{12}
 	innermost.Field["deep"] = StringVal{"very deep"}
@@ -503,7 +503,7 @@ func TestInterpretUpdateStruct(t *testing.T) {
 	storage.Field["a"] = StringVal{"test"}
 	storage.Field["b"] = inner
 
-	oplist, sto := InterpretContractCall(texp, params, "main", []Value{storage})
+	oplist, sto := InterpretContractCall(texp, params, "main", storage)
 	switch sto.(type) {
 	case StructVal:
 		sto := sto.(StructVal)
@@ -537,7 +537,7 @@ func TestInterpretUpdateStruct(t *testing.T) {
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
 	if len(oplist) != 0 {
-		t.Error("oplist isn't empty")
+		t.Errorf("oplist isn't empty but: %s", oplist)
 	}
 }
 
@@ -547,8 +547,8 @@ func TestInterpretBinOps(t *testing.T) {
 		t.Fail()
 		return
 	}
-	params := []Value{IntVal{13}, IntVal{17}}
-	storage := []Value{IntVal{19}}
+	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
+	storage := IntVal{19}
 	oplist, sto := InterpretContractCall(texp, params, "main", storage)
 	switch sto.(type) {
 	case IntVal:

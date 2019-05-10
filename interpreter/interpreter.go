@@ -47,7 +47,7 @@ func lookupVar(id string, venv VarEnv) Value {
 	}
 }
 
-func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []Value) ([]Operation, Value) {
+func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) ([]Operation, Value) {
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
@@ -80,16 +80,52 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 	return nil, 1 // TODO this is just a dummy return Value
 }
 
-func applyParams(paramVals []interface{}, pattern Pattern, venv VarEnv) (VarEnv, error) {
-	venv_ := venv
-	for i, param := range pattern.Params {
-		if checkParam(paramVals[i], param.Anno.Typ) {
-			venv_ = venv_.Set(param.Id, paramVals[i])
+func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
+	switch paramVal.(type) {
+	case TupleVal:
+		paramVal := paramVal.(TupleVal)
+		if len(pattern.Params) == 1 {
+			if checkParam(paramVal, pattern.Params[0].Anno.Typ) {
+				return venv.Set(pattern.Params[0].Id, paramVal), nil
+			} else {
+				return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+			}
+		} else if len(pattern.Params) == len(paramVal.Values) {
+			venv_ := venv
+			for i, param := range pattern.Params {
+				if checkParam(paramVal.Values[i], param.Anno.Typ) {
+					venv_ = venv_.Set(param.Id, paramVal.Values[i])
+				} else {
+					return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+				}
+			}
+			return venv_, nil
 		} else {
 			return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
 		}
+	case UnitVal:
+		if len(pattern.Params) == 0 {
+			return venv, nil
+		} else if len(pattern.Params) == 1 {
+			if checkParam(paramVal, pattern.Params[0].Anno.Typ) {
+				return venv.Set(pattern.Params[0].Id, UnitVal{}), nil
+			} else {
+				return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+			}
+		} else {
+			return venv, fmt.Errorf("pattern mistmatch, expected %d values but got none", len(pattern.Params))
+		}
+	default:
+		if len(pattern.Params) != 1 {
+			return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+		} else {
+			if checkParam(paramVal, pattern.Params[0].Anno.Typ) {
+				return venv.Set(pattern.Params[0].Id, paramVal), nil
+			} else {
+				return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
+			}
+		}
 	}
-	return venv_, nil
 }
 
 func checkParam(param interface{}, typ Type) bool {
@@ -490,10 +526,9 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		}
 	case LetExp:
 		exp := exp.(LetExp)
-		varname := exp.Patt.Params[0].Id
 		value := interpret(exp.DefExp.(TypedExp), venv, tenv, senv)
-		venv_ := venv.Set(varname, value)
-		return interpret(exp.InExp.(TypedExp), venv_, tenv, senv)
+		venv, _ = applyParams(value, exp.Patt, venv)
+		return interpret(exp.InExp.(TypedExp), venv, tenv, senv)
 	case AnnoExp:
 		exp := exp.(AnnoExp)
 		return interpret(exp.Exp.(TypedExp), venv, tenv, senv)
