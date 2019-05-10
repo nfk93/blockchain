@@ -315,7 +315,7 @@ func TestCurrentModule(t *testing.T) {
 	texp := getTypedAST(t, testpath)
 	fmt.Println(texp)
 	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{10.0}})
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)

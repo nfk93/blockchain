@@ -460,7 +460,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 	case ModuleLookupExp:
 		exp := exp.(ModuleLookupExp)
 		switch exp.ModId {
-		case "current":
+		case "Current":
 			switch exp.FieldId {
 			case "balance":
 				return LambdaVal{CURRENT_BALANCE}
@@ -473,14 +473,14 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			default:
 				return todo()
 			}
-		case "contract":
+		case "Contract":
 			switch exp.FieldId {
 			case "call":
 				return LambdaVal{CONTRACT_CALL}
 			default:
 				return todo()
 			}
-		case "account":
+		case "Account":
 			switch exp.FieldId {
 			case "transfer":
 				return LambdaVal{ACCOUNT_TRANSFER}
