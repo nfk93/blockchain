@@ -284,12 +284,18 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
+					if rightval.(IntVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := int64(leftval.(NatVal).Value)
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
 					return OptionVal{TupleVal{values}, true}
 				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := leftval.(NatVal).Value
 					right := rightval.(NatVal).Value
 					quotient, remainder := left/right, left%right
@@ -299,12 +305,18 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
+					if rightval.(IntVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := leftval.(IntVal).Value
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
 					return OptionVal{TupleVal{values}, true}
 				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := leftval.(IntVal).Value
 					right := int64(rightval.(NatVal).Value)
 					quotient, remainder := left/right, left%right
