@@ -6,9 +6,9 @@ import (
 	"log"
 )
 
-type TypeEnv ps.Map   // TODO
-type VarEnv ps.Map    // TODO
-type StructEnv ps.Map // TODO
+type TypeEnv ps.Map
+type VarEnv ps.Map
+type StructEnv ps.Map
 
 type TypedExp struct {
 	Exp  Exp
@@ -42,6 +42,7 @@ func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv,
 	return TypedExp{exp, NotImplementedType{}}, venv, tenv, senv
 }
 
+// TODO make it such that return reflects whether or not any error were encountered
 func AddTypes(exp Exp) TypedExp {
 	texp, _, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
 	return texp

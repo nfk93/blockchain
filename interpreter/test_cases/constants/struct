@@ -1,5 +1,6 @@
-type storage = {a : int; b : string;}
+type tuple = int * int
+type storage = {a : int; b : tuple;}
 
-let%init storage = {a = 1; b = "hi";}
+let%init storage = {a = 1; b = (2, 3);}
 
-let%entry main () s = (([] : operation list), {a = 1111; b = "asdasd";})
+let%entry main () s = (([] : operation list), {a = 1111; b = (4, 5);})

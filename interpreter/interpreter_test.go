@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"fmt"
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
@@ -111,15 +110,23 @@ func TestCallExp(t *testing.T) {
 	testFileNoError(t, "test_cases/callexp_semant")
 }
 
-/* Interpreter tests */
-
 func TestStructInStruct(t *testing.T) {
 	testFileNoError(t, "test_cases/structinstruct_semant")
 }
 
+func TestUpdateStruct(t *testing.T) {
+	testFileNoError(t, "test_cases/updatestruct_interp")
+}
+
+/* Interpreter tests */
+
 func TestIntConstant(t *testing.T) {
 	testpath := "test_cases/constants/int"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{IntVal{13}})
 	switch sto.(type) {
@@ -137,7 +144,11 @@ func TestIntConstant(t *testing.T) {
 
 func TestAddressConstant(t *testing.T) {
 	testpath := "test_cases/constants/address"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{AddressVal{"123123aA"}})
 	switch sto.(type) {
@@ -155,7 +166,11 @@ func TestAddressConstant(t *testing.T) {
 
 func TestBoolConstant(t *testing.T) {
 	testpath := "test_cases/constants/bool"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{BoolVal{true}})
 	switch sto.(type) {
@@ -173,7 +188,11 @@ func TestBoolConstant(t *testing.T) {
 
 func TestDeclaredConstant(t *testing.T) {
 	testpath := "test_cases/constants/declared"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main",
 		[]Value{TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}}})
@@ -200,7 +219,11 @@ func TestDeclaredConstant(t *testing.T) {
 
 func TestKeyConstant(t *testing.T) {
 	testpath := "test_cases/constants/key"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KeyVal{"1212Ddd"}})
 	switch sto.(type) {
@@ -218,7 +241,11 @@ func TestKeyConstant(t *testing.T) {
 
 func TestKoinConstant(t *testing.T) {
 	testpath := "test_cases/constants/koin"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{1.1}})
 	switch sto.(type) {
@@ -236,7 +263,11 @@ func TestKoinConstant(t *testing.T) {
 
 func TestListConstant(t *testing.T) {
 	testpath := "test_cases/constants/list"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{ListVal{[]Value{IntVal{2}}}})
 	switch sto.(type) {
@@ -261,7 +292,11 @@ func TestListConstant(t *testing.T) {
 
 func TestNatConstant(t *testing.T) {
 	testpath := "test_cases/constants/nat"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{NatVal{13}})
 	switch sto.(type) {
@@ -279,7 +314,11 @@ func TestNatConstant(t *testing.T) {
 
 func TestStringConstant(t *testing.T) {
 	testpath := "test_cases/constants/string"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{StringVal{"eymom"}})
 	switch sto.(type) {
@@ -297,7 +336,11 @@ func TestStringConstant(t *testing.T) {
 
 func TestUnitConstant(t *testing.T) {
 	testpath := "test_cases/constants/unit"
-	texp := getTypedAST(t, testpath)
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
 	switch sto.(type) {
@@ -310,17 +353,39 @@ func TestUnitConstant(t *testing.T) {
 	}
 }
 
-func TestCurrentModule(t *testing.T) {
-	testpath := "test_cases/currentbalance_interp"
-	texp := getTypedAST(t, testpath)
-	fmt.Println(texp)
+func TestStructConstant(t *testing.T) {
+	testpath := "test_cases/constants/struct"
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
-	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{10.0}})
+	storageinit := createStruct()
+	storageinit.Field["a"] = IntVal{1213}
+	storageinit.Field["b"] = TupleVal{[]Value{IntVal{5}, IntVal{6}}}
+	oplist, sto := InterpretContractCall(texp, emptylist, "main",
+		[]Value{storageinit})
 	switch sto.(type) {
-	case KoinVal:
-		sto := sto.(KoinVal)
-		if sto.Value != 0.0 {
-			t.Errorf("return value is %f, expected 0.0", sto.Value)
+	case StructVal:
+		sto, oksto := sto.(StructVal)
+		if oksto {
+			a, oka := sto.Field["a"].(IntVal)
+			if !oka || a.Value != 1111 {
+				t.Errorf("storage.a has unexpected value of %d", sto.Field["a"])
+			}
+			b, okb := sto.Field["b"].(TupleVal)
+			if !okb {
+				t.Errorf("storage.b has unexpected type")
+			} else {
+				tup1, ok1 := b.Values[0].(IntVal)
+				tup2, ok2 := b.Values[1].(IntVal)
+				if !ok1 || !ok2 || tup1.Value != 4 || tup2.Value != 5 {
+					t.Errorf("storage.b has wrong value. It is %d", b)
+				}
+			}
+		} else {
+			t.Error("return value isn't of correct type")
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -330,23 +395,20 @@ func TestCurrentModule(t *testing.T) {
 	}
 }
 
-func TestStructConstant(t *testing.T) {
-	testpath := "test_cases/constants/struct"
-	texp := getTypedAST(t, testpath)
+func TestCurrentModule(t *testing.T) {
+	testpath := "test_cases/currentbalance_interp"
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
 	emptylist := make([]Value, 0)
-	storageinit := createStruct()
-	storageinit.Field["a"] = IntVal{1213}
-	storageinit.Field["b"] = StringVal{"ey mom"}
-	oplist, sto := InterpretContractCall(texp, emptylist, "main",
-		[]Value{storageinit})
+	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{KoinVal{10.0}})
 	switch sto.(type) {
-	case StructVal:
-		sto := sto.(StructVal)
-		if sto.Field["a"].(IntVal).Value != 1111 {
-			t.Errorf("storage has unexpected value of %d", sto.Field["a"])
-		}
-		if sto.Field["b"].(StringVal).Value != "asdasd" {
-			t.Errorf("storage has unexpected value of %d", sto.Field["b"])
+	case KoinVal:
+		sto := sto.(KoinVal)
+		if sto.Value != 0.0 {
+			t.Errorf("return value is %f, expected 0.0", sto.Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -423,8 +485,68 @@ func TestCheckParams(t *testing.T) {
 	}
 }
 
+func TestInterpretUpdateStruct(t *testing.T) {
+	testpath := "test_cases/updatestruct_interp"
+	texp, ok := getTypedAST(t, testpath)
+	if !ok {
+		t.Fail()
+		return
+	}
+	params := []Value{IntVal{173}, StringVal{"newinner"}, StringVal{"newa"}}
+	innermost := createStruct()
+	innermost.Field["buried"] = IntVal{12}
+	innermost.Field["deep"] = StringVal{"very deep"}
+	inner := createStruct()
+	inner.Field["id"] = StringVal{"innerid"}
+	inner.Field["innermost"] = innermost
+	storage := createStruct()
+	storage.Field["a"] = StringVal{"test"}
+	storage.Field["b"] = inner
+
+	oplist, sto := InterpretContractCall(texp, params, "main", []Value{storage})
+	switch sto.(type) {
+	case StructVal:
+		sto := sto.(StructVal)
+		a, ok := sto.Field["a"].(StringVal)
+		if !ok || a.Value != "newa" {
+			t.Errorf("sto.a has unexpected value of %s", a)
+		}
+		b, ok := sto.Field["b"].(StructVal)
+		if !ok {
+			t.Errorf("sto.b has unexpected type. It is %s", b)
+		} else {
+			bid, ok := b.Field["id"].(StringVal)
+			if !ok || bid.Value != "newinner" {
+				t.Errorf("sto.b.id has unexpected value of %s", bid)
+			}
+			binnermost, ok := b.Field["innermost"].(StructVal)
+			if !ok {
+				t.Errorf("sto.b.innermost has unexpected type. It is %s", binnermost)
+			} else {
+				buried, ok := binnermost.Field["buried"].(IntVal)
+				if !ok || buried.Value != 173+12 {
+					t.Errorf("sto.b.innermost.buried has unexpected value of %d", buried)
+				}
+				deep, ok := binnermost.Field["deep"].(StringVal)
+				if !ok || deep.Value != "very deep" {
+					t.Errorf("sto.b.innermost.deep has unexpected value of %s", deep)
+				}
+			}
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Error("oplist isn't empty")
+	}
+}
+
 func TestInterpretBinOps(t *testing.T) {
-	texp := getTypedAST(t, "test_cases/binop_interp")
+	texp, ok := getTypedAST(t, "test_cases/binop_interp")
+	if !ok {
+		t.Fail()
+		return
+	}
 	params := []Value{IntVal{13}, IntVal{17}}
 	storage := []Value{IntVal{19}}
 	oplist, sto := InterpretContractCall(texp, params, "main", storage)
@@ -478,7 +600,7 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 	}
 }
 
-func getTypedAST(t *testing.T, testpath string) TypedExp {
+func getTypedAST(t *testing.T, testpath string) (TypedExp, bool) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
 		t.Error("Error reading testfile:", testpath)
@@ -488,8 +610,9 @@ func getTypedAST(t *testing.T, testpath string) TypedExp {
 	par, err := p.Parse(lex)
 	if err != nil {
 		t.Errorf("parse error: " + err.Error())
+		return TypedExp{}, false
 	}
-	return AddTypes(par.(Exp))
+	return AddTypes(par.(Exp)), true
 }
 
 func checkForErrorTypes(texp_ Exp) bool {
