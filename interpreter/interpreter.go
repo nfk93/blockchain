@@ -5,10 +5,11 @@ import (
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
+	"strconv"
 )
 
-func todo() int {
-	fmt.Println("Not implemented yet")
+func todo(n int) int {
+	fmt.Println("Not implemented yet " + strconv.Itoa(n))
 	return 0
 }
 
@@ -25,7 +26,7 @@ func currentGas() NatVal {
 }
 
 func currentFailWith(failmessage StringVal) Operation {
-	return FailWith{failmessage.Value} //TODO add proper functionality
+	panic(failmessage.Value)
 }
 
 func contractCall(address AddressVal, gas KoinVal, param Value) Operation {
@@ -79,7 +80,14 @@ func InterpretStorageInit(texp TypedExp) Value {
 	return -1
 }
 
-func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) ([]Operation, Value) {
+func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) (oplist []Operation, storage Value) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+			oplist = []Operation{FailWith{err.(string)}}
+			storage = stor
+		}
+	}()
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {
@@ -285,7 +293,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				case INT:
 					return IntVal{int64(leftval.(NatVal).Value) + rightval.(IntVal).Value}
 				default:
-					return todo()
+					return todo(1)
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -294,10 +302,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				case INT:
 					return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
 				default:
-					return todo()
+					return todo(2)
 				}
 			default:
-				return todo()
+				return todo(3)
 			}
 		case MINUS:
 			switch exp.Left.(TypedExp).Type.Type() {
@@ -308,7 +316,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				case NAT:
 					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}
 				default:
-					return todo()
+					return todo(4)
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -317,12 +325,12 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				case NAT:
 					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}
 				default:
-					return todo()
+					return todo(5)
 				}
 			case KOIN:
 				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(6)
 			}
 		case TIMES:
 			switch texp.Type.Type() {
@@ -333,7 +341,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return KoinVal{leftval.(KoinVal).Value * rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(7)
 			}
 		case DIVIDE:
 			switch exp.Left.(TypedExp).Type.Type() {
@@ -360,7 +368,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
 					return OptionVal{TupleVal{values}, true}
 				default:
-					return todo()
+					return todo(8)
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -383,7 +391,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					values := []Value{NatVal{quotient}, NatVal{remainder}}
 					return OptionVal{TupleVal{values}, true}
 				default:
-					return todo()
+					return todo(9)
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -406,10 +414,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
 					return OptionVal{TupleVal{values}, true}
 				default:
-					return todo()
+					return todo(10)
 				}
 			default:
-				return todo()
+				return todo(11)
 			}
 		case EQ:
 			return BoolVal{leftval == rightval}
@@ -424,7 +432,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return BoolVal{leftval.(KoinVal).Value >= rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(12)
 			}
 		case LEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
@@ -435,7 +443,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return BoolVal{leftval.(KoinVal).Value <= rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(13)
 			}
 		case LT:
 			switch exp.Right.(TypedExp).Type.Type() {
@@ -446,7 +454,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return BoolVal{leftval.(KoinVal).Value < rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(14)
 			}
 		case GT:
 			switch exp.Right.(TypedExp).Type.Type() {
@@ -457,7 +465,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return BoolVal{leftval.(KoinVal).Value > rightval.(KoinVal).Value}
 			default:
-				return todo()
+				return todo(15)
 			}
 		case AND:
 			switch exp.Right.(TypedExp).Type.Type() {
@@ -466,7 +474,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case BOOL:
 				return BoolVal{leftval.(BoolVal).Value && rightval.(BoolVal).Value}
 			default:
-				return todo()
+				return todo(16)
 			}
 		case OR:
 			switch exp.Right.(TypedExp).Type.Type() {
@@ -475,13 +483,13 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case BOOL:
 				return BoolVal{leftval.(BoolVal).Value || rightval.(BoolVal).Value}
 			default:
-				return todo()
+				return todo(17)
 			}
 		default:
-			return todo()
+			return todo(18)
 		}
 	case TypeDecl:
-		return todo()
+		return todo(18)
 	case KeyLit:
 		exp := exp.(KeyLit)
 		return KeyVal{exp.Key}
@@ -553,7 +561,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			key := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(KeyVal)
 			return accountDefault(key)
 		default:
-			return todo()
+			return todo(20)
 		}
 	case LetExp:
 		exp := exp.(LetExp)
@@ -608,14 +616,14 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case "failwith":
 				return LambdaVal{CURRENT_FAILWITH}
 			default:
-				return todo()
+				return todo(22)
 			}
 		case "Contract":
 			switch exp.FieldId {
 			case "call":
 				return LambdaVal{CONTRACT_CALL}
 			default:
-				return todo()
+				return todo(23)
 			}
 		case "Account":
 			switch exp.FieldId {
@@ -624,10 +632,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case "default":
 				return LambdaVal{ACCOUNT_DEFAULT}
 			default:
-				return todo()
+				return todo(24)
 			}
 		default:
-			return todo()
+			return todo(25)
 		}
 
 	case LookupExp:
@@ -654,8 +662,8 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		innerStruct.(StructVal).Field[path[0]] = newval
 		return struc
 	case StorageInitExp:
-		return todo()
+		return todo(26)
 	default:
-		return todo()
+		return todo(27)
 	}
 }
