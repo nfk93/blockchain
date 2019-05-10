@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
@@ -124,7 +125,8 @@ func TestIntConstant(t *testing.T) {
 	testpath := "test_cases/constants/int"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -146,7 +148,8 @@ func TestAddressConstant(t *testing.T) {
 	testpath := "test_cases/constants/address"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -168,7 +171,8 @@ func TestBoolConstant(t *testing.T) {
 	testpath := "test_cases/constants/bool"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -190,7 +194,8 @@ func TestDeclaredConstant(t *testing.T) {
 	testpath := "test_cases/constants/declared"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -221,7 +226,8 @@ func TestKeyConstant(t *testing.T) {
 	testpath := "test_cases/constants/key"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -243,7 +249,8 @@ func TestKoinConstant(t *testing.T) {
 	testpath := "test_cases/constants/koin"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -265,7 +272,8 @@ func TestListConstant(t *testing.T) {
 	testpath := "test_cases/constants/list"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -294,7 +302,8 @@ func TestNatConstant(t *testing.T) {
 	testpath := "test_cases/constants/nat"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -316,7 +325,8 @@ func TestStringConstant(t *testing.T) {
 	testpath := "test_cases/constants/string"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -338,7 +348,8 @@ func TestUnitConstant(t *testing.T) {
 	testpath := "test_cases/constants/unit"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -357,7 +368,8 @@ func TestStructConstant(t *testing.T) {
 	testpath := "test_cases/constants/struct"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -399,7 +411,8 @@ func TestCurrentModule(t *testing.T) {
 	testpath := "test_cases/currentbalance_interp"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	unitval := UnitVal{}
@@ -489,7 +502,8 @@ func TestInterpretUpdateStruct(t *testing.T) {
 	testpath := "test_cases/updatestruct_interp"
 	texp, ok := getTypedAST(t, testpath)
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	params := TupleVal{[]Value{IntVal{173}, StringVal{"newinner"}, StringVal{"newa"}}}
@@ -544,7 +558,8 @@ func TestInterpretUpdateStruct(t *testing.T) {
 func TestInterpretBinOps(t *testing.T) {
 	texp, ok := getTypedAST(t, "test_cases/binop_interp")
 	if !ok {
-		t.Fail()
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
 		return
 	}
 	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
@@ -553,6 +568,29 @@ func TestInterpretBinOps(t *testing.T) {
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 13+17+19 {
+			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty. It is %s", oplist)
+	}
+}
+
+func TestInterpretLetexps(t *testing.T) {
+	texp, ok := getTypedAST(t, "test_cases/letexps_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+	params := TupleVal{[]Value{IntVal{7}, StringVal{"not imporatnt"}, NatVal{13}}}
+	storage := IntVal{19}
+	oplist, sto := InterpretContractCall(texp, params, "main", storage)
+	switch sto.(type) {
+	case IntVal:
+		if sto.(IntVal).Value != 19-(15+7+13) {
 			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
 		}
 	default:
@@ -585,9 +623,8 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 		t.Errorf("parse error: " + err.Error())
 	} else {
 		parsed := par.(Exp)
-		typed := AddTypes(parsed)
+		typed, noErrors := AddTypes(parsed)
 		print("\n" + typed.String() + "\n")
-		noErrors := checkForErrorTypes(typed)
 		if shouldFail {
 			if noErrors {
 				t.Errorf("Didn't find any noErrors")
@@ -612,101 +649,5 @@ func getTypedAST(t *testing.T, testpath string) (TypedExp, bool) {
 		t.Errorf("parse error: " + err.Error())
 		return TypedExp{}, false
 	}
-	return AddTypes(par.(Exp)), true
-}
-
-func checkForErrorTypes(texp_ Exp) bool {
-	switch texp_.(type) {
-	case TypedExp:
-		break
-	default:
-		return false
-	}
-	texp := texp_.(TypedExp)
-	if texp.Type.Type() == ERROR || texp.Type.Type() == NOTIMPLEMENTED {
-		return false
-	}
-	e := texp.Exp
-	switch e.(type) {
-	case TypeDecl:
-		return true
-	case TopLevel:
-		e := e.(TopLevel)
-		for _, v := range e.Roots {
-			if !checkForErrorTypes(v) {
-				return false
-			}
-		}
-		return true
-	case EntryExpression:
-		e := e.(EntryExpression)
-		return checkForErrorTypes(e.Body)
-	case BinOpExp:
-		e := e.(BinOpExp)
-		return checkForErrorTypes(e.Left) && checkForErrorTypes(e.Right)
-	case ListLit:
-		e := e.(ListLit)
-		for _, v := range e.List {
-			if !checkForErrorTypes(v) {
-				return false
-			}
-		}
-		return true
-	case ListConcat:
-		e := e.(ListConcat)
-		return checkForErrorTypes(e.Exp) && checkForErrorTypes(e.List)
-	case LetExp:
-		e := e.(LetExp)
-		return checkForErrorTypes(e.DefExp) && checkForErrorTypes(e.InExp)
-	case TupleExp:
-		e := e.(TupleExp)
-		for _, v := range e.Exps {
-			if !checkForErrorTypes(v) {
-				return false
-			}
-		}
-		return true
-	case AnnoExp:
-		e := e.(AnnoExp)
-		return checkForErrorTypes(e.Exp)
-	case IfThenElseExp:
-		e := e.(IfThenElseExp)
-		return checkForErrorTypes(e.If) && checkForErrorTypes(e.Then) && checkForErrorTypes(e.Else)
-	case IfThenExp:
-		e := e.(IfThenExp)
-		return checkForErrorTypes(e.If) && checkForErrorTypes(e.Then)
-	case ExpSeq:
-		e := e.(ExpSeq)
-		return checkForErrorTypes(e.Left) && checkForErrorTypes(e.Right)
-	case UpdateStructExp:
-		e := e.(UpdateStructExp)
-		return checkForErrorTypes(e.Exp)
-	case StorageInitExp:
-		e := e.(StorageInitExp)
-		return checkForErrorTypes(e.Exp)
-	case StructLit:
-		e := e.(StructLit)
-		for _, v := range e.Vals {
-			if !checkForErrorTypes(v) {
-				return false
-			}
-		}
-		return true
-	case CallExp:
-		e := e.(CallExp)
-		for _, v := range e.ExpList {
-			if !checkForErrorTypes(v) {
-				return false
-			}
-		}
-		return true
-	case UnOpExp:
-		e := e.(UnOpExp)
-		return checkForErrorTypes(e.Exp)
-	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
-		ModuleLookupExp, LookupExp, NatLit:
-		return true
-	default:
-		return false
-	}
+	return AddTypes(par.(Exp))
 }

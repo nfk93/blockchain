@@ -43,9 +43,105 @@ func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv,
 }
 
 // TODO make it such that return reflects whether or not any error were encountered
-func AddTypes(exp Exp) TypedExp {
+func AddTypes(exp Exp) (TypedExp, bool) {
 	texp, _, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
-	return texp
+	return texp, checkForErrorTypes(texp)
+}
+
+func checkForErrorTypes(texp_ Exp) bool {
+	switch texp_.(type) {
+	case TypedExp:
+		break
+	default:
+		return false
+	}
+	texp := texp_.(TypedExp)
+	if texp.Type.Type() == ERROR || texp.Type.Type() == NOTIMPLEMENTED {
+		return false
+	}
+	e := texp.Exp
+	switch e.(type) {
+	case TypeDecl:
+		return true
+	case TopLevel:
+		e := e.(TopLevel)
+		for _, v := range e.Roots {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
+	case EntryExpression:
+		e := e.(EntryExpression)
+		return checkForErrorTypes(e.Body)
+	case BinOpExp:
+		e := e.(BinOpExp)
+		return checkForErrorTypes(e.Left) && checkForErrorTypes(e.Right)
+	case ListLit:
+		e := e.(ListLit)
+		for _, v := range e.List {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
+	case ListConcat:
+		e := e.(ListConcat)
+		return checkForErrorTypes(e.Exp) && checkForErrorTypes(e.List)
+	case LetExp:
+		e := e.(LetExp)
+		return checkForErrorTypes(e.DefExp) && checkForErrorTypes(e.InExp)
+	case TupleExp:
+		e := e.(TupleExp)
+		for _, v := range e.Exps {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
+	case AnnoExp:
+		e := e.(AnnoExp)
+		return checkForErrorTypes(e.Exp)
+	case IfThenElseExp:
+		e := e.(IfThenElseExp)
+		return checkForErrorTypes(e.If) && checkForErrorTypes(e.Then) && checkForErrorTypes(e.Else)
+	case IfThenExp:
+		e := e.(IfThenExp)
+		return checkForErrorTypes(e.If) && checkForErrorTypes(e.Then)
+	case ExpSeq:
+		e := e.(ExpSeq)
+		return checkForErrorTypes(e.Left) && checkForErrorTypes(e.Right)
+	case UpdateStructExp:
+		e := e.(UpdateStructExp)
+		return checkForErrorTypes(e.Exp)
+	case StorageInitExp:
+		e := e.(StorageInitExp)
+		return checkForErrorTypes(e.Exp)
+	case StructLit:
+		e := e.(StructLit)
+		for _, v := range e.Vals {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
+	case CallExp:
+		e := e.(CallExp)
+		for _, v := range e.ExpList {
+			if !checkForErrorTypes(v) {
+				return false
+			}
+		}
+		return true
+	case UnOpExp:
+		e := e.(UnOpExp)
+		return checkForErrorTypes(e.Exp)
+	case KeyLit, BoolLit, IntLit, KoinLit, StringLit, UnitLit, VarExp,
+		ModuleLookupExp, LookupExp, NatLit, AddressLit:
+		return true
+	default:
+		return false
+	}
 }
 
 func GenerateCurrentModule() StructType {
@@ -142,21 +238,6 @@ func translateType(typ Type, tenv TypeEnv) Type {
 		return NotImplementedType{}
 	}
 }
-
-/*func actualType(Typ Type, tenv TypeEnv) Type {
-	switch Typ.Type() {
-	case DECLARED:
-		Typ := Typ.(DeclaredType)
-		actualtyp := lookupType(Typ.TypId, tenv)
-		if actualtyp == nil {
-			return ErrorType{fmt.Sprintf("type %s is not declared", Typ.TypId)}
-		} else {
-			return actualtyp
-		}
-	default:
-		return Typ
-	}
-} */
 
 // ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
 func checkTypesEqual(typ1, typ2 Type) bool {
@@ -567,7 +648,7 @@ func addTypes(
 					ErrorType{fmt.Sprintf("return type of entry must be operation list * %s, but was %s", storagetype.String(), body.Type.String())}},
 				venv, tenv, senv
 		}
-		return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body}, storagetype}, venv, tenv, senv
+		return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body}, UnitType{}}, venv, tenv, senv
 	case KeyLit:
 		return TypedExp{exp, KeyType{}}, venv, tenv, senv
 	case BoolLit:
@@ -582,6 +663,8 @@ func addTypes(
 		return TypedExp{exp, UnitType{}}, venv, tenv, senv
 	case NatLit:
 		return TypedExp{exp, NatType{}}, venv, tenv, senv
+	case AddressLit:
+		return TypedExp{exp, AddressType{}}, venv, tenv, senv
 	case StructLit:
 		exp := exp.(StructLit)
 		definedStruct := lookupStruct(exp.FieldString(), senv)
