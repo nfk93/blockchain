@@ -459,17 +459,35 @@ func addTypes(
 			}
 		case PLUS:
 			switch leftTyped.Type.Type() {
-			case INT, KOIN, NAT:
-				break
+			case NAT:
+				switch rightTyped.Type.Type() {
+				case NAT:
+					return TypedExp{texp, NewNatType()}, venv, tenv, senv
+				case INT:
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp, ErrorType{"Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case INT:
+				switch rightTyped.Type.Type() {
+				case INT, NAT:
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp, ErrorType{"Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()}},
+						venv, tenv, senv
+				}
+			case KOIN:
+				switch rightTyped.Type.Type() {
+				case KOIN:
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv
+				default:
+					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
+						venv, tenv, senv
+				}
 			default:
 				return TypedExp{texp,
-						ErrorType{"Can't add expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv
-			}
-			if leftTyped.Type == rightTyped.Type {
-				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv
-			} else {
-				return TypedExp{texp, ErrorType{"ArgTypes of plus operation are not equal"}},
+						ErrorType{"Can't subtract expressions of type " + leftTyped.Type.String()}},
 					venv, tenv, senv
 			}
 

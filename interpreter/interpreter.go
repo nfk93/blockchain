@@ -248,9 +248,23 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			case KOIN:
 				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}
 			case NAT:
-				return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}
+				switch exp.Right.(TypedExp).Type.Type() {
+				case NAT:
+					return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}
+				case INT:
+					return IntVal{int64(leftval.(NatVal).Value) + rightval.(IntVal).Value}
+				default:
+					return todo()
+				}
 			case INT:
-				return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
+				switch exp.Right.(TypedExp).Type.Type() {
+				case NAT:
+					return IntVal{leftval.(IntVal).Value + int64(rightval.(NatVal).Value)}
+				case INT:
+					return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
+				default:
+					return todo()
+				}
 			default:
 				return todo()
 			}
@@ -290,7 +304,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			default:
 				return todo()
 			}
-		case DIVIDE: // TODO handle more cases
+		case DIVIDE:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -298,19 +312,63 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					if rightval.(KoinVal).Value == 0 {
 						return OptionVal{Opt: false}
 					}
+					left := leftval.(KoinVal).Value
+					right := rightval.(KoinVal).Value
+					quotient := uint64(left / right)
+					remainder := ((left / right) - float64(quotient)) * right
+					values := []Value{NatVal{quotient}, KoinVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
+				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
+					left := leftval.(KoinVal).Value
+					right := float64(rightval.(NatVal).Value)
+					quotient := float64(uint64(left / right))
+					remainder := ((left / right) - quotient) * right
+					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
+				default:
 					return todo()
+				}
+			case NAT:
+				switch exp.Right.(TypedExp).Type.Type() {
+				case INT:
+					if rightval.(IntVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
+					left := int64(leftval.(NatVal).Value)
+					right := rightval.(IntVal).Value
+					quotient, remainder := left/right, left%right
+					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
+					return OptionVal{TupleVal{values}, true}
+				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
+					left := leftval.(NatVal).Value
+					right := rightval.(NatVal).Value
+					quotient, remainder := left/right, left%right
+					values := []Value{NatVal{quotient}, NatVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
 				default:
 					return todo()
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
+					if rightval.(IntVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := leftval.(IntVal).Value
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
 					return OptionVal{TupleVal{values}, true}
 				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
 					left := leftval.(IntVal).Value
 					right := int64(rightval.(NatVal).Value)
 					quotient, remainder := left/right, left%right
@@ -319,7 +377,6 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				default:
 					return todo()
 				}
-
 			default:
 				return todo()
 			}
