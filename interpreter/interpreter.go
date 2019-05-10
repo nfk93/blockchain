@@ -84,7 +84,7 @@ func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
-			oplist = []Operation{FailWith{err.(string)}}
+			oplist = []Operation{FailWith{err.(error).Error()}}
 			storage = stor
 		}
 	}()
