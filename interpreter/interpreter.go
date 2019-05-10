@@ -65,7 +65,7 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, nil // TODO return original storage
+					return []Operation{failwith("storage doesn't match storage type definition")}, stor // TODO return original storage
 				}
 				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
 				opvallist := bodyTuple.Values[0].(ListVal).Values
@@ -79,6 +79,7 @@ func InterpretContractCall(texp TypedExp, params []Value, entry string, stor []V
 	}
 	return nil, 1 // TODO this is just a dummy return Value
 }
+
 func applyParams(paramVals []interface{}, pattern Pattern, venv VarEnv) (VarEnv, error) {
 	venv_ := venv
 	for i, param := range pattern.Params {
@@ -505,7 +506,17 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		}
 		return structVal.Field[exp.LeafId]
 	case UpdateStructExp:
-		return todo()
+		exp := exp.(UpdateStructExp)
+		struc := lookupVar(exp.Root, venv)
+		innerStruct := struc
+		path := exp.Path
+		for len(path) > 1 {
+			innerStruct = innerStruct.(StructVal).Field[path[0]]
+			path = path[1:]
+		}
+		newval := interpret(exp.Exp.(TypedExp), venv, tenv, senv)
+		innerStruct.(StructVal).Field[path[0]] = newval
+		return struc
 	case StorageInitExp:
 		return todo()
 	default:
