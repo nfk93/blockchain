@@ -576,6 +576,25 @@ func TestInterpretBinOps(t *testing.T) {
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
+
+	texp, ok = getTypedAST(t, "test_cases/division_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+
+	oplist, sto = InterpretContractCall(texp, params, "main", storage)
+
+	switch sto.(type) {
+	case TupleVal:
+		if sto.(IntVal).Value != 13+17+19 {
+			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+
 }
 
 func TestInterpretFailwith(t *testing.T) {

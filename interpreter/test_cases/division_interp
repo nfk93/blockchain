@@ -1,0 +1,6 @@
+type storage = int * nat
+
+let%init storage = (2, 3p)
+
+let%entry main ((a : int), (b : int)) storage =
+  (([]: operation list), 10 / (a + b))
