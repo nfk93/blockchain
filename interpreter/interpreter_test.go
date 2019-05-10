@@ -590,14 +590,14 @@ func TestInterpretFailwith(t *testing.T) {
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
-		if sto.Value != 0.0 {
+		if sto.Value != 10.0 {
 			t.Errorf("return value is %f, expected 0.0", sto.Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
-	if len(oplist) != 0 {
-		t.Errorf("oplist isn't empty but: %s", oplist)
+	if len(oplist) != 1 {
+		t.Errorf("oplist is empty, should contain failwith oper")
 	}
 }
 

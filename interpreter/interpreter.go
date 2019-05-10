@@ -80,10 +80,12 @@ func InterpretStorageInit(texp TypedExp) Value {
 	return -1
 }
 
-func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) ([]Operation, Value) {
+func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) (oplist []Operation, storage Value) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
+			oplist = []Operation{FailWith{err.(string)}}
+			storage = stor
 		}
 	}()
 	exp := texp.Exp.(TopLevel)
