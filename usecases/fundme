@@ -8,14 +8,12 @@ type storage = {
   owner : key;
   funding_goal : koin;
   amount_raised : koin;
-  soft_cap : koin;
 }
 
 let%init storage = {
   owner = kn1YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc;
   funding_goal = 10kn;
   amount_raised = 0kn;
-  soft_cap  = 75kn;
 }
 
 let%entry main

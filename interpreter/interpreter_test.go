@@ -624,6 +624,77 @@ func TestInterpretLetexps(t *testing.T) {
 	}
 }
 
+func TestInitStorage(t *testing.T) {
+	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+	if err != nil {
+		t.Error("Error reading testfile")
+	}
+	_, init, err := InitiateContract(dat)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	switch init.(type) {
+	case StructVal:
+		init := init.(StructVal)
+		owner, ok := init.Field["owner"].(KeyVal)
+		if !ok || owner.Value != "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc" {
+			t.Errorf("init storage has wrong value in field %s", "owner")
+		}
+		funding_goal, ok := init.Field["funding_goal"].(KoinVal)
+		if !ok || funding_goal.Value != 10 {
+			t.Errorf("init storage has wrong value in field %s", "funding_goal")
+		}
+		amount_raised, ok := init.Field["amount_raised"].(KoinVal)
+		if !ok || amount_raised.Value != 0 {
+			t.Errorf("init storage has wrong value in field %s", "amount_raised")
+		}
+	}
+}
+
+func TestRunFundme(t *testing.T) {
+	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+	if err != nil {
+		t.Error("Error reading testfile")
+	}
+	texp, stor, err := InitiateContract(dat)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	ownerkey := "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc"
+	otherkey := "asdasdasd"
+	param1 := KeyVal{otherkey}
+	oplist, stor := InterpretContractCall(texp, param1, "main", stor)
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty. It is %s", oplist)
+	}
+	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty. It is %s", oplist)
+	}
+
+	switch stor.(type) {
+	case StructVal:
+		init := stor.(StructVal)
+		owner, ok := init.Field["owner"].(KeyVal)
+		if !ok || owner.Value != ownerkey {
+			t.Errorf("storage has wrong value in field %s", "owner")
+		}
+		funding_goal, ok := init.Field["funding_goal"].(KoinVal)
+		if !ok || funding_goal.Value != 10 {
+			t.Errorf("storage has wrong value in field %s", "funding_goal")
+		}
+		amount_raised, ok := init.Field["amount_raised"].(KoinVal)
+		if !ok || amount_raised.Value != 10 {
+			t.Errorf("storage has wrong value in field %s. expected 10, actual %f", "amount_raised",
+				amount_raised.Value)
+		}
+	}
+}
+
 /* Helper functions */
 
 func testFileNoError(t *testing.T, testpath string) {

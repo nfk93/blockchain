@@ -3,6 +3,8 @@ package interpreter
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/interpreter/ast"
+	"github.com/nfk93/blockchain/interpreter/lexer"
+	"github.com/nfk93/blockchain/interpreter/parser"
 	"strconv"
 )
 
@@ -16,7 +18,7 @@ func currentBalance() KoinVal {
 }
 
 func currentAmount() KoinVal {
-	return KoinVal{0.0} //TODO return proper value
+	return KoinVal{5.0} //TODO return proper value
 }
 
 func currentGas() NatVal {
@@ -48,6 +50,36 @@ func lookupVar(id string, venv VarEnv) Value {
 	}
 }
 
+func InitiateContract(contractCode []byte) (TypedExp, Value, error) {
+	lex := lexer.NewLexer(contractCode)
+	p := parser.NewParser()
+	par, err := p.Parse(lex)
+	if err != nil {
+		return TypedExp{}, Value(struct{}{}), err
+	}
+	texp, ok := AddTypes(par.(Exp))
+	if !ok {
+		return TypedExp{}, Value(struct{}{}), fmt.Errorf("semantic error in contract code")
+	}
+	initstorage := InterpretStorageInit(texp)
+	return texp, initstorage, nil
+}
+
+func InterpretStorageInit(texp TypedExp) Value {
+	exp := texp.Exp.(TopLevel)
+	venv, tenv, senv := GenInitEnvs()
+	for _, e := range exp.Roots {
+		e := e.(TypedExp).Exp
+		switch e.(type) {
+		case StorageInitExp:
+			e := e.(StorageInitExp)
+			storageVal := interpret(e.Exp.(TypedExp), venv, tenv, senv)
+			return storageVal
+		}
+	}
+	return -1
+}
+
 func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) ([]Operation, Value) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -59,7 +91,6 @@ func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value
 	for _, e := range exp.Roots {
 		e := e.(TypedExp).Exp
 		switch e.(type) {
-		case TypeDecl:
 		case EntryExpression:
 			e := e.(EntryExpression)
 			if e.Id == entry {
@@ -550,7 +581,10 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		exp := exp.(VarExp)
 		return lookupVar(exp.Id, venv)
 	case ExpSeq:
-		return todo(21)
+		exp := exp.(ExpSeq)
+		_ = interpret(exp.Left.(TypedExp), venv, tenv, senv)
+		rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
+		return rightval
 	case IfThenElseExp:
 		exp := exp.(IfThenElseExp)
 		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
