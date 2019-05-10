@@ -9,7 +9,7 @@ import (
 )
 
 func todo(n int) int {
-	fmt.Println("Not implemented yet " + strconv.Itoa(n))
+	panic("Hit todo nr. " + strconv.Itoa(n))
 	return 0
 }
 
@@ -29,12 +29,12 @@ func currentFailWith(failmessage StringVal) Operation {
 	panic(failmessage.Value)
 }
 
-func contractCall(address AddressVal, gas KoinVal, param Value) Operation {
-	return FailWith{"dummmy"} //TODO add proper functionality
+func contractCall(address AddressVal, gas KoinVal, param Value) OperationVal {
+	return OperationVal{FailWith{"dummmy"}} //TODO add proper functionality
 }
 
-func accountTransfer(key KeyVal, amount KoinVal) Operation {
-	return FailWith{"dummmy"} //TODO add proper functionality
+func accountTransfer(key KeyVal, amount KoinVal) OperationVal {
+	return OperationVal{Transfer{TransferData{key.Value, amount.Value}}}
 }
 
 func accountDefault(key KeyVal) AddressVal {

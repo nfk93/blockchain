@@ -576,6 +576,17 @@ func TestInterpretBinOps(t *testing.T) {
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
+
+	texp, ok = getTypedAST(t, "test_cases/division_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+
+	oplist, sto = InterpretContractCall(texp, params, "main", storage)
+	//TODO make check of correct value
+
 }
 
 func TestInterpretFailwith(t *testing.T) {
