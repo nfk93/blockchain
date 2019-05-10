@@ -373,7 +373,7 @@ func PatternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv) (Pattern, VarE
 func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv) (Param, bool) {
 	if param.Anno.Opt {
 		actualanno := translateType(param.Anno.Typ, tenv)
-		return param, checkTypesEqual(actualanno, typ)
+		return Param{param.Id, TypeOption{true, actualanno}}, checkTypesEqual(actualanno, typ)
 	} else {
 		return Param{param.Id, TypeOption{true, typ}}, true
 	}
@@ -656,7 +656,8 @@ func addTypes(
 		}
 		storagePattern, venv_, ok := PatternMatch(exp.Storage, storagetype, venv_, tenv)
 		if !ok {
-			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
+			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern,
+				ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv
 		}
 		// add types with updated venv
 		body, _, _, _ := addTypes(exp.Body, venv_, tenv, senv)
