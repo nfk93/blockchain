@@ -9,6 +9,7 @@ type OperationID int
 
 const (
 	FAILWITH = iota
+	TRANSFER
 )
 
 // --------------------
@@ -23,4 +24,20 @@ func (o FailWith) OperationID() OperationID {
 
 func (o FailWith) OperationData() interface{} {
 	return o.msg
+}
+
+type Transfer struct {
+	data TransferData
+}
+type TransferData struct {
+	key    string
+	amount int
+}
+
+func (o Transfer) OperationID() OperationID {
+	return TRANSFER
+}
+
+func (o Transfer) OperationData() interface{} {
+	return o.data
 }

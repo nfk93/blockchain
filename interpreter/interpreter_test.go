@@ -670,6 +670,16 @@ func TestRunFundme(t *testing.T) {
 				amount_raised.Value)
 		}
 	}
+
+	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
+	if len(oplist) != 1 {
+		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
+	}
+	failwithOp, ok := oplist[0].(FailWith)
+	if !ok || failwithOp.msg != "funding goal already reached" {
+		t.Errorf("unexpected returned operation")
+	}
+
 }
 
 /* Helper functions */

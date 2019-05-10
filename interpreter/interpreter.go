@@ -539,7 +539,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			return currentGas()
 		case CURRENT_FAILWITH:
 			failmessage := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(StringVal)
-			return currentFailWith(failmessage)
+			return OperationVal{currentFailWith(failmessage)}
 		case CONTRACT_CALL:
 			address := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(AddressVal)
 			gas := interpret(exp.ExpList[2].(TypedExp), venv, tenv, senv).(KoinVal)
