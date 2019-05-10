@@ -254,7 +254,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			default:
 				return todo()
 			}
-		case DIVIDE: // TODO handle more cases
+		case DIVIDE:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -262,9 +262,39 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					if rightval.(KoinVal).Value == 0 {
 						return OptionVal{Opt: false}
 					}
-					return todo()
+					left := leftval.(KoinVal).Value
+					right := rightval.(KoinVal).Value
+					quotient := uint64(left / right)
+					remainder := ((left / right) - float64(quotient)) * right
+					values := []Value{NatVal{quotient}, KoinVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
+				case NAT:
+					if rightval.(NatVal).Value == 0 {
+						return OptionVal{Opt: false}
+					}
+					left := leftval.(KoinVal).Value
+					right := float64(rightval.(NatVal).Value)
+					quotient := float64(uint64(left / right))
+					remainder := ((left / right) - quotient) * right
+					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
 				default:
 					return todo()
+				}
+			case NAT:
+				switch exp.Right.(TypedExp).Type.Type() {
+				case INT:
+					left := int64(leftval.(NatVal).Value)
+					right := rightval.(IntVal).Value
+					quotient, remainder := left/right, left%right
+					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
+					return OptionVal{TupleVal{values}, true}
+				case NAT:
+					left := leftval.(NatVal).Value
+					right := rightval.(NatVal).Value
+					quotient, remainder := left/right, left%right
+					values := []Value{NatVal{quotient}, NatVal{remainder}}
+					return OptionVal{TupleVal{values}, true}
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
@@ -283,7 +313,6 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				default:
 					return todo()
 				}
-
 			default:
 				return todo()
 			}
