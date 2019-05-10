@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
@@ -312,6 +313,7 @@ func TestUnitConstant(t *testing.T) {
 func TestCurrentModule(t *testing.T) {
 	testpath := "test_cases/currentbalance_interp"
 	texp := getTypedAST(t, testpath)
+	fmt.Println(texp)
 	emptylist := make([]Value, 0)
 	oplist, sto := InterpretContractCall(texp, emptylist, "main", []Value{UnitVal{}})
 	switch sto.(type) {

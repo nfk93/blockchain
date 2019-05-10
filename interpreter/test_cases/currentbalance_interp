@@ -1,5 +1,7 @@
 type storage = koin
 
+let%init storage = 10.0kn
+
 let%entry main () s =
   let bal = Current.balance() in
   (([] : operation list), bal)
