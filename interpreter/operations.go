@@ -10,6 +10,7 @@ type OperationID int
 const (
 	FAILWITH = iota
 	TRANSFER
+	CONTRACTCALL
 )
 
 // --------------------
@@ -40,4 +41,22 @@ func (o Transfer) OperationID() OperationID {
 
 func (o Transfer) OperationData() interface{} {
 	return o.data
+}
+
+type ContractCall struct {
+	data CallData
+}
+
+type CallData struct {
+	address string
+	gas     float64
+	params  Value
+}
+
+func (o ContractCall) OperationData() interface{} {
+	return o.data
+}
+
+func (o ContractCall) OperationID() OperationID {
+	return CONTRACTCALL
 }
