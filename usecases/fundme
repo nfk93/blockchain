@@ -35,5 +35,5 @@ let%entry main
       let sender_refund_op = Contract.call key_typed difference () in
       ( [sender_refund_op], storage)
     else
-      let storage = storage.amount_raised <- amount in
+      let storage = storage.amount_raised <- new_raise in
       ( ([] : operation list), storage)
