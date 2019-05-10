@@ -23,7 +23,7 @@ func currentGas() NatVal {
 }
 
 func currentFailWith(failmessage StringVal) Operation {
-	return FailWith{failmessage.Value} //TODO add proper functionality
+	panic(failmessage.Value) //TODO add proper functionality
 }
 
 func contractCall(address AddressVal, gas KoinVal, param Value) Operation {
@@ -48,6 +48,11 @@ func lookupVar(id string, venv VarEnv) Value {
 }
 
 func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) ([]Operation, Value) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
 	exp := texp.Exp.(TopLevel)
 	venv, tenv, senv := GenInitEnvs()
 	for _, e := range exp.Roots {

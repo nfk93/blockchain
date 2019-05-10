@@ -578,6 +578,29 @@ func TestInterpretBinOps(t *testing.T) {
 	}
 }
 
+func TestInterpretFailwith(t *testing.T) {
+	texp, ok := getTypedAST(t, "test_cases/currentfailwith_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+	unitval := UnitVal{}
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{10.0})
+	switch sto.(type) {
+	case KoinVal:
+		sto := sto.(KoinVal)
+		if sto.Value != 0.0 {
+			t.Errorf("return value is %f, expected 0.0", sto.Value)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty but: %s", oplist)
+	}
+}
+
 func TestInterpretLetexps(t *testing.T) {
 	texp, ok := getTypedAST(t, "test_cases/letexps_interp")
 	if !ok {
