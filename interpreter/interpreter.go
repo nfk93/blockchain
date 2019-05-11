@@ -299,7 +299,7 @@ func createStruct() StructVal {
 
 func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 	// pay gas
-	if int64(gas)-10000 < 0 {
+	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
 	}
 	gas = gas - 1000

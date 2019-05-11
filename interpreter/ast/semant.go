@@ -201,7 +201,7 @@ func lookupStruct(fieldIds string, senv StructEnv) Type {
 }
 
 func translateType(typ Type, tenv TypeEnv, gas uint64) (Type, uint64) {
-	if int64(gas)-10000 < 0 {
+	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
 	}
 	gas = gas - 1000
@@ -350,7 +350,7 @@ func traverseStruct(typ Type, path []string) Type {
 
 // matches the pattern p to the type Typ, doing pattern matching if Typ is a tuple, and returning an updated venv
 func PatternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv, gas uint64) (Pattern, VarEnv, bool, uint64) {
-	if int64(gas)-10000 < 0 {
+	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
 	}
 	gas = gas - 1000
@@ -393,7 +393,7 @@ func PatternMatch(p Pattern, typ Type, venv VarEnv, tenv TypeEnv, gas uint64) (P
 }
 
 func checkParamTypeAnno(param Param, typ Type, tenv TypeEnv, gas uint64) (Param, bool, uint64) {
-	if int64(gas)-10000 < 0 {
+	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
 	}
 	gas = gas - 1000
@@ -413,7 +413,7 @@ func addTypes(
 	gas uint64,
 ) (TypedExp, VarEnv, TypeEnv, StructEnv, uint64) {
 
-	if int64(gas)-10000 < 0 {
+	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
 	}
 	gas = gas - 1000
