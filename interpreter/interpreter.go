@@ -73,6 +73,9 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
 	}
 	texp, ok, gas := AddTypes(par.(Exp), gas)
+	if gas == 0 {
+		panic("ran out of gas when building typed AST")
+	}
 	if !ok {
 		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
 	}

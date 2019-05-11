@@ -46,8 +46,6 @@ func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv,
 func AddTypes(exp Exp, gas uint64) (texp TypedExp, ok bool, remainingGas uint64) {
 	defer func() {
 		if err := recover(); err != nil {
-			str := fmt.Sprintf("%s", err)
-			fmt.Println(str)
 			texp = TypedExp{}
 			ok = false
 			remainingGas = 0

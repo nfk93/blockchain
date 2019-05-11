@@ -793,9 +793,31 @@ func TestRunFundme(t *testing.T) {
 }
 
 func TestRunOutOfGas(t *testing.T) {
-	_, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
 		t.Error("Error reading testfile")
+	}
+	_, _, remaining, err := InitiateContract(dat, 200000)
+	if err == nil {
+		t.Error("should've run out of gas")
+		return
+	}
+	if remaining > 0 {
+		t.Errorf("didn't run out of gas in semantic check, %d remaining gas", remaining)
+	}
+
+	ownerkey := "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc"
+	param1 := KeyVal{ownerkey}
+
+	texp, stor, remaining, _ := InitiateContract(dat, 207000)
+	oplist, stor, remaining := InterpretContractCall(texp, param1, "main", stor, 900000, remaining)
+	if len(oplist) != 1 {
+		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
+	} else {
+		failWith, ok := oplist[0].(FailWith)
+		if !ok || failWith.msg != "ran out of gas!" {
+			t.Errorf("unexpected returned operation")
+		}
 	}
 }
 
