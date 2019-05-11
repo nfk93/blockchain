@@ -674,6 +674,22 @@ func TestKoinDivision(t *testing.T) {
 
 }
 
+func TestInterpretFailwithGas(t *testing.T) {
+	texp, ok := getTypedAST(t, "test_cases/currentfailwith_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+	fmt.Println(texp.String())
+	unitval := UnitVal{}
+	initgas := NatToKoin(100)
+	_, _, gas := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0, initgas)
+	if gas != initgas-6000 {
+		t.Errorf("remaining gas is %d, expected %d", gas, initgas-6000)
+	}
+}
+
 func TestInterpretFailwith(t *testing.T) {
 	texp, ok := getTypedAST(t, "test_cases/currentfailwith_interp")
 	if !ok {

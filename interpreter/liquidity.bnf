@@ -101,7 +101,7 @@ Struct      : lident colon Type semicolon Struct                << ast.AddFieldT
             | lident colon Type semicolon                       << ast.NewStructType(util.ParseId($0), $2), nil // >> ;
 
 Exp         : Exp1                                              << $0, nil >>
-            | Exp semicolon Exp1                                << ast.NewExpSeq($0, $2) // seqexp >> ;
+            | Exp1 semicolon Exp                                << ast.NewExpSeq($0, $2) // seqexp >> ;
 Exp1        : CallExp                                           << $0, nil >>
             | VarExp                                            << $0, nil >>
             | AnnoExp                                           << $0, nil >>
