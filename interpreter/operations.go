@@ -49,7 +49,7 @@ type ContractCall struct {
 
 type CallData struct {
 	address string
-	gas     float64
+	gas     uint64
 	params  Value
 }
 
