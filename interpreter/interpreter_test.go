@@ -683,7 +683,7 @@ func TestInitStorage(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	_, init, err := InitiateContract(dat, 999999999999999)
+	_, init, _, err := InitiateContract(dat, 999999999999999)
 	if err != nil {
 		t.Error(err)
 		return
@@ -713,7 +713,7 @@ func TestRunFundme(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	texp, stor, err := InitiateContract(dat, 999999999)
+	texp, stor, _, err := InitiateContract(dat, 999999999)
 	if err != nil {
 		t.Error(err)
 		return
