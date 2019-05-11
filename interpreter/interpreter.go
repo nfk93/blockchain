@@ -328,6 +328,11 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					return todo(5)
 				}
 			case KOIN:
+				left := leftval.(KoinVal).Value
+				right := rightval.(KoinVal).Value
+				if left < right {
+					panic(fmt.Sprintf("Subtracting %f from %f would result in a negative Koin value", left, right))
+				}
 				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
 			default:
 				return todo(6)
@@ -349,24 +354,24 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				switch exp.Right.(TypedExp).Type.Type() {
 				case KOIN:
 					if rightval.(KoinVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - float64(quotient)) * right
 					values := []Value{NatVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(KoinVal).Value
 					right := float64(rightval.(NatVal).Value)
 					quotient := float64(uint64(left / right))
 					remainder := ((left / right) - quotient) * right
 					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				default:
 					return todo(8)
 				}
@@ -374,22 +379,22 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := int64(leftval.(NatVal).Value)
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(NatVal).Value
 					right := rightval.(NatVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{NatVal{quotient}, NatVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				default:
 					return todo(9)
 				}
@@ -397,22 +402,22 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(IntVal).Value
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(IntVal).Value
 					right := int64(rightval.(NatVal).Value)
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return TupleVal{values}
 				default:
 					return todo(10)
 				}
@@ -422,7 +427,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 		case EQ:
 			return BoolVal{leftval == rightval}
 		case NEQ:
-			return BoolVal{leftval == rightval}
+			return BoolVal{leftval != rightval}
 		case GEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:

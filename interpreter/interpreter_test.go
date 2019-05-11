@@ -577,16 +577,58 @@ func TestInterpretBinOps(t *testing.T) {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
 
-	texp, ok = getTypedAST(t, "test_cases/division_interp")
+}
+
+func TestDivision(t *testing.T) {
+	texp, ok := getTypedAST(t, "test_cases/division_interp")
 	if !ok {
 		t.Errorf("Semant error")
 		fmt.Println(texp.String())
 		return
 	}
+	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
+	storage := TupleVal{[]Value{IntVal{19}, NatVal{0}}}
+	oplist, sto := InterpretContractCall(texp, params, "main", storage)
 
+	switch sto.(type) {
+	case TupleVal:
+		sto := sto.(TupleVal)
+		if len(sto.Values) != 2 {
+			t.Errorf("storage tuple has unexpeted length of %d", len(sto.Values))
+		}
+		switch sto.Values[0].(type) {
+		case IntVal:
+		default:
+			t.Errorf("First value of returned storage tuple is wrong type")
+		}
+		switch sto.Values[1].(type) {
+		case NatVal:
+		default:
+			t.Errorf("Second value of returned storage tuple is wrong type")
+		}
+		val1 := sto.Values[0].(IntVal).Value
+		val2 := sto.Values[1].(NatVal).Value
+		if val1 != 0 && val2 != 10 {
+			t.Errorf("storage has unexpected value of (%d, %d)", val1, val2)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty. It is %s", oplist)
+	}
+
+	params = TupleVal{[]Value{IntVal{0}, IntVal{0}}}
 	oplist, sto = InterpretContractCall(texp, params, "main", storage)
-	//TODO make check of correct value
+	if len(oplist) != 1 {
+		t.Errorf("oplist is len %d should be 1", len(oplist))
+	}
 
+	failwithOp, ok := oplist[0].(FailWith)
+	if !ok {
+		fmt.Println(failwithOp.msg)
+		t.Errorf("unexpected returned operation")
+	}
 }
 
 func TestInterpretFailwith(t *testing.T) {
