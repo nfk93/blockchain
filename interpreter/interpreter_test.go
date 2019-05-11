@@ -819,6 +819,9 @@ func TestRunOutOfGas(t *testing.T) {
 			t.Errorf("unexpected returned operation")
 		}
 	}
+	if remaining > 0 {
+		t.Errorf("should have 0 remaining gas but had %d", remaining)
+	}
 }
 
 /* Helper functions */
