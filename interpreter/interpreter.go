@@ -16,6 +16,10 @@ func todo(n int) int {
 	return 0
 }
 
+func NatToKoin(i uint64) uint64 {
+	return i * 100000
+}
+
 func currentBalance() KoinVal {
 	return KoinVal{0.0} //TODO return proper value
 }
@@ -375,8 +379,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value
-					quotient := uint64(left / right)
-					remainder := ((left / right) - quotient) * right
+					quotient, remainder := left/right, left%right
 					values := []Value{NatVal{quotient}, KoinVal{remainder}}
 					return TupleVal{values}, gas
 				case NAT:

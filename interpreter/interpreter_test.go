@@ -580,7 +580,7 @@ func TestInterpretBinOps(t *testing.T) {
 
 }
 
-func TestDivision(t *testing.T) {
+func TestIntDivision(t *testing.T) {
 	texp, ok := getTypedAST(t, "test_cases/division_interp")
 	if !ok {
 		t.Errorf("Semant error")
@@ -609,7 +609,7 @@ func TestDivision(t *testing.T) {
 		}
 		val1 := sto.Values[0].(IntVal).Value
 		val2 := sto.Values[1].(NatVal).Value
-		if val1 != 0 && val2 != 10 {
+		if val1 != 0 || val2 != 10 {
 			t.Errorf("storage has unexpected value of (%d, %d)", val1, val2)
 		}
 	default:
@@ -630,6 +630,48 @@ func TestDivision(t *testing.T) {
 		fmt.Println(failwithOp.msg)
 		t.Errorf("unexpected returned operation")
 	}
+}
+
+func TestKoinDivision(t *testing.T) {
+	texp, ok := getTypedAST(t, "test_cases/koindivision_interp")
+	if !ok {
+		t.Errorf("Semant error")
+		fmt.Println(texp.String())
+		return
+	}
+
+	params := TupleVal{[]Value{KoinVal{NatToKoin(5)}, KoinVal{NatToKoin(2)}}}
+	storage := TupleVal{[]Value{NatVal{10}, KoinVal{NatToKoin(2)}}}
+	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 100000)
+
+	switch sto.(type) {
+	case TupleVal:
+		sto := sto.(TupleVal)
+		if len(sto.Values) != 2 {
+			t.Errorf("storage tuple has unexpeted length of %d", len(sto.Values))
+		}
+		switch sto.Values[0].(type) {
+		case NatVal:
+		default:
+			t.Errorf("First value of returned storage tuple is wrong type")
+		}
+		switch sto.Values[1].(type) {
+		case KoinVal:
+		default:
+			t.Errorf("Second value of returned storage tuple is wrong type")
+		}
+		val1 := sto.Values[0].(NatVal).Value
+		val2 := sto.Values[1].(KoinVal).Value
+		if val1 != 2 || val2 != NatToKoin(1) {
+			t.Errorf("storage has unexpected value of (%d, %d)", val1, val2)
+		}
+	default:
+		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
+	}
+	if len(oplist) != 0 {
+		t.Errorf("oplist isn't empty. It is %s", oplist)
+	}
+
 }
 
 func TestInterpretFailwith(t *testing.T) {
