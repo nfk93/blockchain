@@ -33,10 +33,6 @@ func currentAmount() KoinVal {
 	return KoinVal{currentAmt} //TODO return proper value
 }
 
-func currentGas() NatVal {
-	return NatVal{0} //TODO return proper value
-}
-
 func currentFailWith(failmessage StringVal) Operation {
 	panic(failmessage.Value)
 }
@@ -62,19 +58,38 @@ func lookupVar(id string, venv VarEnv) Value {
 	}
 }
 
-func InitiateContract(contractCode []byte, gas uint64) (TypedExp, Value, error) {
+func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor Value, remainingGas uint64, returnErr error) {
+	defer func() {
+		if err := recover(); err != nil {
+			str := fmt.Sprintf("%s", err)
+			fmt.Println(str)
+			texp = TypedExp{}
+			initstor = nil
+			returnErr = fmt.Errorf(str)
+		}
+	}()
+
+	// initial gas cost
+	if int64(gas)-100000 < 0 {
+		panic("ran out of gas!")
+	}
+	gas = gas - 100000
+
 	lex := lexer.NewLexer(contractCode)
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		return TypedExp{}, Value(struct{}{}), err
+		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
 	}
-	texp, ok := AddTypes(par.(Exp))
+	texp, ok, gas := AddTypes(par.(Exp), gas)
+	if gas == 0 {
+		panic("ran out of gas when building typed AST")
+	}
 	if !ok {
-		return TypedExp{}, Value(struct{}{}), fmt.Errorf("semantic error in contract code")
+		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)
-	return texp, initstorage, nil
+	return texp, initstorage, gas, nil
 }
 
 func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
@@ -111,6 +126,7 @@ func InterpretContractCall(
 			remainingGas = err.gas
 		}
 	}()
+
 	exp := texp.Exp.(TopLevel)
 	venv := ps.NewMap()
 	for _, e := range exp.Roots {
@@ -299,6 +315,11 @@ func createStruct() StructVal {
 }
 
 func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
+	// pay gas
+	if int64(gas)-1000 < 0 {
+		panic("ran out of gas!")
+	}
+	gas = gas - 1000
 	exp := texp.Exp
 	switch exp.(type) {
 	case BinOpExp:
@@ -557,7 +578,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		var returnlist []Value
 		for _, e := range exp.List {
 			val, gas_ := interpret(e.(TypedExp), venv, gas)
-			gas = gas + gas_
+			gas = gas_
 			returnlist = append(returnlist, val)
 		}
 		return ListVal{returnlist}, gas
@@ -615,7 +636,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		var tupleValues []Value
 		for _, e := range exp.Exps {
 			interE, gas_ := interpret(e.(TypedExp), venv, gas)
-			gas = gas + gas_
+			gas = gas_
 			tupleValues = append(tupleValues, interE)
 		}
 		return TupleVal{tupleValues}, gas

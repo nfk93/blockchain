@@ -7,7 +7,7 @@ import (
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 999999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -22,7 +22,7 @@ func TestBoolLit(t *testing.T) {
 
 func TestKeyLit(t *testing.T) {
 	exp := KeyLit{"2aAad314"}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 9999999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -33,7 +33,7 @@ func TestKeyLit(t *testing.T) {
 
 func TestIntLit(t *testing.T) {
 	exp := IntLit{123}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 99999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -44,7 +44,7 @@ func TestIntLit(t *testing.T) {
 
 func TestKoinLit(t *testing.T) {
 	exp := KoinLit{123}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 99999999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -55,7 +55,7 @@ func TestKoinLit(t *testing.T) {
 
 func TestStringLit(t *testing.T) {
 	exp := StringLit{"ey"}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 999999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -66,7 +66,7 @@ func TestStringLit(t *testing.T) {
 
 func TestUnitLit(t *testing.T) {
 	exp := UnitLit{}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 999999999999999)
 	if !ok {
 		t.Fail()
 		return
@@ -77,7 +77,7 @@ func TestUnitLit(t *testing.T) {
 
 func TestBinOp(t *testing.T) {
 	exp := BinOpExp{IntLit{123}, EQ, IntLit{11}}
-	texp, ok := AddTypes(exp)
+	texp, ok, _ := AddTypes(exp, 99999999999)
 	if !ok {
 		t.Errorf("semant err")
 		return
@@ -88,7 +88,7 @@ func TestBinOp(t *testing.T) {
 	expected := TypedExp{BinOpExp{ltyped, exp.Op, rtyped}, BoolType{}}
 	checkTypeEquality(t, texp, expected)
 	exp = BinOpExp{IntLit{123}, EQ, StringLit{"tis"}}
-	texp, ok = AddTypes(exp)
+	texp, ok, _ = AddTypes(exp, 99999999999)
 	if ok {
 		t.Errorf("should have error")
 		return
@@ -98,7 +98,7 @@ func TestBinOp(t *testing.T) {
 
 func TestTypeDecl(t *testing.T) {
 	exp := TypeDecl{"test", NewIntType()}
-	texp, _, tenv, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv())
+	texp, _, tenv, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv(), 999999999999999)
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
 	switch lookupType("test", tenv).(type) {
@@ -120,7 +120,7 @@ func TestTranslateType(t *testing.T) {
 	tenv = tenv.Set("myint", IntType{})
 	tupletyp := TupleType{[]Type{IntType{}, IntType{}, NewDeclaredType("myint")}}
 
-	actualtyp := translateType(tupletyp, tenv)
+	actualtyp, _ := translateType(tupletyp, tenv, 999999999999)
 	actualtype := actualtyp.(TupleType)
 	if len(actualtype.Typs) != 3 {
 		t.Errorf("Tuple not correct length")
