@@ -27,7 +27,7 @@ type BoolVal struct {
 }
 
 type KoinVal struct {
-	Value float64
+	Value uint64
 }
 
 type OperationVal struct {

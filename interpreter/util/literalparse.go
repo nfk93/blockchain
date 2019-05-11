@@ -1,8 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"github.com/nfk93/blockchain/interpreter/token"
 	"strconv"
+	"strings"
 )
 
 func ParseId(id interface{}) string {
@@ -33,10 +35,23 @@ func ParseString(str interface{}) string {
 	return s
 }
 
-func ParseKoin(kn interface{}) float64 {
+func ParseKoin(kn interface{}) (uint64, error) {
 	knstr := string(kn.(*token.Token).Lit)
-	knval, _ := strconv.ParseFloat(knstr[:len(knstr)-2], 64)
-	return knval
+	knstr = knstr[:len(knstr)-2]
+	i := strings.Index(knstr, ".")
+	if i > -1 {
+		decimals := len(knstr) - i - 1
+		if decimals > 5 {
+			return 0, fmt.Errorf("too many decimals in koin literal, max is 5")
+		} else {
+			knstr = knstr + strings.Repeat("0", 5-decimals)
+			val, _ := strconv.ParseUint(strings.Replace(knstr, ".", "", -1), 10, 64)
+			return val, nil
+		}
+	} else {
+		val, _ := strconv.ParseUint(knstr, 10, 64)
+		return val * 100000, nil
+	}
 }
 
 func ParseNat(i interface{}) uint64 {

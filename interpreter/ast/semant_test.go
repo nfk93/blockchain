@@ -7,56 +7,92 @@ import (
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, BoolType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestKeyLit(t *testing.T) {
 	exp := KeyLit{"2aAad314"}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, KeyType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestIntLit(t *testing.T) {
 	exp := IntLit{123}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, IntType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestKoinLit(t *testing.T) {
 	exp := KoinLit{123}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, KoinType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestStringLit(t *testing.T) {
 	exp := StringLit{"ey"}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, StringType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestUnitLit(t *testing.T) {
 	exp := UnitLit{}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Fail()
+		return
+	}
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
 }
 
 func TestBinOp(t *testing.T) {
 	exp := BinOpExp{IntLit{123}, EQ, IntLit{11}}
-	texp := AddTypes(exp)
+	texp, ok := AddTypes(exp)
+	if !ok {
+		t.Errorf("semant err")
+		return
+	}
 	fmt.Println(texp.String())
 	ltyped := TypedExp{IntLit{123}, IntType{}}
 	rtyped := TypedExp{IntLit{11}, IntType{}}
 	expected := TypedExp{BinOpExp{ltyped, exp.Op, rtyped}, BoolType{}}
 	checkTypeEquality(t, texp, expected)
 	exp = BinOpExp{IntLit{123}, EQ, StringLit{"tis"}}
-	texp = AddTypes(exp)
+	texp, ok = AddTypes(exp)
+	if ok {
+		t.Errorf("should have error")
+		return
+	}
 	fmt.Println(texp.String())
 }
 

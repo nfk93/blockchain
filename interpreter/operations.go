@@ -32,7 +32,7 @@ type Transfer struct {
 }
 type TransferData struct {
 	key    string
-	amount float64
+	amount uint64
 }
 
 func (o Transfer) OperationID() OperationID {
@@ -49,7 +49,7 @@ type ContractCall struct {
 
 type CallData struct {
 	address string
-	gas     float64
+	gas     uint64
 	params  Value
 }
 
