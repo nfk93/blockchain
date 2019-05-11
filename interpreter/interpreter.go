@@ -49,7 +49,7 @@ func lookupVar(id string, venv VarEnv) Value {
 	}
 }
 
-func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor Value, returnErr error) {
+func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor Value, remainingGas uint64, returnErr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			str := fmt.Sprintf("%s", err)
@@ -60,18 +60,24 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 		}
 	}()
 
+	// initial gas cost
+	if int64(gas)-100000 < 0 {
+		panic("ran out of gas!")
+	}
+	gas = gas - 100000
+
 	lex := lexer.NewLexer(contractCode)
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		return TypedExp{}, Value(struct{}{}), fmt.Errorf("syntax error in contract code: %s", err.Error())
+		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
 	}
 	texp, ok, gas := AddTypes(par.(Exp), gas)
 	if !ok {
-		return TypedExp{}, Value(struct{}{}), fmt.Errorf("semantic error in contract code")
+		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)
-	return texp, initstorage, nil
+	return texp, initstorage, gas, nil
 }
 
 func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
