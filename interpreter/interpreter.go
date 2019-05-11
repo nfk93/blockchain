@@ -30,7 +30,7 @@ func currentFailWith(failmessage StringVal) Operation {
 }
 
 func contractCall(address AddressVal, gas KoinVal, param Value) OperationVal {
-	return OperationVal{FailWith{"dummmy"}} //TODO add proper functionality
+	return OperationVal{ContractCall{CallData{address.Value, gas.Value, param}}}
 }
 
 func accountTransfer(key KeyVal, amount KoinVal) OperationVal {
@@ -38,7 +38,7 @@ func accountTransfer(key KeyVal, amount KoinVal) OperationVal {
 }
 
 func accountDefault(key KeyVal) AddressVal {
-	return AddressVal{"dummy"} //TODO add proper funcitonality
+	return AddressVal{"dummy address"} //TODO add proper functionality
 }
 
 func lookupVar(id string, venv VarEnv) Value {
