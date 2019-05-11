@@ -130,7 +130,7 @@ func TestIntConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", IntVal{13}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", IntVal{13}, 0, 99999999999)
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 15 {
@@ -153,7 +153,7 @@ func TestAddressConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", AddressVal{"123123aA"}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", AddressVal{"123123aA"}, 0, 9999999999)
 	switch sto.(type) {
 	case AddressVal:
 		if sto.(AddressVal).Value != "3132141AAAa" {
@@ -176,7 +176,7 @@ func TestBoolConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", BoolVal{true}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", BoolVal{true}, 0, 999999999999999999)
 	switch sto.(type) {
 	case BoolVal:
 		if sto.(BoolVal).Value != false {
@@ -201,7 +201,7 @@ func TestDeclaredConstant(t *testing.T) {
 	unitval := UnitVal{}
 	oplist, sto, _ := InterpretContractCall(texp, unitval, "main",
 		TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}},
-		0, 0)
+		0, 9999999)
 	switch sto.(type) {
 	case TupleVal:
 		sto := sto.(TupleVal)
@@ -232,7 +232,7 @@ func TestKeyConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KeyVal{"1212Ddd"}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KeyVal{"1212Ddd"}, 0, 999999999)
 	switch sto.(type) {
 	case KeyVal:
 		if sto.(KeyVal).Value != "aaAAaaA" {
@@ -255,7 +255,7 @@ func TestKoinConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{uint64(110000)}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{uint64(110000)}, 0, 99999999999)
 	switch sto.(type) {
 	case KoinVal:
 		if sto.(KoinVal).Value != 13355000 {
@@ -279,7 +279,7 @@ func TestListConstant(t *testing.T) {
 	}
 	unitval := UnitVal{}
 	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", ListVal{[]Value{IntVal{2}}},
-		0, 0)
+		0, 9999999999)
 	switch sto.(type) {
 	case ListVal:
 		sto := sto.(ListVal)
@@ -309,7 +309,7 @@ func TestNatConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", NatVal{13}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", NatVal{13}, 0, 99999999999)
 	switch sto.(type) {
 	case NatVal:
 		if sto.(NatVal).Value != 117 {
@@ -332,7 +332,7 @@ func TestStringConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", StringVal{"eymom"}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", StringVal{"eymom"}, 0, 99999999999)
 	switch sto.(type) {
 	case StringVal:
 		if !(sto.(StringVal).Value == "dank") {
@@ -355,7 +355,7 @@ func TestUnitConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", UnitVal{}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", UnitVal{}, 0, 99999999999)
 	switch sto.(type) {
 	case UnitVal:
 	default:
@@ -378,7 +378,7 @@ func TestStructConstant(t *testing.T) {
 	storageinit := createStruct()
 	storageinit.Field["a"] = IntVal{1213}
 	storageinit.Field["b"] = TupleVal{[]Value{IntVal{5}, IntVal{6}}}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", storageinit, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", storageinit, 0, 99999999999)
 	switch sto.(type) {
 	case StructVal:
 		sto, oksto := sto.(StructVal)
@@ -417,7 +417,7 @@ func TestCurrentModule(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0, 999999999)
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
@@ -518,7 +518,7 @@ func TestInterpretUpdateStruct(t *testing.T) {
 	storage.Field["a"] = StringVal{"test"}
 	storage.Field["b"] = inner
 
-	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 999999999999)
 	switch sto.(type) {
 	case StructVal:
 		sto := sto.(StructVal)
@@ -565,7 +565,7 @@ func TestInterpretBinOps(t *testing.T) {
 	}
 	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
 	storage := IntVal{19}
-	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 999999999999)
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 13+17+19 {
@@ -585,7 +585,7 @@ func TestInterpretBinOps(t *testing.T) {
 		return
 	}
 
-	oplist, sto, _ = InterpretContractCall(texp, params, "main", storage, 0, 0)
+	oplist, sto, _ = InterpretContractCall(texp, params, "main", storage, 0, 9999999999)
 	//TODO make check of correct value
 
 }
@@ -598,7 +598,7 @@ func TestInterpretFailwith(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0, 99999999999)
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
@@ -622,7 +622,7 @@ func TestInterpretLetexps(t *testing.T) {
 	}
 	params := TupleVal{[]Value{IntVal{7}, StringVal{"not imporatnt"}, NatVal{13}}}
 	storage := IntVal{19}
-	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 0)
+	oplist, sto, _ := InterpretContractCall(texp, params, "main", storage, 0, 999999999999)
 	switch sto.(type) {
 	case IntVal:
 		if sto.(IntVal).Value != 19-(15+7+13) {
@@ -641,7 +641,7 @@ func TestInitStorage(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	_, init, err := InitiateContract(dat, 0)
+	_, init, err := InitiateContract(dat, 999999999999999)
 	if err != nil {
 		t.Error(err)
 		return
@@ -671,7 +671,7 @@ func TestRunFundme(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	texp, stor, err := InitiateContract(dat, 0)
+	texp, stor, err := InitiateContract(dat, 99990)
 	if err != nil {
 		t.Error(err)
 		return
@@ -699,18 +699,18 @@ func TestRunFundme(t *testing.T) {
 	ownerkey := "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc"
 	otherkey := "asdasdasd"
 	param1 := KeyVal{otherkey}
-	oplist, stor, _ := InterpretContractCall(texp, param1, "main", stor, 900000, 0)
+	oplist, stor, _ := InterpretContractCall(texp, param1, "main", stor, 900000, 999999)
 	checkstorage("call1", stor, ownerkey, 1100000, 900000)
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
-	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 100000, 0)
+	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 100000, 9999999)
 	checkstorage("call2", stor, ownerkey, 1100000, 1000000)
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
 
-	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 500000, 0)
+	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 500000, 999999)
 	checkstorage("call3", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
@@ -724,7 +724,7 @@ func TestRunFundme(t *testing.T) {
 		}
 	}
 
-	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 900000, 0)
+	oplist, stor, _ = InterpretContractCall(texp, param1, "main", stor, 900000, 9999999)
 	checkstorage("call4", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
@@ -735,7 +735,7 @@ func TestRunFundme(t *testing.T) {
 		}
 	}
 
-	oplist, stor, _ = InterpretContractCall(texp, KeyVal{ownerkey}, "main", stor, 0, 0)
+	oplist, stor, _ = InterpretContractCall(texp, KeyVal{ownerkey}, "main", stor, 0, 999999)
 	checkstorage("call5", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
@@ -748,7 +748,13 @@ func TestRunFundme(t *testing.T) {
 			t.Errorf("unexpected returned operation")
 		}
 	}
+}
 
+func TestRunOutOfGas(t *testing.T) {
+	_, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+	if err != nil {
+		t.Error("Error reading testfile")
+	}
 }
 
 /* Helper functions */
@@ -773,8 +779,13 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 		t.Errorf("parse error: " + err.Error())
 	} else {
 		parsed := par.(Exp)
-		typed, noErrors := AddTypes(parsed)
-		print("\n" + typed.String() + "\n")
+		typed, noErrors, remainingGas := AddTypes(parsed, 10000000)
+		if remainingGas > 0 {
+			print("\n" + typed.String() + "\n")
+		} else {
+			t.Errorf("ran out of gas")
+			return
+		}
 		if shouldFail {
 			if noErrors {
 				t.Errorf("Didn't find any noErrors")
@@ -799,5 +810,6 @@ func getTypedAST(t *testing.T, testpath string) (TypedExp, bool) {
 		t.Errorf("parse error: " + err.Error())
 		return TypedExp{}, false
 	}
-	return AddTypes(par.(Exp))
+	texp, ok, _ := AddTypes(par.(Exp), 999999999)
+	return texp, ok
 }
