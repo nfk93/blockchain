@@ -713,7 +713,7 @@ func TestRunFundme(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	texp, stor, err := InitiateContract(dat, 99990)
+	texp, stor, err := InitiateContract(dat, 999999999)
 	if err != nil {
 		t.Error(err)
 		return
