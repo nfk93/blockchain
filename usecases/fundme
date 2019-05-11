@@ -32,7 +32,7 @@ let%entry main
     if new_raise > storage.funding_goal then
       let difference = new_raise - storage.funding_goal in
       let sender_refund_op = Account.transfer parameter difference in
-      ( [sender_refund_op], storage)
+      ( [sender_refund_op], storage.amount_raised <- storage.funding_goal)
 
     else
       let storage = storage.amount_raised <- new_raise in

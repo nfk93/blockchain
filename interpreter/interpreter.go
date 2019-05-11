@@ -2,11 +2,14 @@ package interpreter
 
 import (
 	"fmt"
+	"github.com/mndrix/ps"
 	. "github.com/nfk93/blockchain/interpreter/ast"
 	"github.com/nfk93/blockchain/interpreter/lexer"
 	"github.com/nfk93/blockchain/interpreter/parser"
 	"strconv"
 )
+
+var currentAmt uint64
 
 func todo(n int) int {
 	panic("Hit todo nr. " + strconv.Itoa(n))
@@ -18,7 +21,7 @@ func currentBalance() KoinVal {
 }
 
 func currentAmount() KoinVal {
-	return KoinVal{5.0} //TODO return proper value
+	return KoinVal{currentAmt} //TODO return proper value
 }
 
 func currentGas() NatVal {
@@ -50,7 +53,7 @@ func lookupVar(id string, venv VarEnv) Value {
 	}
 }
 
-func InitiateContract(contractCode []byte) (TypedExp, Value, error) {
+func InitiateContract(contractCode []byte, gas uint64) (TypedExp, Value, error) {
 	lex := lexer.NewLexer(contractCode)
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
@@ -61,26 +64,37 @@ func InitiateContract(contractCode []byte) (TypedExp, Value, error) {
 	if !ok {
 		return TypedExp{}, Value(struct{}{}), fmt.Errorf("semantic error in contract code")
 	}
-	initstorage := InterpretStorageInit(texp)
+	initstorage, gas := interpretStorageInit(texp, gas)
 	return texp, initstorage, nil
 }
 
-func InterpretStorageInit(texp TypedExp) Value {
+func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
 	exp := texp.Exp.(TopLevel)
-	venv, tenv, senv := GenInitEnvs()
+	venv := ps.NewMap()
 	for _, e := range exp.Roots {
 		e := e.(TypedExp).Exp
 		switch e.(type) {
 		case StorageInitExp:
 			e := e.(StorageInitExp)
-			storageVal := interpret(e.Exp.(TypedExp), venv, tenv, senv)
-			return storageVal
+			storageVal, gas := interpret(e.Exp.(TypedExp), venv, gas)
+			return storageVal, gas
 		}
 	}
-	return -1
+	return -1, gas
 }
 
-func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) (oplist []Operation, storage Value) {
+func InterpretContractCall(
+	texp TypedExp,
+	params Value,
+	entry string,
+	stor Value,
+	amount uint64,
+	gas uint64,
+) (oplist []Operation, storage Value, remainingGas uint64) {
+
+	// initiate module variables
+	currentAmt = amount
+
 	defer func() {
 		if err := recover(); err != nil {
 			str := fmt.Sprintf("%s", err)
@@ -90,7 +104,7 @@ func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value
 		}
 	}()
 	exp := texp.Exp.(TopLevel)
-	venv, tenv, senv := GenInitEnvs()
+	venv := ps.NewMap()
 	for _, e := range exp.Roots {
 		e := e.(TypedExp).Exp
 		switch e.(type) {
@@ -100,24 +114,25 @@ func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value
 				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
-					return []Operation{failwith(err.Error())}, stor // TODO return original storage
+					return []Operation{failwith(err.Error())}, stor, gas // TODO return original storage
 				}
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, stor // TODO return original storage
+					return []Operation{failwith("storage doesn't match storage type definition")}, stor, gas // TODO return original storage
 				}
-				bodyTuple := interpret(e.Body.(TypedExp), venv, tenv, senv).(TupleVal)
+				bodyTuple_, gas := interpret(e.Body.(TypedExp), venv, gas)
+				bodyTuple := bodyTuple_.(TupleVal)
 				opvallist := bodyTuple.Values[0].(ListVal).Values
 				var oplist []Operation
 				for _, v := range opvallist {
 					oplist = append(oplist, v.(OperationVal).Value)
 				}
-				return oplist, bodyTuple.Values[1]
+				return oplist, bodyTuple.Values[1], gas
 			}
 		}
 	}
-	return nil, 1 // TODO this is just a dummy return Value
+	return nil, 1, gas // TODO this is just a dummy return Value
 }
 
 func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
@@ -275,74 +290,74 @@ func createStruct() StructVal {
 	return StructVal{m}
 }
 
-func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interface{} {
+func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 	exp := texp.Exp
 	switch exp.(type) {
 	case BinOpExp:
 		exp := exp.(BinOpExp)
-		leftval := interpret(exp.Left.(TypedExp), venv, tenv, senv)
-		rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
+		leftval, gas := interpret(exp.Left.(TypedExp), venv, gas)
+		rightval, gas := interpret(exp.Right.(TypedExp), venv, gas)
 		switch exp.Op {
 		case PLUS:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
-				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}
+				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}, gas
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case NAT:
-					return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}
+					return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}, gas
 				case INT:
-					return IntVal{int64(leftval.(NatVal).Value) + rightval.(IntVal).Value}
+					return IntVal{int64(leftval.(NatVal).Value) + rightval.(IntVal).Value}, gas
 				default:
-					return todo(1)
+					return todo(1), gas
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case NAT:
-					return IntVal{leftval.(IntVal).Value + int64(rightval.(NatVal).Value)}
+					return IntVal{leftval.(IntVal).Value + int64(rightval.(NatVal).Value)}, gas
 				case INT:
-					return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}
+					return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}, gas
 				default:
-					return todo(2)
+					return todo(2), gas
 				}
 			default:
-				return todo(3)
+				return todo(3), gas
 			}
 		case MINUS:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}
+					return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}, gas
 				case NAT:
-					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}
+					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}, gas
 				default:
-					return todo(4)
+					return todo(4), gas
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					return IntVal{int64(leftval.(NatVal).Value) - rightval.(IntVal).Value}
+					return IntVal{int64(leftval.(NatVal).Value) - rightval.(IntVal).Value}, gas
 				case NAT:
-					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}
+					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}, gas
 				default:
-					return todo(5)
+					return todo(5), gas
 				}
 			case KOIN:
-				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}
+				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}, gas
 			default:
-				return todo(6)
+				return todo(6), gas
 			}
 		case TIMES:
 			switch texp.Type.Type() {
 			case INT:
-				return IntVal{leftval.(IntVal).Value * rightval.(IntVal).Value}
+				return IntVal{leftval.(IntVal).Value * rightval.(IntVal).Value}, gas
 			case NAT:
-				return NatVal{leftval.(NatVal).Value * rightval.(NatVal).Value}
+				return NatVal{leftval.(NatVal).Value * rightval.(NatVal).Value}, gas
 			case KOIN:
-				return KoinVal{leftval.(KoinVal).Value * rightval.(KoinVal).Value}
+				return KoinVal{leftval.(KoinVal).Value * rightval.(KoinVal).Value}, gas
 			default:
-				return todo(7)
+				return todo(7), gas
 			}
 		case DIVIDE:
 			switch exp.Left.(TypedExp).Type.Type() {
@@ -350,293 +365,306 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				switch exp.Right.(TypedExp).Type.Type() {
 				case KOIN:
 					if rightval.(KoinVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
 					values := []Value{NatVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(NatVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
 					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				default:
-					return todo(8)
+					return todo(8), gas
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := int64(leftval.(NatVal).Value)
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(NatVal).Value
 					right := rightval.(NatVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{NatVal{quotient}, NatVal{remainder}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				default:
-					return todo(9)
+					return todo(9), gas
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(IntVal).Value
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(IntVal).Value
 					right := int64(rightval.(NatVal).Value)
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}
+					return OptionVal{TupleVal{values}, true}, gas
 				default:
-					return todo(10)
+					return todo(10), gas
 				}
 			default:
-				return todo(11)
+				return todo(11), gas
 			}
 		case EQ:
-			return BoolVal{leftval == rightval}
+			return BoolVal{leftval == rightval}, gas
 		case NEQ:
-			return BoolVal{leftval == rightval}
+			return BoolVal{leftval == rightval}, gas
 		case GEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value >= rightval.(NatVal).Value}
+				return BoolVal{leftval.(NatVal).Value >= rightval.(NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value >= rightval.(IntVal).Value}
+				return BoolVal{leftval.(IntVal).Value >= rightval.(IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value >= rightval.(KoinVal).Value}
+				return BoolVal{leftval.(KoinVal).Value >= rightval.(KoinVal).Value}, gas
 			default:
-				return todo(12)
+				return todo(12), gas
 			}
 		case LEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value <= rightval.(NatVal).Value}
+				return BoolVal{leftval.(NatVal).Value <= rightval.(NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value <= rightval.(IntVal).Value}
+				return BoolVal{leftval.(IntVal).Value <= rightval.(IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value <= rightval.(KoinVal).Value}
+				return BoolVal{leftval.(KoinVal).Value <= rightval.(KoinVal).Value}, gas
 			default:
-				return todo(13)
+				return todo(13), gas
 			}
 		case LT:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value < rightval.(NatVal).Value}
+				return BoolVal{leftval.(NatVal).Value < rightval.(NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value < rightval.(IntVal).Value}
+				return BoolVal{leftval.(IntVal).Value < rightval.(IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value < rightval.(KoinVal).Value}
+				return BoolVal{leftval.(KoinVal).Value < rightval.(KoinVal).Value}, gas
 			default:
-				return todo(14)
+				return todo(14), gas
 			}
 		case GT:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value > rightval.(NatVal).Value}
+				return BoolVal{leftval.(NatVal).Value > rightval.(NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value > rightval.(IntVal).Value}
+				return BoolVal{leftval.(IntVal).Value > rightval.(IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value > rightval.(KoinVal).Value}
+				return BoolVal{leftval.(KoinVal).Value > rightval.(KoinVal).Value}, gas
 			default:
-				return todo(15)
+				return todo(15), gas
 			}
 		case AND:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return NatVal{leftval.(NatVal).Value & rightval.(NatVal).Value}
+				return NatVal{leftval.(NatVal).Value & rightval.(NatVal).Value}, gas
 			case BOOL:
-				return BoolVal{leftval.(BoolVal).Value && rightval.(BoolVal).Value}
+				return BoolVal{leftval.(BoolVal).Value && rightval.(BoolVal).Value}, gas
 			default:
-				return todo(16)
+				return todo(16), gas
 			}
 		case OR:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return NatVal{leftval.(NatVal).Value | rightval.(NatVal).Value}
+				return NatVal{leftval.(NatVal).Value | rightval.(NatVal).Value}, gas
 			case BOOL:
-				return BoolVal{leftval.(BoolVal).Value || rightval.(BoolVal).Value}
+				return BoolVal{leftval.(BoolVal).Value || rightval.(BoolVal).Value}, gas
 			default:
-				return todo(17)
+				return todo(17), gas
 			}
 		default:
-			return todo(18)
+			return todo(18), gas
 		}
 	case TypeDecl:
-		return todo(18)
+		return todo(18), gas
 	case KeyLit:
 		exp := exp.(KeyLit)
-		return KeyVal{exp.Key}
+		return KeyVal{exp.Key}, gas
 	case BoolLit:
 		exp := exp.(BoolLit)
-		return BoolVal{exp.Val}
+		return BoolVal{exp.Val}, gas
 	case IntLit:
 		exp := exp.(IntLit)
-		return IntVal{exp.Val}
+		return IntVal{exp.Val}, gas
 	case KoinLit:
 		exp := exp.(KoinLit)
-		return KoinVal{exp.Val}
+		return KoinVal{exp.Val}, gas
 	case StringLit:
 		exp := exp.(StringLit)
-		return StringVal{exp.Val}
+		return StringVal{exp.Val}, gas
 	case NatLit:
 		exp := exp.(NatLit)
-		return NatVal{exp.Val}
+		return NatVal{exp.Val}, gas
 	case UnitLit:
-		return UnitVal{}
+		return UnitVal{}, gas
 	case AddressLit:
 		exp := exp.(AddressLit)
-		return AddressVal{exp.Val}
+		return AddressVal{exp.Val}, gas
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()
 		for i, id := range exp.Ids {
-			newStruct.Field[id] = interpret(exp.Vals[i].(TypedExp), venv, tenv, senv)
+			newStruct.Field[id], gas = interpret(exp.Vals[i].(TypedExp), venv, gas)
 		}
-		return newStruct
+		return newStruct, gas
 	case ListLit:
 		exp := exp.(ListLit)
 		if len(exp.List) == 0 {
-			return ListVal{make([]Value, 0)}
+			return ListVal{make([]Value, 0)}, gas
 		}
 		var returnlist []Value
 		for _, e := range exp.List {
-			returnlist = append(returnlist, interpret(e.(TypedExp), venv, tenv, senv))
+			val, gas_ := interpret(e.(TypedExp), venv, gas)
+			gas = gas + gas_
+			returnlist = append(returnlist, val)
 		}
-		return ListVal{returnlist}
+		return ListVal{returnlist}, gas
 	case ListConcat:
 		exp := exp.(ListConcat)
-		e := interpret(exp.Exp.(TypedExp), venv, tenv, senv)
-		list := interpret(exp.Exp.(TypedExp), venv, tenv, senv).(ListVal)
-		return ListVal{append(list.Values, e)}
+		e, gas := interpret(exp.Exp.(TypedExp), venv, gas)
+		list_, gas := interpret(exp.Exp.(TypedExp), venv, gas)
+		list := list_.(ListVal)
+		return ListVal{append(list.Values, e)}, gas
 	case CallExp:
 		exp := exp.(CallExp)
-		name := interpret(exp.ExpList[0].(TypedExp), venv, tenv, senv).(LambdaVal)
+		name_, gas := interpret(exp.ExpList[0].(TypedExp), venv, gas)
+		name := name_.(LambdaVal)
 		switch name.Value {
 		case CURRENT_BALANCE:
-			return currentBalance()
+			return currentBalance(), gas
 		case CURRENT_AMOUNT:
-			return currentAmount()
+			return currentAmount(), gas
 		case CURRENT_GAS:
-			return currentGas()
+			return KoinVal{gas}, gas
 		case CURRENT_FAILWITH:
-			failmessage := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(StringVal)
-			return OperationVal{currentFailWith(failmessage)}
+			failmessage_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
+			failmessage := failmessage_.(StringVal)
+			return OperationVal{currentFailWith(failmessage)}, gas
 		case CONTRACT_CALL:
-			address := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(AddressVal)
-			gas := interpret(exp.ExpList[2].(TypedExp), venv, tenv, senv).(KoinVal)
-			param := interpret(exp.ExpList[3].(TypedExp), venv, tenv, senv)
-			return contractCall(address, gas, param)
+			address_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
+			address := address_.(AddressVal)
+			gasval_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
+			gasval := gasval_.(KoinVal)
+			param, gas := interpret(exp.ExpList[3].(TypedExp), venv, gas)
+			return contractCall(address, gasval, param), gas
 		case ACCOUNT_TRANSFER:
-			key := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(KeyVal)
-			amount := interpret(exp.ExpList[2].(TypedExp), venv, tenv, senv).(KoinVal)
-			return accountTransfer(key, amount)
+			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
+			key := key_.(KeyVal)
+			amount_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
+			amount := amount_.(KoinVal)
+			return accountTransfer(key, amount), gas
 		case ACCOUNT_DEFAULT:
-			key := interpret(exp.ExpList[1].(TypedExp), venv, tenv, senv).(KeyVal)
-			return accountDefault(key)
+			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
+			key := key_.(KeyVal)
+			return accountDefault(key), gas
 		default:
-			return todo(20)
+			return todo(20), gas
 		}
 	case LetExp:
 		exp := exp.(LetExp)
-		value := interpret(exp.DefExp.(TypedExp), venv, tenv, senv)
+		value, gas := interpret(exp.DefExp.(TypedExp), venv, gas)
 		venv, _ = applyParams(value, exp.Patt, venv)
-		return interpret(exp.InExp.(TypedExp), venv, tenv, senv)
+		return interpret(exp.InExp.(TypedExp), venv, gas)
 	case AnnoExp:
 		exp := exp.(AnnoExp)
-		return interpret(exp.Exp.(TypedExp), venv, tenv, senv)
+		return interpret(exp.Exp.(TypedExp), venv, gas)
 	case TupleExp:
 		exp := exp.(TupleExp)
 		var tupleValues []Value
 		for _, e := range exp.Exps {
-			interE := interpret(e.(TypedExp), venv, tenv, senv)
+			interE, gas_ := interpret(e.(TypedExp), venv, gas)
+			gas = gas + gas_
 			tupleValues = append(tupleValues, interE)
 		}
-		return TupleVal{tupleValues}
+		return TupleVal{tupleValues}, gas
 	case VarExp:
 		exp := exp.(VarExp)
-		return lookupVar(exp.Id, venv)
+		return lookupVar(exp.Id, venv), gas
 	case ExpSeq:
 		exp := exp.(ExpSeq)
-		_ = interpret(exp.Left.(TypedExp), venv, tenv, senv)
-		rightval := interpret(exp.Right.(TypedExp), venv, tenv, senv)
-		return rightval
+		_, gas = interpret(exp.Left.(TypedExp), venv, gas)
+		rightval, gas := interpret(exp.Right.(TypedExp), venv, gas)
+		return rightval, gas
 	case IfThenElseExp:
 		exp := exp.(IfThenElseExp)
-		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
+		condition_, gas := interpret(exp.If.(TypedExp), venv, gas)
+		condition := condition_.(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv)
+			return interpret(exp.Then.(TypedExp), venv, gas)
 		} else {
-			return interpret(exp.Else.(TypedExp), venv, tenv, senv)
+			return interpret(exp.Else.(TypedExp), venv, gas)
 		}
 	case IfThenExp:
 		exp := exp.(IfThenExp)
-		condition := interpret(exp.If.(TypedExp), venv, tenv, senv).(BoolVal).Value
+		condition_, gas := interpret(exp.If.(TypedExp), venv, gas)
+		condition := condition_.(BoolVal).Value
 		if condition {
-			return interpret(exp.Then.(TypedExp), venv, tenv, senv)
+			return interpret(exp.Then.(TypedExp), venv, gas)
 		}
-		return UnitVal{}
+		return UnitVal{}, gas
 	case ModuleLookupExp:
 		exp := exp.(ModuleLookupExp)
 		switch exp.ModId {
 		case "Current":
 			switch exp.FieldId {
 			case "balance":
-				return LambdaVal{CURRENT_BALANCE}
+				return LambdaVal{CURRENT_BALANCE}, gas
 			case "amount":
-				return LambdaVal{CURRENT_AMOUNT}
+				return LambdaVal{CURRENT_AMOUNT}, gas
 			case "gas":
-				return LambdaVal{CURRENT_GAS}
+				return LambdaVal{CURRENT_GAS}, gas
 			case "failwith":
-				return LambdaVal{CURRENT_FAILWITH}
+				return LambdaVal{CURRENT_FAILWITH}, gas
 			default:
-				return todo(22)
+				return todo(22), gas
 			}
 		case "Contract":
 			switch exp.FieldId {
 			case "call":
-				return LambdaVal{CONTRACT_CALL}
+				return LambdaVal{CONTRACT_CALL}, gas
 			default:
-				return todo(23)
+				return todo(23), gas
 			}
 		case "Account":
 			switch exp.FieldId {
 			case "transfer":
-				return LambdaVal{ACCOUNT_TRANSFER}
+				return LambdaVal{ACCOUNT_TRANSFER}, gas
 			case "default":
-				return LambdaVal{ACCOUNT_DEFAULT}
+				return LambdaVal{ACCOUNT_DEFAULT}, gas
 			default:
-				return todo(24)
+				return todo(24), gas
 			}
 		default:
-			return todo(25)
+			return todo(25), gas
 		}
 
 	case LookupExp:
@@ -649,7 +677,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 				structVal = structVal.Field[id].(StructVal)
 			}
 		}
-		return structVal.Field[exp.LeafId]
+		return structVal.Field[exp.LeafId], gas
 	case UpdateStructExp:
 		exp := exp.(UpdateStructExp)
 		struc := lookupVar(exp.Root, venv)
@@ -659,12 +687,12 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 			innerStruct = innerStruct.(StructVal).Field[path[0]]
 			path = path[1:]
 		}
-		newval := interpret(exp.Exp.(TypedExp), venv, tenv, senv)
+		newval, gas := interpret(exp.Exp.(TypedExp), venv, gas)
 		innerStruct.(StructVal).Field[path[0]] = newval
-		return struc
+		return struc, gas
 	case StorageInitExp:
-		return todo(26)
+		return todo(26), gas
 	default:
-		return todo(27)
+		return todo(27), gas
 	}
 }
