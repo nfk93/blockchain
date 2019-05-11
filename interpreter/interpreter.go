@@ -9,6 +9,11 @@ import (
 	"strconv"
 )
 
+type PanicStruct struct {
+	message string
+	gas     uint64
+}
+
 var currentAmt uint64
 
 func todo(n int) int {
@@ -95,16 +100,15 @@ func InterpretContractCall(
 	amount uint64,
 	gas uint64,
 ) (oplist []Operation, storage Value, remainingGas uint64) {
-
 	// initiate module variables
 	currentAmt = amount
-
 	defer func() {
 		if err := recover(); err != nil {
-			str := fmt.Sprintf("%s", err)
-			fmt.Println(str)
-			oplist = []Operation{FailWith{str}}
+			err := err.(PanicStruct)
+			fmt.Println(err.message)
+			oplist = []Operation{FailWith{err.message}}
 			storage = stor
+			remainingGas = err.gas
 		}
 	}()
 	exp := texp.Exp.(TopLevel)
