@@ -245,14 +245,17 @@ func NewAddressLit(val string) (Exp, error) {
 
 /* KoinType Lit */
 type KoinLit struct {
-	Val float64
+	Val uint64
 }
 
 func (k KoinLit) String() string {
 	return fmt.Sprintf("KoinLit(val: %d)", k.Val)
 }
 
-func NewKoinLit(koins float64) (Exp, error) {
+func NewKoinLit(koins uint64, err error) (Exp, error) {
+	if err != nil {
+		return ErrorExpression{""}, err
+	}
 	if koins < 0 {
 		err := "koin literal can't have negative value"
 		return ErrorExpression{err}, nil

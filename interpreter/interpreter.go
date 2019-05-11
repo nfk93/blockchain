@@ -83,8 +83,9 @@ func InterpretStorageInit(texp TypedExp) Value {
 func InterpretContractCall(texp TypedExp, params Value, entry string, stor Value) (oplist []Operation, storage Value) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err)
-			oplist = []Operation{FailWith{err.(error).Error()}}
+			str := fmt.Sprintf("%s", err)
+			fmt.Println(str)
+			oplist = []Operation{FailWith{str}}
 			storage = stor
 		}
 	}()
@@ -354,7 +355,7 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value
 					quotient := uint64(left / right)
-					remainder := ((left / right) - float64(quotient)) * right
+					remainder := ((left / right) - quotient) * right
 					values := []Value{NatVal{quotient}, KoinVal{remainder}}
 					return OptionVal{TupleVal{values}, true}
 				case NAT:
@@ -362,8 +363,8 @@ func interpret(texp TypedExp, venv VarEnv, tenv TypeEnv, senv StructEnv) interfa
 						return OptionVal{Opt: false}
 					}
 					left := leftval.(KoinVal).Value
-					right := float64(rightval.(NatVal).Value)
-					quotient := float64(uint64(left / right))
+					right := rightval.(NatVal).Value
+					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
 					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
 					return OptionVal{TupleVal{values}, true}

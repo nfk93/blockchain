@@ -31,7 +31,7 @@ type Transfer struct {
 }
 type TransferData struct {
 	key    string
-	amount float64
+	amount uint64
 }
 
 func (o Transfer) OperationID() OperationID {

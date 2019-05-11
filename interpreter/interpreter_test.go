@@ -254,11 +254,11 @@ func TestKoinConstant(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{1.1})
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{uint64(110000)})
 	switch sto.(type) {
 	case KoinVal:
-		if sto.(KoinVal).Value != 133.55 {
-			t.Errorf("storage has unexpected value of %f", sto.(KoinVal).Value)
+		if sto.(KoinVal).Value != 13355000 {
+			t.Errorf("storage has unexpected value of %d", sto.(KoinVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -416,12 +416,12 @@ func TestCurrentModule(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{10.0})
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{1000000})
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
-		if sto.Value != 0.0 {
-			t.Errorf("return value is %f, expected 0.0", sto.Value)
+		if sto.Value != 0 {
+			t.Errorf("return value is %d, expected 0.0", sto.Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -597,12 +597,12 @@ func TestInterpretFailwith(t *testing.T) {
 		return
 	}
 	unitval := UnitVal{}
-	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{10.0})
+	oplist, sto := InterpretContractCall(texp, unitval, "main", KoinVal{1000000})
 	switch sto.(type) {
 	case KoinVal:
 		sto := sto.(KoinVal)
-		if sto.Value != 10.0 {
-			t.Errorf("return value is %f, expected 0.0", sto.Value)
+		if sto.Value != 1000000 {
+			t.Errorf("return value is %d, expected 1000000", sto.Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -654,8 +654,9 @@ func TestInitStorage(t *testing.T) {
 			t.Errorf("init storage has wrong value in field %s", "owner")
 		}
 		funding_goal, ok := init.Field["funding_goal"].(KoinVal)
-		if !ok || funding_goal.Value != 10 {
-			t.Errorf("init storage has wrong value in field %s", "funding_goal")
+		if !ok || funding_goal.Value != 1100000 {
+			t.Errorf("init storage has wrong value in field %s. expected: 1100000, actual: %d",
+				"funding_goal", funding_goal.Value)
 		}
 		amount_raised, ok := init.Field["amount_raised"].(KoinVal)
 		if !ok || amount_raised.Value != 0 {
@@ -675,7 +676,7 @@ func TestRunFundme(t *testing.T) {
 		return
 	}
 
-	checkstorage := func(msg string, stor Value, owner_ string, funding_goal_ float64, amount_raised_ float64) {
+	checkstorage := func(msg string, stor Value, owner_ string, funding_goal_ uint64, amount_raised_ uint64) {
 		switch stor.(type) {
 		case StructVal:
 			init := stor.(StructVal)
@@ -698,50 +699,53 @@ func TestRunFundme(t *testing.T) {
 	otherkey := "asdasdasd"
 	param1 := KeyVal{otherkey}
 	oplist, stor := InterpretContractCall(texp, param1, "main", stor)
-	checkstorage("call1", stor, ownerkey, 11, 5)
+	checkstorage("call1", stor, ownerkey, 1100000, 500000)
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
 	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
-	checkstorage("call2", stor, ownerkey, 11, 10)
+	checkstorage("call2", stor, ownerkey, 1100000, 1000000)
 	if len(oplist) != 0 {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
 
 	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
-	checkstorage("call3", stor, ownerkey, 11, 11)
+	checkstorage("call3", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
-	}
-	transferOp, ok := oplist[0].(Transfer)
-	if !ok || transferOp.data.amount != 4 {
-		t.Errorf("unexpected returned operation")
-	}
-	if !ok || transferOp.data.key != otherkey {
-		t.Errorf("unexpected returned operation")
+	} else {
+		transferOp, ok := oplist[0].(Transfer)
+		if !ok || transferOp.data.amount != 400000 {
+			t.Errorf("unexpected returned operation")
+		}
+		if !ok || transferOp.data.key != otherkey {
+			t.Errorf("unexpected returned operation")
+		}
 	}
 
 	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
-	checkstorage("call4", stor, ownerkey, 11, 11)
+	checkstorage("call4", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
-	}
-	failwithOp, ok := oplist[0].(FailWith)
-	if !ok || failwithOp.msg != "funding goal already reached" {
-		t.Errorf("unexpected returned operation")
+	} else {
+		failwithOp, ok := oplist[0].(FailWith)
+		if !ok || failwithOp.msg != "funding goal already reached" {
+			t.Errorf("unexpected returned operation")
+		}
 	}
 
 	oplist, stor = InterpretContractCall(texp, param1, "main", stor)
-	checkstorage("call5", stor, ownerkey, 11, 11)
+	checkstorage("call5", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
-	}
-	transferOp, ok = oplist[0].(Transfer)
-	if !ok || transferOp.data.amount != 11 {
-		t.Errorf("unexpected returned operation")
-	}
-	if !ok || transferOp.data.key != ownerkey {
-		t.Errorf("unexpected returned operation")
+	} else {
+		transferOp, ok := oplist[0].(Transfer)
+		if !ok || transferOp.data.amount != 1100000 {
+			t.Errorf("unexpected returned operation")
+		}
+		if !ok || transferOp.data.key != ownerkey {
+			t.Errorf("unexpected returned operation")
+		}
 	}
 
 }
