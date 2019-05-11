@@ -589,9 +589,9 @@ func addTypes(
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, OptionType{NewTupleType([]Type{NewNatType(), NewKoinType()})}}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewKoinType()})}, venv, tenv, senv, gas
 				case NAT:
-					return TypedExp{texp, OptionType{NewTupleType([]Type{NewKoinType(), NewKoinType()})}}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewKoinType(), NewKoinType()})}, venv, tenv, senv, gas
 				default:
 					return TypedExp{texp,
 							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},

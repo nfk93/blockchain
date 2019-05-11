@@ -356,6 +356,11 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 					return todo(5), gas
 				}
 			case KOIN:
+				left := leftval.(KoinVal).Value
+				right := rightval.(KoinVal).Value
+				if left < right {
+					panic(fmt.Sprintf("Subtracting %d from %d would result in a negative Koin value", left, right))
+				}
 				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}, gas
 			default:
 				return todo(6), gas
@@ -378,23 +383,24 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 				case KOIN:
 					if rightval.(KoinVal).Value == 0 {
 						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
 					values := []Value{NatVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(NatVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
 					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				default:
 					return todo(8), gas
 				}
@@ -402,22 +408,22 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := int64(leftval.(NatVal).Value)
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(NatVal).Value
 					right := rightval.(NatVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{NatVal{quotient}, NatVal{remainder}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				default:
 					return todo(9), gas
 				}
@@ -425,22 +431,22 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
 					if rightval.(IntVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(IntVal).Value
 					right := rightval.(IntVal).Value
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				case NAT:
 					if rightval.(NatVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+						panic("Can't divide by zero!")
 					}
 					left := leftval.(IntVal).Value
 					right := int64(rightval.(NatVal).Value)
 					quotient, remainder := left/right, left%right
 					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return OptionVal{TupleVal{values}, true}, gas
+					return TupleVal{values}, gas
 				default:
 					return todo(10), gas
 				}
@@ -450,7 +456,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		case EQ:
 			return BoolVal{leftval == rightval}, gas
 		case NEQ:
-			return BoolVal{leftval == rightval}, gas
+			return BoolVal{leftval != rightval}, gas
 		case GEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
