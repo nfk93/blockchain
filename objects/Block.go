@@ -8,12 +8,12 @@ import (
 
 type Block struct {
 	Slot           int
-	ParentPointer  string    //a hash of parent block
-	BakerID        PublicKey //
+	ParentPointer  string //a hash of parent block
+	BakerID        PublicKey
 	Draw           string
 	BlockNonce     BlockNonce
 	LastFinalized  string //hash of last finalized block
-	BlockData      Data
+	BlockData      BlockData
 	StateHash      string
 	BlockSignature string
 }
@@ -33,51 +33,48 @@ type BlockNonce struct {
 	Proof string
 }
 
-type Data struct {
+type BlockData struct {
 	Trans       []Transaction
 	GenesisData GenesisData
 }
 
-// Validation functions
-
-//Signing functions
+// Block Functions
 func (b *Block) SignBlock(sk SecretKey) {
-	m := buildBlockStringToSign(*b)
+	m := b.toString()
 	b.BlockSignature = Sign(m, sk)
 }
 
 func (b Block) ValidateBlock() bool {
-	return Verify(buildBlockStringToSign(b), b.BlockSignature, b.BakerID)
+	return Verify(b.toString(), b.BlockSignature, b.BakerID)
 }
 
-// Helpers
-func (d *Data) DataString() string {
-	var buf bytes.Buffer
-	for _, t := range d.Trans {
-		buf.WriteString(t.buildStringToSign())
-	}
-	return buf.String()
-}
-
-func buildBlockStringToSign(b Block) string {
+func (b Block) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(strconv.Itoa(b.Slot))
 	buf.WriteString(b.ParentPointer)
-	buf.WriteString(b.BakerID.N.String())
-	buf.WriteString(b.BakerID.E.String())
+	buf.WriteString(b.BakerID.String())
 	buf.WriteString(b.Draw)
 	buf.WriteString(b.BlockNonce.Nonce)
 	buf.WriteString(b.BlockNonce.Proof)
 	buf.WriteString(b.LastFinalized)
-	buf.WriteString(b.BlockData.DataString())
+	buf.WriteString(b.BlockData.toString())
 	buf.WriteString(b.StateHash)
 	return buf.String()
 }
 
 func (b *Block) CalculateBlockHash() string {
-	return HashSHA(buildBlockStringToSign(*b))
+	return HashSHA(b.toString())
 }
 
+func (d *BlockData) toString() string {
+	var buf bytes.Buffer
+	for _, t := range d.Trans {
+		buf.WriteString(t.toString())
+	}
+	return buf.String()
+}
+
+// BlockNonce Functions
 func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot int) BlockNonce {
 	var buf bytes.Buffer
 	buf.WriteString("NONCE") //Old block nonce

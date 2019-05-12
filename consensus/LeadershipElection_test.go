@@ -28,7 +28,7 @@ func TestLeadershipElection(t *testing.T) {
 		draw,
 		BlockNonce{},
 		"",
-		Data{},
+		BlockData{},
 		"",
 		""}
 	someBlock.SignBlock(sk)

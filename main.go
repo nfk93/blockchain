@@ -89,7 +89,7 @@ func cliLoop() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				genesisblock := objects.Block{Slot: 0, BlockData: objects.Data{GenesisData: genesisdata}}
+				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
 			} else {
 				fmt.Println("Only the network founder can start the network!")

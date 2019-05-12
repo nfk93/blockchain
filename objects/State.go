@@ -47,12 +47,12 @@ func (s *State) AddTransaction(t Transaction, transFee int) bool {
 	return true
 }
 
-func (s *State) AddBlockRewardAndTransFees(pk PublicKey, reward int) {
+func (s *State) AddBlockReward(pk PublicKey, reward int) {
 	s.Ledger[pk.String()] += reward
 	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
 
-func (s State) StateAsString() string {
+func (s State) toString() string {
 	var buf bytes.Buffer
 
 	sortedLedger := make(map[string]int)
@@ -74,13 +74,10 @@ func (s State) StateAsString() string {
 	return buf.String()
 }
 
-func (s *State) CreateStateHash(sk SecretKey) string {
-
-	return Sign(HashSHA(s.StateAsString()), sk)
-
+func (s *State) SignHashedState(sk SecretKey) string {
+	return Sign(HashSHA(s.toString()), sk)
 }
 
-func (s State) VerifyStateHash(sig string, pk PublicKey) bool {
-
-	return Verify(HashSHA(s.StateAsString()), sig, pk)
+func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
+	return Verify(HashSHA(s.toString()), sig, pk)
 }

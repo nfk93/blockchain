@@ -40,7 +40,7 @@ func CreateTestGenesis(pk crypto.PublicKey) Block {
 		"",
 		BlockNonce{},
 		"",
-		Data{[]Transaction{}, data},
+		BlockData{[]Transaction{}, data},
 		"",
 		""}
 }

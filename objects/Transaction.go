@@ -14,7 +14,7 @@ type Transaction struct {
 	Signature string
 }
 
-func (t Transaction) buildStringToSign() string {
+func (t Transaction) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(t.From.String())
 	buf.WriteString(t.To.String())
@@ -24,12 +24,12 @@ func (t Transaction) buildStringToSign() string {
 }
 
 func (t *Transaction) SignTransaction(sk SecretKey) {
-	m := t.buildStringToSign()
+	m := t.toString()
 	t.Signature = Sign(m, sk)
 }
 
 func (t *Transaction) VerifyTransaction() bool {
-	return Verify(t.buildStringToSign(), t.Signature, t.From)
+	return Verify(t.toString(), t.Signature, t.From)
 }
 
 func CreateTransaction(from PublicKey, to PublicKey, amount int, id string, sk SecretKey) Transaction {
