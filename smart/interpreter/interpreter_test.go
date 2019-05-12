@@ -2,9 +2,9 @@ package interpreter
 
 import (
 	"fmt"
-	. "github.com/nfk93/blockchain/interpreter/ast"
-	"github.com/nfk93/blockchain/interpreter/lexer"
-	"github.com/nfk93/blockchain/interpreter/parser"
+	. "github.com/nfk93/blockchain/smart/interpreter/ast"
+	"github.com/nfk93/blockchain/smart/interpreter/lexer"
+	"github.com/nfk93/blockchain/smart/interpreter/parser"
 	"io/ioutil"
 	"os"
 	"reflect"

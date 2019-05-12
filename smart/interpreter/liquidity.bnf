@@ -83,8 +83,8 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 /* Syntax Part */
 
-<< import "github.com/nfk93/blockchain/interpreter/ast"
-   import "github.com/nfk93/blockchain/interpreter/util" >>
+<< import "github.com/nfk93/blockchain/smart/interpreter/ast"
+   import "github.com/nfk93/blockchain/smart/interpreter/util" >>
 
 Toplevel    : Structure                                         << ast.NewRoot($0) >>
             | Structure Toplevel                                << ast.AppendRoots($0, $1) >> ;

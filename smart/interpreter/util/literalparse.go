@@ -2,7 +2,7 @@ package util
 
 import (
 	"fmt"
-	"github.com/nfk93/blockchain/interpreter/token"
+	"github.com/nfk93/blockchain/smart/interpreter/token"
 	"strconv"
 	"strings"
 )
