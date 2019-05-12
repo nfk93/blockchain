@@ -11,6 +11,7 @@ import (
 	"github.com/nfk93/blockchain/transaction"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -184,7 +185,7 @@ func autoTrans() {
 			trans := objects.CreateTransaction(publicKey,
 				receiverPK,
 				rand.Intn(currentStake/50),
-				publicKey.String()+time.Now().String(),
+				strconv.Itoa(i),
 				secretKey)
 			channels.TransClientInput <- trans
 		}

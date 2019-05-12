@@ -4,6 +4,7 @@ import (
 	"bytes"
 	. "github.com/nfk93/blockchain/crypto"
 	"strconv"
+	"time"
 )
 
 type Transaction struct {
@@ -33,7 +34,7 @@ func (t *Transaction) VerifyTransaction() bool {
 }
 
 func CreateTransaction(from PublicKey, to PublicKey, amount int, id string, sk SecretKey) Transaction {
-	t := Transaction{from, to, amount, id, ""}
+	t := Transaction{from, to, amount, from.String()[4:14] + "-" + id + "-" + time.Now().String(), ""}
 	t.SignTransaction(sk)
 	return t
 }

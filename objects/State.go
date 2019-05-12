@@ -8,8 +8,15 @@ import (
 	"strconv"
 )
 
+type ContractAccount struct {
+	Owner   PublicKey
+	Balance int
+	Prepaid int
+}
+
 type State struct {
 	Ledger     map[string]int
+	ConLedger  map[string]ContractAccount
 	ParentHash string
 	TotalStake int
 }
@@ -17,8 +24,9 @@ type State struct {
 func NewInitialState(key PublicKey) State {
 	initialStake := 1000000 // 1 mil
 	ledger := make(map[string]int)
+	conledger := make(map[string]ContractAccount)
 	ledger[key.String()] = initialStake
-	return State{ledger, "", initialStake}
+	return State{ledger, conledger, "", initialStake}
 }
 
 func (s *State) AddTransaction(t Transaction, transFee int) bool {
@@ -81,3 +89,15 @@ func (s *State) SignHashedState(sk SecretKey) string {
 func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
 	return Verify(HashSHA(s.toString()), sig, pk)
 }
+
+//func (s *State)initContract(amount int) {
+//
+//	if !checkTransaction(*s, t, amountWithFees){
+//		return false
+//	}
+//
+//}
+//
+//func (s *State)refundUser(amount int ) {
+//
+//}

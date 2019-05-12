@@ -19,7 +19,6 @@ type Tree struct {
 var tree Tree
 var transactionFee = 1
 var blockReward = 100
-var pendingBlocks []Block
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -33,11 +32,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
-					if len(pendingBlocks) != 0 {
-						for _, b := range pendingBlocks {
-							tree.processBlock(b)
-						}
-					}
 				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
@@ -68,10 +62,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 }
 
 func (t *Tree) processBlock(b Block) {
-	if _, exist := tree.treeMap[b.ParentPointer]; !exist {
-		pendingBlocks = append(pendingBlocks, b)
-		return
-	}
 
 	successfulTransactions := 0
 	s := State{}
@@ -105,6 +95,10 @@ func (t *Tree) processBlock(b Block) {
 
 	// Update head
 	t.head = b.CalculateBlockHash()
+
+}
+
+func handleContractCall() {
 
 }
 
