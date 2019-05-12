@@ -1,0 +1,10 @@
+type storage = koin
+
+let%init storage = 1kn
+
+let%entry main () sto = (([]: operation list), Current.amount ())
+
+let%entry main1 () stoa = (
+    if ((Current.gas ()) < 100p) then Current.failwith "stopping, because low on gas";
+    (([]: operation list), 1kn)
+)

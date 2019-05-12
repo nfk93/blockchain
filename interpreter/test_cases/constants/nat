@@ -1,0 +1,5 @@
+type storage = nat
+
+let%init storage = 1p
+
+let%entry main () s = (([] : operation list), 117p)

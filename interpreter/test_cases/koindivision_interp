@@ -1,0 +1,6 @@
+type storage = nat * koin
+
+let%init storage = (10p, 20.0kn)
+
+let%entry main ((a : koin), (b : koin)) storage =
+  (([]: operation list), a / b)

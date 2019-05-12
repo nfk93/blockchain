@@ -1,0 +1,5 @@
+type storage = int
+
+let%init storage = 123
+
+let%entry mainentry () s = (([] : operation list), 0)

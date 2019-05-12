@@ -1,0 +1,9 @@
+type storage = {
+  owner : key;
+  val : int;
+}
+
+type history = {
+    name : string;
+    hist : storage list;
+}

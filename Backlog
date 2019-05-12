@@ -4,9 +4,10 @@ Networking:
     Make sure a new node joining will not miss any nodes inbetween him requesting the current tree, processing it, and
     starts listening for nodes.
 
+Write an install script that builds the lexer and parser code
 
 
 
 
-- Does the blockchain also work on the other peers? 
+- Does the blockchain also work on the other peers?
 - Why do they not win?

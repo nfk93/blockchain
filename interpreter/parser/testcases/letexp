@@ -1,0 +1,5 @@
+let%entry main () () = let a = 15 in 12
+let%entry main2 () () = let testval =
+    (if false then (); "hey") in testval
+
+let%entry main3 () () = let (q : int) = 13 in q

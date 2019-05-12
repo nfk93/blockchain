@@ -1,0 +1,6 @@
+type storage = {
+  owner : key;
+  funding_goal : koin;
+  amount_raised : koin;
+  soft_cap : koin;
+}

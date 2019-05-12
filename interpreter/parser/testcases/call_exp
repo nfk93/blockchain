@@ -1,0 +1,8 @@
+type storage = unit
+
+let%entry main1 () () = ASdma.qweql 1 2 3
+
+let%entry main2 () () = Contract.somefunction "par1" "par2" "par3"
+
+let%entry main3 () () = Module.somefunc "par1"
+
