@@ -14,7 +14,7 @@ func TestVerifyBlock(t *testing.T) {
 		"",
 		BlockNonce{},
 		"",
-		Data{},
+		BlockData{},
 		"",
 		""}
 
@@ -36,7 +36,7 @@ func TestVerifyBlockFAIL(t *testing.T) {
 		"",
 		BlockNonce{},
 		"",
-		Data{},
+		BlockData{},
 		"",
 		""}
 
@@ -57,7 +57,7 @@ func TestBlockNonce(t *testing.T) {
 		"",
 		blockNonce,
 		"",
-		Data{},
+		BlockData{},
 		"",
 		""}
 	if !block.validateBlockNonce(leadershipNonce) {
@@ -108,7 +108,7 @@ func TestBlockNonce(t *testing.T) {
 //		"",
 //		preNonce,
 //		"",
-//		Data{},
+//		BlockData{},
 //		""}
 //
 //	//nonce := CreateNewBlockNonce(preNonce, slot, sk, pk)

@@ -93,7 +93,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 		publicKeys[myKey] = true
 		determinePeers()
 		go listenForRPC(myHostPort)
-		fmt.Printf("Listening on %v:%v ", myIp, myHostPort)
+		fmt.Printf("Listening on %v:%v \n", myIp, myHostPort)
 
 	} else {
 		fmt.Println("CONNECTING TO EXISTING NETWORK AT ", connectTo)
@@ -272,21 +272,12 @@ func handleBlock(block objects.Block) {
 	}
 }
 
-//func handleBlockWithoutDelivering(block objects.Block) {
-//	blocksSeen.lock()
-//	defer blocksSeen.unlock()
-//	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-//	if blocksSeen.contains(block.CalculateBlockHash()) != true {
-//		blocksSeen.add(block.CalculateBlockHash())
-//		go broadcastBlock(block)
-//	}
-//}
-
 func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
 		client, err := rpc.DialHTTP("tcp", peer)
+
 		if err != nil {
 			fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
 		} else {
@@ -332,6 +323,7 @@ func broadcastTrans(trans objects.Transaction) {
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
 		client, err := rpc.DialHTTP("tcp", peer)
+
 		if err != nil {
 			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
 		} else {
@@ -350,6 +342,7 @@ func transHash(t objects.Transaction) string {
 
 func connectToNetwork(addr string) {
 	client, err := rpc.DialHTTP("tcp", addr)
+
 	if err != nil {
 		// TODO: handle error
 		log.Fatal(err)

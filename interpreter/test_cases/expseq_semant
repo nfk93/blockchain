@@ -1,0 +1,5 @@
+type storage = int
+
+let%init storage = 1
+
+let%entry main () s = ((); if false then (); (([]: operation list), 70))

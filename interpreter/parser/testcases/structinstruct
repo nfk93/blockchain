@@ -1,0 +1,20 @@
+type innerstr = {name1: string; v: int;}
+
+type strinstr = {
+  name2: string;
+  str: innerstr;
+}
+
+type storage = strinstr
+
+let%init storage = {
+  name2 = "Bob";
+  str = {
+    name1 = "Alice";
+    v = 2;
+  };
+}
+
+let%entry main () s =
+  let a = s.str.v <- 2 in
+  ([], a)

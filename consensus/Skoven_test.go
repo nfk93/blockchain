@@ -24,7 +24,7 @@ func createTestBlock(t []Transaction, i int, parentHash string, finalHash string
 		"VALID",
 		BlockNonce{},
 		finalHash,
-		Data{Trans: t},
+		BlockData{Trans: t},
 		"",
 		"",
 	}
@@ -41,7 +41,7 @@ func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block 
 		"VALID",
 		BlockNonce{},
 		"",
-		Data{Trans: []Transaction{}, GenesisData: gData},
+		BlockData{Trans: []Transaction{}, GenesisData: gData},
 		"",
 		"",
 	}

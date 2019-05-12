@@ -1,0 +1,5 @@
+type storage = key
+
+let%init storage = kn1221313124
+
+let%entry main () s = (([] : operation list), kn1aaAAaaA)

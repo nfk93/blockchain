@@ -25,7 +25,7 @@ func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk Pu
 		draw,
 		BlockNonce{},
 		"",
-		Data{},
+		BlockData{},
 		"",
 		""}
 	intermediateBlock.SignBlock(sk)

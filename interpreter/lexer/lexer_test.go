@@ -3,6 +3,7 @@ package lexer
 import (
 	"github.com/nfk93/blockchain/interpreter/token"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -46,54 +47,55 @@ func compare_tokens(t *testing.T, strings []string, lex *Lexer) {
 }
 
 func TestLexStorage(t *testing.T) {
-	bytes := read_file("tests/storage_type", t)
+	bytes := read_file("test_cases/storage_type", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		TYPE, LIDENT, EQ, LBRACE, LIDENT, COLON, KEYHASH, SEMICOLON, LIDENT, COLON, TEZ, SEMICOLON, LIDENT, COLON, TEZ,
-		SEMICOLON, LIDENT, COLON, TEZ, SEMICOLON, RBRACE, EOF}
+		TYPE, LIDENT, EQ, LBRACE, LIDENT, COLON, KEY, SEMICOLON, LIDENT, COLON, KOIN, SEMICOLON, LIDENT, COLON, KOIN,
+		SEMICOLON, LIDENT, COLON, KOIN, SEMICOLON, RBRACE, EOF}
 	compare_tokens(t, strings, lex)
 }
 
 func TestLexInitStorage(t *testing.T) {
-	bytes := read_file("tests/init_storage", t)
+	bytes := read_file("test_cases/init_storage", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, LIDENT, LIDENT, EQ, LBRACE, LIDENT, EQ, HASH, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON, LIDENT, EQ, TEZ_LIT, SEMICOLON,
-		LIDENT, EQ, TEZ_LIT, SEMICOLON, RBRACE, EOF}
+		LETINIT, LIDENT, EQ, LBRACE, LIDENT, EQ, KEYLIT, SEMICOLON, LIDENT, EQ, KOIN_LIT, SEMICOLON, LIDENT, EQ, KOIN_LIT, SEMICOLON,
+		LIDENT, EQ, KOIN_LIT, SEMICOLON, RBRACE, EOF}
 	compare_tokens(t, strings, lex)
 }
 
+/* THIS TEST IS DEPRECATED
 func TestLexSimpleEntry(t *testing.T) {
-	bytes := read_file("tests/simple_entry", t)
+	bytes := read_file("../test_cases/simple_entry_parser", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, PERC, LIDENT, LIDENT, LPAREN, LIDENT, COLON, KEYHASH, RPAREN, LPAREN, LIDENT, COLON, LIDENT, RPAREN, EQ, IF, LIDENT, DOT, LIDENT, GEQ,
+		LETENTRY, LIDENT, LPAREN, LIDENT, COLON, KEY, RPAREN, LPAREN, LIDENT, COLON, LIDENT, RPAREN, EQ, IF, LIDENT, DOT, LIDENT, GEQ,
 		LIDENT, DOT, LIDENT, THEN, LET, LIDENT, EQ, LIDENT, DOT, LIDENT, LARROW, LIDENT, IN, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION,
 		LIST, RPAREN, COMMA, LIDENT, RPAREN, ELSE, LPAREN, LPAREN, LBRACK, RBRACK, COLON, OPERATION, LIST, RPAREN, COMMA,
 		LIDENT, RPAREN, EOF}
 	compare_tokens(t, strings, lex)
-}
+} */
 
 func TestLexFloat(t *testing.T) {
-	bytes := read_file("tests/float", t)
+	bytes := read_file("test_cases/float", t)
 	lex := NewLexer(bytes)
 
 	strings := []string{
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, INT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
-		LET, LIDENT, EQ, FLOAT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, INT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
+		LET, LIDENT, EQ, FLOAT_LIT, IN,
 		LET, LIDENT, EQ, LIDENT, PLUS, LIDENT, MINUS, LIDENT, EOF}
 	compare_tokens(t, strings, lex)
 }
 
 func TestNoInvalidsInFundMe(t *testing.T) {
-	bytes := read_file("tests/fundme", t)
+	bytes := read_file(os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme", t)
 	lex := NewLexer(bytes)
 
 	for {
@@ -107,53 +109,61 @@ func TestNoInvalidsInFundMe(t *testing.T) {
 }
 
 func TestLidUid(t *testing.T) {
-	bytes := read_file("tests/lid_uid", t)
+	bytes := read_file("test_cases/lid_uid", t)
 	lex := NewLexer(bytes)
 	strings := []string{
 		LIDENT, LIDENT, UIDENT, UIDENT, LIDENT, LIDENT, EOF}
 	compare_tokens(t, strings, lex)
 }
 
-// TODO: make tests covering all of the below
+// TODO: make ../test_cases covering all of the below
 
 const (
-	COMMA     string = "comma"
-	GEQ       string = "geq"
-	GT        string = "gt"
-	LEQ       string = "leq"
-	LARROW    string = "larrow"
-	NEQ       string = "neq"
-	LT        string = "lt"
-	RARROW    string = "rarrow"
-	EQ        string = "eq"
-	PLUS      string = "plus"
-	MINUS     string = "minus"
-	LBRACE    string = "lbrace"
-	RBRACE    string = "rbrace"
-	LBRACK    string = "lbrack"
-	RBRACK    string = "rbrack"
-	LPAREN    string = "lparen"
-	RPAREN    string = "rparen"
-	COLON     string = "colon"
-	SEMICOLON string = "semicolon"
-	KEYHASH   string = "keyhash"
-	OPERATION string = "operation"
-	LIST      string = "list"
-	PERC      string = "percentage"
-	LET       string = "let"
-	IN        string = "in"
-	IF        string = "if"
-	THEN      string = "then"
-	ELSE      string = "else"
-	TYPE      string = "type"
-	TEZ       string = "tez"
-	HASH      string = "hash"
-	LIDENT    string = "lident"
-	UIDENT    string = "uident"
-	STRING    string = "string"
-	TEZ_LIT   string = "tez_lit"
-	INT       string = "int"
-	FLOAT     string = "float"
-	DOT       string = "dot"
-	EOF       string = "$"
+	COMMA      string = "comma"
+	GEQ        string = "geq"
+	GT         string = "gt"
+	LEQ        string = "leq"
+	LARROW     string = "larrow"
+	NEQ        string = "neq"
+	LT         string = "lt"
+	RARROW     string = "rarrow"
+	EQ         string = "eq"
+	PLUS       string = "plus"
+	MINUS      string = "minus"
+	LBRACE     string = "lbrace"
+	RBRACE     string = "rbrace"
+	LBRACK     string = "lbrack"
+	RBRACK     string = "rbrack"
+	LPAREN     string = "lparen"
+	RPAREN     string = "rparen"
+	COLON      string = "colon"
+	SEMICOLON  string = "semicolon"
+	KEY        string = "key"
+	OPERATION  string = "operation"
+	LIST       string = "list"
+	LETINIT    string = "letinit"
+	LETENTRY   string = "letentry"
+	LET        string = "let"
+	IN         string = "in"
+	IF         string = "if"
+	THEN       string = "then"
+	ELSE       string = "else"
+	TYPE       string = "type"
+	KOIN       string = "koin"
+	KEYLIT     string = "key_lit"
+	LIDENT     string = "lident"
+	UIDENT     string = "uident"
+	STRING_LIT string = "string_lit"
+	KOIN_LIT   string = "koin_lit"
+	INT_LIT    string = "int_lit"
+	FLOAT_LIT  string = "float_lit"
+	DOT        string = "dot"
+	AST        string = "ast"
+	TRUE       string = "true"
+	FALSE      string = "false"
+	BOOL       string = "bool"
+	STRING     string = "string"
+	INT        string = "int"
+	SLASH      string = "slash"
+	EOF        string = "$"
 )

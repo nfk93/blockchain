@@ -5,6 +5,7 @@ import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/transaction"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -83,16 +84,18 @@ func updateStake() {
 	ledgerLock.Lock()
 	defer ledgerLock.Unlock()
 	lastFinalizedLedger = state.Ledger
-}
-
-func TestDrawLottery(slot int) {
-	drawLottery(slot)
+	if isVerbose {
+		fmt.Println("Finalized Successfully")
+		PrintFinalizedLedger()
+	}
 }
 
 func drawLottery(slot int) {
 	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, slot)
 	if winner {
-		fmt.Println("We won slot " + strconv.Itoa(slot))
+		if isVerbose {
+			fmt.Println("We won slot " + strconv.Itoa(slot))
+		}
 		generateBlock(draw, slot)
 	}
 }
@@ -125,4 +128,17 @@ func getLotteryPower(pk PublicKey) float64 {
 
 func GetLastFinalState() map[string]int {
 	return lastFinalizedLedger
+}
+
+func PrintFinalizedLedger() {
+	ledger := lastFinalizedLedger
+	var keyList []string
+	for k := range ledger {
+		keyList = append(keyList, k)
+	}
+	sort.Strings(keyList)
+
+	for _, k := range keyList {
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
+	}
 }

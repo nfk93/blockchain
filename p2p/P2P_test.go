@@ -24,7 +24,7 @@ var mockBlock_1 = objects.Block{
 	"VALID",
 	objects.BlockNonce{"42", ""},
 	"",
-	objects.Data{},
+	objects.BlockData{},
 	"",
 	"123",
 }
@@ -36,7 +36,7 @@ var mockBlock_2 = objects.Block{
 	"VALID",
 	objects.BlockNonce{"44", ""},
 	"",
-	objects.Data{},
+	objects.BlockData{},
 	"",
 	"555",
 }

@@ -3,36 +3,41 @@ package transaction
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/objects"
+	"sort"
 )
 
-type TLNode struct {
+type TreeNode struct {
 	block Block
 	state State
 }
 
 type Tree struct {
-	treeMap map[string]TLNode
+	treeMap map[string]TreeNode
 	head    string
 }
 
 var tree Tree
 var transactionFee = 1
 var blockReward = 100
+var pendingBlocks []Block
 
 func StartTransactionLayer(channels ChannelStruct) {
-	tree = Tree{make(map[string]TLNode), ""}
-
+	tree = Tree{make(map[string]TreeNode), ""}
 	// Process a Block coming from the consensus layer
 	go func() {
 		for {
 			b := <-channels.BlockToTrans
-
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
+					if len(pendingBlocks) != 0 {
+						for _, b := range pendingBlocks {
+							tree.processBlock(b)
+						}
+					}
 				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
@@ -45,8 +50,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 		for {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
-				fmt.Println("Finalized Successfully")
-				printFinalizedLedger(finalizedNode.state.Ledger)
 				channels.StateFromTrans <- finalizedNode.state
 			} else {
 				fmt.Println("Couldn't finalize")
@@ -65,6 +68,11 @@ func StartTransactionLayer(channels ChannelStruct) {
 }
 
 func (t *Tree) processBlock(b Block) {
+	if _, exist := tree.treeMap[b.ParentPointer]; !exist {
+		pendingBlocks = append(pendingBlocks, b)
+		return
+	}
+
 	successfulTransactions := 0
 	s := State{}
 	s.ParentHash = b.ParentPointer
@@ -85,9 +93,9 @@ func (t *Tree) processBlock(b Block) {
 	}
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
-	if s.VerifyStateHash(b.StateHash, b.BakerID) {
+	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator
-		s.AddBlockRewardAndTransFees(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+		s.AddBlockReward(b.BakerID, blockReward+(successfulTransactions*transactionFee))
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -101,8 +109,7 @@ func (t *Tree) processBlock(b Block) {
 }
 
 func (t *Tree) createNewNode(b Block, s State) {
-	n := TLNode{b, s}
-	t.treeMap[b.CalculateBlockHash()] = n
+	t.treeMap[b.CalculateBlockHash()] = TreeNode{b, s}
 }
 
 func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
@@ -126,8 +133,8 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		blockData.Draw,
 		BlockNonce{},
 		blockData.LastFinalized,
-		Data{addedTransactions, GenesisData{}},
-		s.CreateStateHash(blockData.Sk),
+		BlockData{addedTransactions, GenesisData{}},
+		s.SignHashedState(blockData.Sk),
 		""}
 
 	b.SignBlock(blockData.Sk)
@@ -155,8 +162,16 @@ func GetCurrentLedger() map[string]int {
 	return tree.treeMap[tree.head].state.Ledger
 }
 
-func printFinalizedLedger(ledger map[string]int) {
-	for l := range ledger {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[l], l[4:14])
+func PrintCurrentLedger() {
+	ledger := tree.treeMap[tree.head].state.Ledger
+
+	var keyList []string
+	for k := range ledger {
+		keyList = append(keyList, k)
+	}
+	sort.Strings(keyList)
+
+	for _, k := range keyList {
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
 	}
 }

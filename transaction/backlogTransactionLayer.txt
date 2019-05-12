@@ -46,8 +46,11 @@ OK - Only first instance of genesis should be accepted
     OK - Block creator should receive block rewards for a block.
     OK - Transaction cost should be subtracted from the sender.
 
-- Blocks are done
-- Leadership election is not tested
+
+- definition of ID in transaction
+- latex Ref til andre sections?
+
+
 
 
 

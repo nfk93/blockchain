@@ -1,0 +1,7 @@
+let%entry main1 () () = (1, 2)
+
+let%entry main2 () () = (1, 2, 3)
+
+let%entry main3 () () = ((1, 2), 2)
+
+let%entry main4 () () = (1, (1, 2))

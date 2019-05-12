@@ -1,0 +1,7 @@
+type storage = int
+let%entry main
+    ((parameter1 : int), (parameter2 : int))
+    (storage : int) =
+
+  (([] : operation list),
+  storage + parameter1 + parameter2)

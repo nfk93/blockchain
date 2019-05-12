@@ -1,0 +1,20 @@
+let%entry main1 () () =
+  let k = {
+    swag = 1132;
+    something = "hey";
+  } in (([] : operation list), ())
+
+let%entry main2 () () =
+  let k = {
+    a = {
+      a1 = (if true then (); 12);
+      a2 = 12;
+    };
+    b = "damn";
+  } in (([] : operation list), ())
+
+let%entry main3 () () =
+  let k = {
+    d = (18 + 33 + 12);
+    c = let a = 12 in a;
+  } in (([] : operation list), ())

@@ -1,0 +1,5 @@
+type storage = int * string * (bool * unit)
+
+let%init storage = (123, "yo", (true, ()))
+
+let%entry main () s = (([] : operation list), (1, "some string", (false, ())))
