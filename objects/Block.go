@@ -39,6 +39,7 @@ type BlockData struct {
 }
 
 type TransData interface {
+	toString() string
 }
 
 // Block Functions
@@ -72,21 +73,7 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		switch t.(type) {
-
-		case Transaction:
-			t := t.(Transaction)
-			buf.WriteString(t.toString())
-
-		case ContractCall:
-			t := t.(ContractCall)
-			buf.WriteString(t.toString())
-
-		case ContractInitialize:
-			t := t.(ContractInitialize)
-			buf.WriteString(t.toString())
-
-		}
+		buf.WriteString(t.toString())
 	}
 	return buf.String()
 }

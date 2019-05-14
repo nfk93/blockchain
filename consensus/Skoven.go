@@ -35,6 +35,8 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
+			fmt.Println("CL received block from ", block.Slot, " Number of Transactions: ", len(block.BlockData.Trans))
+
 			handleBlock(block)
 		}
 	}()
@@ -235,7 +237,7 @@ func updateHead(b o.Block) {
 	} else {
 		comparePathWeight(b)
 	}
-	//log() //Used for testing purposes
+	log() //Used for testing purposes
 }
 
 // Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block

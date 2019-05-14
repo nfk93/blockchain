@@ -30,30 +30,30 @@ func NewInitialState(key PublicKey) State {
 	return State{ledger, conStake, conledger, "", initialStake}
 }
 
-func (s *State) AddTransaction(t Transaction, transFee int) bool {
+func (s *State) AddTransaction(t Transaction, transFee int) {
 	//TODO: Handle checks of legal transactions
 
 	amountWithFees := t.Amount + transFee
 
 	if !t.VerifyTransaction() {
 		fmt.Println("The transactions didn't verify", t)
-		return false
+		return
 	}
 	if t.Amount <= 0 {
 		fmt.Println("Invalid transaction Amount! Amount should be positive!", t.Amount)
-		return false
+		return
 	}
 
 	// Sender has to be able to pay both the amount and the fee
 	if s.Ledger[t.From.String()] < amountWithFees {
 		fmt.Println("Not enough money on senders account")
-		return false
+		return
 	}
 
 	s.Ledger[t.From.String()] -= amountWithFees
 	s.Ledger[t.To.String()] += t.Amount
 	s.TotalStake -= transFee // Take the fee out of the system
-	return true
+
 }
 
 func (s *State) AddBlockReward(pk PublicKey, reward int) {
@@ -134,4 +134,80 @@ func (s *State) CleanContractLedger() []string {
 		}
 	}
 	return expiredContracts
+}
+
+// Switches depending on type of Trans. Returns amount of gas used
+func (s *State) HandleTransData(td TransData, transactionFee int) int {
+	switch td.(type) {
+
+	case Transaction:
+		td := td.(Transaction)
+		s.AddTransaction(td, transactionFee)
+		return transactionFee
+
+	case ContractCall:
+		td := td.(ContractCall)
+		// Transfer funds from caller to contract
+		if !s.FundContractCall(td.Caller, td.Amount+td.Gas) {
+			return transactionFee // TODO price for funding contract? essentially just a transfer of money -> Transfee
+		}
+
+		// Runs contract at contract layer
+		callSuccess, newContractStake, transactionList, remainingGas := CallAtConLayer(td)
+
+		// Calc how much gas used and refund not used gas to caller
+		gasUsed := td.Gas - remainingGas
+		s.RefundContractCall(td.Caller, remainingGas)
+
+		// If contract not successful, then return amount to caller
+		if !callSuccess {
+			s.RefundContractCall(td.Caller, td.Amount)
+			return gasUsed
+		}
+
+		// If contract succeeded, execute the transactions from the contract layer
+		s.ConStake = newContractStake
+		for _, t := range transactionList {
+			s.AddContractTransaction(t)
+		}
+		return gasUsed
+
+	case ContractInitialize:
+		td := td.(ContractInitialize)
+		addr, remainGas, success := InitContractAtConLayer(td.Code, td.Gas)
+		s.RefundContractCall(td.Owner, remainGas)
+		if success {
+			s.InitializeContract(addr, td.Owner, td.Prepaid)
+		}
+		return td.Gas - remainGas
+	}
+	return 0
+}
+
+// Returns the new State, cost of the Contract call and true if contract executed successful
+func (s *State) handleContractCall(contract ContractCall) (int, bool) {
+
+	// Transfer funds from caller to contract
+	if !s.FundContractCall(contract.Caller, contract.Amount+contract.Gas) {
+		return 0, false
+	}
+
+	// Runs contract at contract layer
+	callSuccess, newContractStake, transactionList, remainingGas := CallAtConLayer(contract)
+	gasUsed := contract.Gas - remainingGas
+
+	// If contract succeeded, execute the transactions from the contract layer
+	if callSuccess {
+		s.ConStake = newContractStake
+		for _, t := range transactionList {
+			s.AddContractTransaction(t)
+		}
+		s.RefundContractCall(contract.Caller, remainingGas)
+		return gasUsed, callSuccess
+	}
+
+	// If contract not successful, then return remaining funds to caller
+	s.RefundContractCall(contract.Caller, contract.Amount+remainingGas)
+	return gasUsed, callSuccess
+
 }
