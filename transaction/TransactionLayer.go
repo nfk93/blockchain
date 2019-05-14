@@ -86,6 +86,11 @@ func (t *Tree) processBlock(b Block) {
 		}
 	}
 
+	// Collection storageCosts
+	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
+	collectedStorageCosts := s.CollectStorageCost(noOfSlots)
+	accumulatedRewards += collectedStorageCosts
+
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator

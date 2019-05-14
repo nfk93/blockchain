@@ -47,9 +47,9 @@ func ExpireAtConLayer(expiredContracts []string) {
 	// TODO Dummies for smart contract layer functions
 }
 
-func InitContractAtConLayer(code []byte, gas int) (string, int, bool) {
+func InitContractAtConLayer(code []byte, gas int) (string, int, int, bool) {
 	// TODO Dummies for smart contract layer functions
-	return "", 0, false
+	return "", 0, 0, false
 }
 
 func (cc ContractCall) toString() string {

@@ -9,8 +9,9 @@ import (
 )
 
 type ContractAccount struct {
-	Owner   PublicKey
-	Prepaid int
+	Owner       PublicKey
+	Prepaid     int
+	StorageCost int
 }
 
 type State struct {
@@ -91,8 +92,8 @@ func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
 	return Verify(HashSHA(s.toString()), sig, pk)
 }
 
-func (s *State) InitializeContract(addr string, owner PublicKey, prepaid int) {
-	s.ConAccounts[addr] = ContractAccount{owner, prepaid}
+func (s *State) InitializeContract(addr string, owner PublicKey, prepaid int, storageCost int) {
+	s.ConAccounts[addr] = ContractAccount{owner, prepaid, storageCost}
 }
 
 // Used for putting more prepaid on an contract account
@@ -174,10 +175,10 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 
 	case ContractInitialize:
 		td := td.(ContractInitialize)
-		addr, remainGas, success := InitContractAtConLayer(td.Code, td.Gas)
+		addr, remainGas, storageCost, success := InitContractAtConLayer(td.Code, td.Gas)
 		s.RefundContractCall(td.Owner, remainGas)
 		if success {
-			s.InitializeContract(addr, td.Owner, td.Prepaid)
+			s.InitializeContract(addr, td.Owner, td.Prepaid, storageCost)
 		}
 		return td.Gas - remainGas
 	}
@@ -210,4 +211,27 @@ func (s *State) handleContractCall(contract ContractCall) (int, bool) {
 	s.RefundContractCall(contract.Caller, contract.Amount+remainingGas)
 	return gasUsed, callSuccess
 
+}
+
+// checks all contract accounts and withdraw the storage cost from their prepaid.
+// Takes as argument how many slots to pay for and then returns total amount of costs for all contracts
+func (s *State) CollectStorageCost(slots int) int {
+	accumulatedStorageCosts := 0
+
+	for acc := range s.ConAccounts {
+		account := s.ConAccounts[acc]
+		storageCost := min(account.StorageCost*slots, account.Prepaid)
+		account.Prepaid -= storageCost
+		s.ConAccounts[acc] = account
+		accumulatedStorageCosts += storageCost
+	}
+
+	return accumulatedStorageCosts
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
