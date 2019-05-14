@@ -19,7 +19,7 @@ type Block struct {
 }
 
 type CreateBlockData struct {
-	TransList     []Transaction
+	TransList     []TransData
 	Sk            SecretKey
 	Pk            PublicKey
 	SlotNo        int
@@ -34,8 +34,11 @@ type BlockNonce struct {
 }
 
 type BlockData struct {
-	Trans       []Transaction
+	Trans       []TransData
 	GenesisData GenesisData
+}
+
+type TransData interface {
 }
 
 // Block Functions
@@ -69,7 +72,21 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		buf.WriteString(t.toString())
+		switch t.(type) {
+
+		case Transaction:
+			t := t.(Transaction)
+			buf.WriteString(t.toString())
+
+		case ContractCall:
+			t := t.(ContractCall)
+			buf.WriteString(t.toString())
+
+		case ContractInitialize:
+			t := t.(ContractInitialize)
+			buf.WriteString(t.toString())
+
+		}
 	}
 	return buf.String()
 }

@@ -10,23 +10,24 @@ import (
 
 type ContractAccount struct {
 	Owner   PublicKey
-	Balance int
 	Prepaid int
 }
 
 type State struct {
-	Ledger     map[string]int
-	ConLedger  map[string]ContractAccount
-	ParentHash string
-	TotalStake int
+	Ledger      map[string]int
+	ConStake    map[string]int
+	ConAccounts map[string]ContractAccount
+	ParentHash  string
+	TotalStake  int
 }
 
 func NewInitialState(key PublicKey) State {
 	initialStake := 1000000 // 1 mil
 	ledger := make(map[string]int)
+	conStake := make(map[string]int)
 	conledger := make(map[string]ContractAccount)
 	ledger[key.String()] = initialStake
-	return State{ledger, conledger, "", initialStake}
+	return State{ledger, conStake, conledger, "", initialStake}
 }
 
 func (s *State) AddTransaction(t Transaction, transFee int) bool {
@@ -90,14 +91,47 @@ func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
 	return Verify(HashSHA(s.toString()), sig, pk)
 }
 
-//func (s *State)initContract(amount int) {
-//
-//	if !checkTransaction(*s, t, amountWithFees){
-//		return false
-//	}
-//
-//}
-//
-//func (s *State)refundUser(amount int ) {
-//
-//}
+func (s *State) InitializeContract(addr string, owner PublicKey, prepaid int) {
+	s.ConAccounts[addr] = ContractAccount{owner, prepaid}
+}
+
+// Used for putting more prepaid on an contract account
+func (s *State) PrepayContracts(addr string, amount int) {
+	newBalance := s.ConAccounts[addr]
+	newBalance.Prepaid += amount
+	s.ConAccounts[addr] = newBalance
+}
+
+// Used for handling contract layer transaction to users
+func (s *State) AddContractTransaction(t ContractTransaction) {
+	s.Ledger[t.To.String()] += t.Amount
+}
+
+// Returns true if caller has enough funds on account to pay for call
+func (s *State) FundContractCall(callerAccount PublicKey, amount int) bool {
+	if s.Ledger[callerAccount.String()] >= amount {
+		s.Ledger[callerAccount.String()] -= amount
+		return true
+	}
+	return false
+}
+
+//Used to refund money from contracts back into the original user ledger
+func (s *State) RefundContractCall(callerAccount PublicKey, amount int) {
+	s.Ledger[callerAccount.String()] += amount
+}
+
+// Goes through the contract accounts and check which is out of prepaid.
+// These are deleted and a list of deleted contracts is returned
+func (s *State) CleanContractLedger() []string {
+	var expiredContracts []string
+	for c := range s.ConAccounts {
+		contract := s.ConAccounts[c]
+		if contract.Prepaid <= 0 {
+			expiredContracts = append(expiredContracts, c)
+			s.RefundContractCall(contract.Owner, s.ConStake[c])
+			delete(s.ConAccounts, c)
+		}
+	}
+	return expiredContracts
+}

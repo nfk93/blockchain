@@ -15,6 +15,11 @@ type Transaction struct {
 	Signature string
 }
 
+type ContractTransaction struct {
+	To     PublicKey
+	Amount int
+}
+
 func (t Transaction) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(t.From.String())

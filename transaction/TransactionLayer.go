@@ -63,21 +63,19 @@ func StartTransactionLayer(channels ChannelStruct) {
 
 func (t *Tree) processBlock(b Block) {
 
-	successfulTransactions := 0
-	s := State{}
-	s.ParentHash = b.ParentPointer
-	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
-	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	if s.Ledger == nil {
-		s.Ledger = make(map[string]int)
-	}
+	accumulatedRewards := blockReward
+	s := copyState(t.treeMap[b.ParentPointer].state, b.ParentPointer)
+
+	// Remove expired contracts from ledger in TL and from ConLayer
+	expiredContracts := s.CleanContractLedger()
+	ExpireAtConLayer(expiredContracts)
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
-		for _, tr := range b.BlockData.Trans {
-			transSuccess := s.AddTransaction(tr, transactionFee)
-			if transSuccess {
-				successfulTransactions += 1
+		for _, td := range b.BlockData.Trans {
+			if newState, gasUsed, success := handleTransData(td, s); success {
+				s = newState
+				accumulatedRewards += gasUsed
 			}
 		}
 	}
@@ -85,7 +83,7 @@ func (t *Tree) processBlock(b Block) {
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator
-		s.AddBlockReward(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+		s.AddBlockReward(b.BakerID, accumulatedRewards)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -98,7 +96,30 @@ func (t *Tree) processBlock(b Block) {
 
 }
 
-func handleContractCall() {
+// Returns the new State, cost of the Contract call and true if contract executed successful
+func handleContractCall(s State, contract ContractCall) (State, int, bool) {
+
+	// Transfer funds from caller to contract
+	if !s.FundContractCall(contract.Caller, contract.Amount+contract.Gas) {
+		return s, 0, false
+	}
+
+	// Runs contract at contract layer
+	callSuccess, newContractStake, transactionList, remainingGas := CallAtConLayer(contract)
+
+	// If contract succeeded, execute the transactions from the contract layer
+	if callSuccess {
+		s.ConStake = newContractStake
+		for _, t := range transactionList {
+			s.AddContractTransaction(t)
+		}
+		s.RefundContractCall(contract.Caller, remainingGas)
+		return s, contract.Gas - remainingGas, callSuccess
+	}
+
+	// If contract not successful, then return remaining funds to caller
+	s.RefundContractCall(contract.Caller, contract.Amount+remainingGas)
+	return s, contract.Gas - remainingGas, callSuccess
 
 }
 
@@ -107,18 +128,18 @@ func (t *Tree) createNewNode(b Block, s State) {
 }
 
 func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
-	s := State{}
-	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
-	s.ParentHash = t.head
-	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	var addedTransactions []Transaction
+	s := copyState(t.treeMap[t.head].state, t.head)
 
+	var addedTransactions []TransData
 	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(1000, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := blockData.TransList[i]
-		s.AddTransaction(newTrans, transactionFee)
-		addedTransactions = append(addedTransactions, newTrans)
+		td := blockData.TransList[i]
+
+		if newState, _, success := handleTransData(td, s); success {
+			s = newState
+			addedTransactions = append(addedTransactions, td)
+		}
 	}
 
 	b := Block{blockData.SlotNo,
@@ -133,7 +154,31 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 
 	b.SignBlock(blockData.Sk)
 	return b
+}
 
+// Switches depending on type of Trans. Returns a state after the trans,
+// the cost of the trans and a true if everything went well
+func handleTransData(td TransData, s State) (State, int, bool) {
+	switch td.(type) {
+
+	case Transaction:
+		td := td.(Transaction)
+		transSuccess := s.AddTransaction(td, transactionFee)
+		return s, transactionFee, transSuccess
+	case ContractCall:
+		td := td.(ContractCall)
+		newState, gasCost, success := handleContractCall(s, td)
+		return newState, gasCost, success
+	case ContractInitialize:
+		td := td.(ContractInitialize)
+		addr, remainGas, success := InitContractAtConLayer(td.Code, td.Gas)
+		if success {
+			s.InitializeContract(addr, td.Owner, td.Prepaid)
+			s.RefundContractCall(td.Owner, remainGas)
+			return s, td.Gas - remainGas, success
+		}
+	}
+	return s, 0, false
 }
 
 // Helpers
@@ -144,12 +189,20 @@ func min(a, b int) int {
 	return b
 }
 
-func copyMap(originalMap map[string]int) map[string]int {
-	newMap := make(map[string]int)
-	for key, value := range originalMap {
-		newMap[key] = value
+func copyState(oldState State, parent string) State {
+	s := State{}
+	s.ParentHash = parent
+	s.Ledger = make(map[string]int)
+	for key, value := range oldState.Ledger {
+		s.Ledger[key] = value
 	}
-	return newMap
+	s.ConAccounts = make(map[string]ContractAccount)
+	for key, value := range oldState.ConAccounts {
+		s.ConAccounts[key] = value
+	}
+
+	s.TotalStake = oldState.TotalStake
+	return s
 }
 
 func GetCurrentLedger() map[string]int {
