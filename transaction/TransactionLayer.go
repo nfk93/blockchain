@@ -26,6 +26,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 	go func() {
 		for {
 			b := <-channels.BlockToTrans
+			fmt.Println("TL received block from ", b.Slot)
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
@@ -63,29 +64,37 @@ func StartTransactionLayer(channels ChannelStruct) {
 
 func (t *Tree) processBlock(b Block) {
 
-	successfulTransactions := 0
+	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	s.ConAccounts = copyContMap(t.treeMap[s.ParentHash].state.ConAccounts)
+	s.ConStake = copyMap(t.treeMap[s.ParentHash].state.ConStake)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	if s.Ledger == nil {
-		s.Ledger = make(map[string]int)
-	}
+
+	// Remove expired contracts from ledger in TL and from ConLayer
+	expiredContracts := s.CleanContractLedger()
+	ExpireAtConLayer(expiredContracts)
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
-		for _, tr := range b.BlockData.Trans {
-			transSuccess := s.AddTransaction(tr, transactionFee)
-			if transSuccess {
-				successfulTransactions += 1
-			}
+		for _, td := range b.BlockData.Trans {
+
+			gasCost := s.HandleTransData(td, transactionFee)
+			accumulatedRewards += gasCost
+
 		}
 	}
+
+	// Collection storageCosts
+	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
+	collectedStorageCosts := s.CollectStorageCost(noOfSlots)
+	accumulatedRewards += collectedStorageCosts
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator
-		s.AddBlockReward(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+		s.AddBlockReward(b.BakerID, accumulatedRewards)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -98,10 +107,6 @@ func (t *Tree) processBlock(b Block) {
 
 }
 
-func handleContractCall() {
-
-}
-
 func (t *Tree) createNewNode(b Block, s State) {
 	t.treeMap[b.CalculateBlockHash()] = TreeNode{b, s}
 }
@@ -111,14 +116,15 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 	s.ParentHash = t.head
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	var addedTransactions []Transaction
+	var addedTransactions []TransData
 
 	noOfTrans := len(blockData.TransList)
 
 	for i := 0; i < min(1000, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := blockData.TransList[i]
-		s.AddTransaction(newTrans, transactionFee)
-		addedTransactions = append(addedTransactions, newTrans)
+		td := blockData.TransList[i]
+		s.HandleTransData(td, transactionFee)
+		addedTransactions = append(addedTransactions, td)
+
 	}
 
 	b := Block{blockData.SlotNo,
@@ -145,7 +151,21 @@ func min(a, b int) int {
 }
 
 func copyMap(originalMap map[string]int) map[string]int {
+	if originalMap == nil {
+		return make(map[string]int)
+	}
 	newMap := make(map[string]int)
+	for key, value := range originalMap {
+		newMap[key] = value
+	}
+	return newMap
+}
+
+func copyContMap(originalMap map[string]ContractAccount) map[string]ContractAccount {
+	if originalMap == nil {
+		return make(map[string]ContractAccount)
+	}
+	newMap := make(map[string]ContractAccount)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}

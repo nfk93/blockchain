@@ -92,6 +92,8 @@ func cliLoop() {
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
+				autoTransStatus = !autoTransStatus // TODO DELETE
+				go autoTrans()                     // TODO DELETE
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}

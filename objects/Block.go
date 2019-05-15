@@ -19,7 +19,7 @@ type Block struct {
 }
 
 type CreateBlockData struct {
-	TransList     []Transaction
+	TransList     []TransData
 	Sk            SecretKey
 	Pk            PublicKey
 	SlotNo        int
@@ -34,8 +34,14 @@ type BlockNonce struct {
 }
 
 type BlockData struct {
-	Trans       []Transaction
+	Trans       []TransData
 	GenesisData GenesisData
+}
+
+type TransData struct {
+	Transaction  Transaction
+	ContractCall ContractCall
+	ContractInit ContractInitialize
 }
 
 // Block Functions
@@ -69,7 +75,15 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		buf.WriteString(t.toString())
+		switch t.getType() {
+		case 1:
+			buf.WriteString(t.Transaction.toString())
+		case 2:
+			buf.WriteString(t.ContractCall.toString())
+		case 3:
+			buf.WriteString(t.ContractInit.toString())
+
+		}
 	}
 	return buf.String()
 }
@@ -94,4 +108,20 @@ func (b *Block) validateBlockNonce(leadershipNonce string) bool {
 	correctSignature := Verify(buf.String(), b.BlockNonce.Proof, b.BakerID)
 	correctNonce := HashSHA(b.BlockNonce.Proof) == b.BlockNonce.Nonce
 	return correctSignature && correctNonce
+}
+
+func (t TransData) getType() int {
+	if t.Transaction != (Transaction{}) {
+		return 1
+	}
+	if t.ContractCall != (ContractCall{}) {
+		return 2
+	}
+	if t.ContractInit.Owner != (PublicKey{}) ||
+		t.ContractInit.Prepaid != 0 ||
+		t.ContractInit.Gas != 0 ||
+		string(t.ContractInit.Code) != "" {
+		return 3
+	}
+	return 0
 }
