@@ -13,12 +13,16 @@ func TestState_AddContractTransaction(t *testing.T) {
 	_, pk2 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
 	s.Ledger[pk2.String()] = 100
+	s.TotalStake = 100 + 100
 
 	trans := CreateTransaction(pk1, pk2, 50, "transOne", sk1)
 	s.AddTransaction(trans, 2)
 
 	if s.Ledger[pk1.String()] != 150 && s.Ledger[pk1.String()] != 48 {
 		t.Error("not correct amount!")
+	}
+	if s.TotalStake != 100+100-2 {
+		t.Error("TotalStake is not correct...")
 	}
 
 }
@@ -31,13 +35,17 @@ func TestState_AddBlockReward(t *testing.T) {
 	_, pk2 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
 	s.Ledger[pk2.String()] = 100
+	s.TotalStake = 100 + 100
 
 	trans := CreateTransaction(pk1, pk2, 50, "transOne", sk1)
 	s.AddTransaction(trans, 2)
-	s.AddBlockReward(pk1, 2)
+	s.PayBlockRewardOrRemainGas(pk1, 2)
 
 	if s.Ledger[pk1.String()] != 150 && s.Ledger[pk1.String()] != 50 {
 		t.Error("not correct amount!")
+	}
+	if s.TotalStake != 100+100-2+2 {
+		t.Error("TotalStake is not correct...")
 	}
 
 }
@@ -61,18 +69,22 @@ func TestState_FundContractCall(t *testing.T) {
 	s.Ledger = make(map[string]int)
 	_, pk1 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
+	s.TotalStake = 100
 
 	s.ConAccounts = make(map[string]ContractAccount)
 	s.ConAccounts["address22"] = ContractAccount{pk1, 200, 15}
 
-	success := s.FundContractCall(pk1, 50)
+	success := s.FundContractCall(pk1, 50, 20)
 
 	if !success {
 		t.Error("Fund account didn't succeed!")
 	}
 
-	if s.Ledger[pk1.String()] != 50 && s.ConAccounts["address22"].Prepaid != 250 {
+	if s.Ledger[pk1.String()] != 100-50-20 && s.ConAccounts["address22"].Prepaid != 250 {
 		t.Error("not correct amount!")
+	}
+	if s.TotalStake != 100-20 {
+		t.Error("TotalStake is not correct...")
 	}
 }
 
@@ -86,6 +98,7 @@ func TestState_CleanContractLedger(t *testing.T) {
 	s.ConStake["address2"] = 100
 	s.ConStake["address3"] = 100
 	s.ConStake["address4"] = 100
+	s.TotalStake = 100 + 4*100
 
 	s.ConAccounts = make(map[string]ContractAccount)
 	s.ConAccounts["address1"] = ContractAccount{pk, 200, 15}
@@ -106,6 +119,9 @@ func TestState_CleanContractLedger(t *testing.T) {
 	}
 	if s.Ledger[pk.String()] != 300 {
 		t.Error("Not correct amount in ledger for pk1")
+	}
+	if s.TotalStake != 100+4*100 {
+		t.Error("TotalStake is not correct...")
 	}
 
 }
@@ -142,12 +158,14 @@ func TestHandleContractCall(t *testing.T) {
 	var s State
 	_, pk := KeyGen(2048)
 	con1 := "contract1"
+
 	s.ConAccounts = map[string]ContractAccount{}
 	s.ConAccounts[con1] = ContractAccount{pk, 100, 15}
 	s.ConStake = map[string]int{}
 	s.ConStake[con1] = 200
 	s.Ledger = map[string]int{}
 	s.Ledger[pk.String()] = 500
+	s.TotalStake = 200 + 500
 
 	contract := ContractCall{}
 	contract.Caller = pk
@@ -159,8 +177,11 @@ func TestHandleContractCall(t *testing.T) {
 	if !success {
 		t.Error("ContractCall failed...")
 	}
-	if s.Ledger[pk.String()] != 339 {
+	if s.Ledger[pk.String()] != 337 {
 		t.Error("Not correct amount in callers account...")
+	}
+	if s.TotalStake != 200+500-13 {
+		t.Error("TotalStake is not correct...")
 	}
 
 }

@@ -31,33 +31,33 @@ func NewInitialState(key PublicKey) State {
 	return State{ledger, conStake, conledger, "", initialStake}
 }
 
-func (s *State) AddTransaction(t Transaction, transFee int) {
+//Returns gasCost
+func (s *State) AddTransaction(t Transaction, gasCost int) int {
 	//TODO: Handle checks of legal transactions
-
-	amountWithFees := t.Amount + transFee
+	amountWithFees := t.Amount + gasCost
 
 	if !t.VerifyTransaction() {
 		fmt.Println("The transactions didn't verify", t)
-		return
+		return 0
 	}
 	if t.Amount <= 0 {
 		fmt.Println("Invalid transaction Amount! Amount should be positive!", t.Amount)
-		return
+		return 0
 	}
 
 	// Sender has to be able to pay both the amount and the fee
 	if s.Ledger[t.From.String()] < amountWithFees {
 		fmt.Println("Not enough money on senders account")
-		return
+		return 0
 	}
 
 	s.Ledger[t.From.String()] -= amountWithFees
 	s.Ledger[t.To.String()] += t.Amount
-	s.TotalStake -= transFee // Take the fee out of the system
-
+	s.TotalStake -= gasCost // Take the fee out of the system
+	return gasCost
 }
 
-func (s *State) AddBlockReward(pk PublicKey, reward int) {
+func (s *State) PayBlockRewardOrRemainGas(pk PublicKey, reward int) {
 	s.Ledger[pk.String()] += reward
 	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
@@ -92,12 +92,16 @@ func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
 	return Verify(HashSHA(s.toString()), sig, pk)
 }
 
-func (s *State) InitializeContract(addr string, owner PublicKey, prepaid int, storageCost int) {
+// Opens account for contract and moves prepaid to its account
+func (s *State) InitializeContractAccount(addr string, owner PublicKey, prepaid int, storageCost int) {
+	s.TotalStake -= prepaid
 	s.ConAccounts[addr] = ContractAccount{owner, prepaid, storageCost}
+
 }
 
 // Used for putting more prepaid on an contract account
 func (s *State) PrepayContracts(addr string, amount int) {
+	s.TotalStake -= amount
 	newBalance := s.ConAccounts[addr]
 	newBalance.Prepaid += amount
 	s.ConAccounts[addr] = newBalance
@@ -109,16 +113,17 @@ func (s *State) AddContractTransaction(t ContractTransaction) {
 }
 
 // Returns true if caller has enough funds on account to pay for call
-func (s *State) FundContractCall(callerAccount PublicKey, amount int) bool {
-	if s.Ledger[callerAccount.String()] >= amount {
-		s.Ledger[callerAccount.String()] -= amount
+func (s *State) FundContractCall(callerAccount PublicKey, amount int, gas int) bool {
+	if s.Ledger[callerAccount.String()] >= amount+gas {
+		s.TotalStake -= gas
+		s.Ledger[callerAccount.String()] -= amount + gas
 		return true
 	}
 	return false
 }
 
 //Used to refund money from contracts back into the original user ledger
-func (s *State) RefundContractCall(callerAccount PublicKey, amount int) {
+func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount int) {
 	s.Ledger[callerAccount.String()] += amount
 }
 
@@ -130,7 +135,7 @@ func (s *State) CleanContractLedger() []string {
 		contract := s.ConAccounts[c]
 		if contract.Prepaid <= 0 {
 			expiredContracts = append(expiredContracts, c)
-			s.RefundContractCall(contract.Owner, s.ConStake[c])
+			s.returnAmountFromContracts(contract.Owner, s.ConStake[c])
 			delete(s.ConAccounts, c)
 		}
 	}
@@ -142,14 +147,14 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 	switch td.getType() {
 
 	case 1:
-		s.AddTransaction(td.Transaction, transactionFee)
-		return transactionFee
+		gasCost := s.AddTransaction(td.Transaction, transactionFee)
+		return gasCost
 
 	case 2:
 		contract := td.ContractCall
 		// Transfer funds from caller to contract
-		if !s.FundContractCall(contract.Caller, contract.Amount+contract.Gas) {
-			return transactionFee // TODO price for funding contract? essentially just a transfer of money -> Transfee
+		if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
+			return 0
 		}
 
 		// Runs contract at contract layer
@@ -157,11 +162,11 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 
 		// Calc how much gas used and refund not used gas to caller
 		gasUsed := contract.Gas - remainingGas
-		s.RefundContractCall(contract.Caller, remainingGas)
+		s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
 
 		// If contract not successful, then return amount to caller
 		if !callSuccess {
-			s.RefundContractCall(contract.Caller, contract.Amount)
+			s.returnAmountFromContracts(contract.Caller, contract.Amount)
 			return gasUsed
 		}
 
@@ -174,12 +179,15 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 
 	case 3:
 		contractInit := td.ContractInit
-		addr, remainGas, storageCost, success := InitContractAtConLayer(contractInit.Code, contractInit.Gas)
-		s.RefundContractCall(contractInit.Owner, remainGas)
-		if success {
-			s.InitializeContract(addr, contractInit.Owner, contractInit.Prepaid, storageCost)
+		if s.Ledger[contractInit.Owner.String()] > contractInit.Prepaid+contractInit.Gas {
+			addr, remainGas, storageCost, success := InitContractAtConLayer(contractInit.Code, contractInit.Gas)
+			s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)
+			if success {
+				s.InitializeContractAccount(addr, contractInit.Owner, contractInit.Prepaid, storageCost)
+			}
+			return contractInit.Gas - remainGas
 		}
-		return contractInit.Gas - remainGas
+
 	}
 	return 0
 }
@@ -188,7 +196,7 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 func (s *State) handleContractCall(contract ContractCall) (int, bool) {
 
 	// Transfer funds from caller to contract
-	if !s.FundContractCall(contract.Caller, contract.Amount+contract.Gas) {
+	if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
 		return 0, false
 	}
 
@@ -202,12 +210,12 @@ func (s *State) handleContractCall(contract ContractCall) (int, bool) {
 		for _, t := range transactionList {
 			s.AddContractTransaction(t)
 		}
-		s.RefundContractCall(contract.Caller, remainingGas)
+		s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
 		return gasUsed, callSuccess
 	}
 
 	// If contract not successful, then return remaining funds to caller
-	s.RefundContractCall(contract.Caller, contract.Amount+remainingGas)
+	s.PayBlockRewardOrRemainGas(contract.Caller, contract.Amount+remainingGas)
 	return gasUsed, callSuccess
 
 }

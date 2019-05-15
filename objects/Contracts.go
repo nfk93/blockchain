@@ -40,7 +40,7 @@ func CallAtConLayer(contract ContractCall) (bool, map[string]int, []ContractTran
 	conStake := map[string]int{}
 	conStake["contract1"] = 200
 	conTrans := []ContractTransaction{{pk, contract.Amount}}
-	return true, conStake, conTrans, 2
+	return true, conStake, conTrans, 0
 }
 
 func ExpireAtConLayer(expiredContracts []string) {

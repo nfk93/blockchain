@@ -17,8 +17,10 @@ type Tree struct {
 }
 
 var tree Tree
-var transactionFee = 1
-var blockReward = 100
+
+const transactionGas = 1
+const blockReward = 100
+const gasLimit = 1000 //(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -26,7 +28,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 	go func() {
 		for {
 			b := <-channels.BlockToTrans
-			fmt.Println("TL received block from ", b.Slot)
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
@@ -80,7 +81,7 @@ func (t *Tree) processBlock(b Block) {
 	if len(b.BlockData.Trans) != 0 {
 		for _, td := range b.BlockData.Trans {
 
-			gasCost := s.HandleTransData(td, transactionFee)
+			gasCost := s.HandleTransData(td, transactionGas)
 			accumulatedRewards += gasCost
 
 		}
@@ -94,7 +95,7 @@ func (t *Tree) processBlock(b Block) {
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator
-		s.AddBlockReward(b.BakerID, accumulatedRewards)
+		s.PayBlockRewardOrRemainGas(b.BakerID, accumulatedRewards)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -118,12 +119,14 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
-	noOfTrans := len(blockData.TransList)
+	accumulatedGasUse := 0
+	for _, td := range blockData.TransList {
 
-	for i := 0; i < min(1000, noOfTrans); i++ { //TODO: Change to only run i X time
-		td := blockData.TransList[i]
-		s.HandleTransData(td, transactionFee)
-		addedTransactions = append(addedTransactions, td)
+		if accumulatedGasUse < gasLimit {
+			gasUse := s.HandleTransData(td, transactionGas)
+			accumulatedGasUse += gasUse
+			addedTransactions = append(addedTransactions, td)
+		}
 
 	}
 
