@@ -39,7 +39,6 @@ type BlockData struct {
 }
 
 type TransData struct {
-	Type         int // 1=Transaction, 2=ContractCall, 3=ContractInitializer
 	Transaction  Transaction
 	ContractCall ContractCall
 	ContractInit ContractInitialize
@@ -76,7 +75,7 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		switch t.Type {
+		switch t.getType() {
 		case 1:
 			buf.WriteString(t.Transaction.toString())
 		case 2:
@@ -109,4 +108,20 @@ func (b *Block) validateBlockNonce(leadershipNonce string) bool {
 	correctSignature := Verify(buf.String(), b.BlockNonce.Proof, b.BakerID)
 	correctNonce := HashSHA(b.BlockNonce.Proof) == b.BlockNonce.Nonce
 	return correctSignature && correctNonce
+}
+
+func (t TransData) getType() int {
+	if t.Transaction != (Transaction{}) {
+		return 1
+	}
+	if t.ContractCall != (ContractCall{}) {
+		return 2
+	}
+	if t.ContractInit.Owner != (PublicKey{}) ||
+		t.ContractInit.Prepaid != 0 ||
+		t.ContractInit.Gas != 0 ||
+		string(t.ContractInit.Code) != "" {
+		return 3
+	}
+	return 0
 }

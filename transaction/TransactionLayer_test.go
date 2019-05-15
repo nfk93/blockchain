@@ -21,7 +21,7 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 
 	t1 := CreateTransaction(p1, p2, 200, "ID112", sk1)
 	t2 := CreateTransaction(p1, p2, 300, "ID222", sk1)
-	channels.TransToTrans <- CreateBlockData{[]TransData{t1, t2}, sk1, p1, 1, "", BlockNonce{}, ""}
+	channels.TransToTrans <- CreateBlockData{[]TransData{{Transaction: t1}, {Transaction: t2}}, sk1, p1, 1, "", BlockNonce{}, ""}
 	b := <-channels.BlockFromTrans
 
 	channels.BlockToTrans <- b
@@ -69,26 +69,26 @@ func TestForking(t *testing.T) {
 
 	// Block 1, Grow from Genesis
 	t1 := CreateTransaction(p1, p4, 400, strconv.Itoa(1), sk1)
-	channels.TransToTrans <- CreateBlockData{[]TransData{t1}, sk1, p1, 1, "", BlockNonce{}, ""}
+	channels.TransToTrans <- CreateBlockData{[]TransData{{Transaction: t1}}, sk1, p1, 1, "", BlockNonce{}, ""}
 	block1 := <-channels.BlockFromTrans
 	channels.BlockToTrans <- block1
 	time.Sleep(time.Millisecond * 300)
 
 	// Block 2 - grow from block 1
 	t2 := CreateTransaction(p1, p2, 200, strconv.Itoa(2), sk1)
-	channels.TransToTrans <- CreateBlockData{[]TransData{t2}, sk2, p2, 2, "", BlockNonce{}, ""}
+	channels.TransToTrans <- CreateBlockData{[]TransData{{Transaction: t2}}, sk2, p2, 2, "", BlockNonce{}, ""}
 	block2 := <-channels.BlockFromTrans
 	channels.BlockToTrans <- block2
 	time.Sleep(time.Millisecond * 100)
 
 	// Block 3 - grow from block 1
 	t3 := CreateTransaction(p1, p3, 300, strconv.Itoa(3), sk1)
-	channels.TransToTrans <- CreateBlockData{[]TransData{t3}, sk2, p2, 3, "", BlockNonce{}, ""}
+	channels.TransToTrans <- CreateBlockData{[]TransData{{Transaction: t3}}, sk2, p2, 3, "", BlockNonce{}, ""}
 	block3 := <-channels.BlockFromTrans
 
 	// Block 4 - grow from block 2
 	t4 := CreateTransaction(p2, p4, 50, strconv.Itoa(4), sk2)
-	channels.TransToTrans <- CreateBlockData{[]TransData{t4}, sk2, p2, 4, "", BlockNonce{}, ""}
+	channels.TransToTrans <- CreateBlockData{[]TransData{{Transaction: t4}}, sk2, p2, 4, "", BlockNonce{}, ""}
 	block4 := <-channels.BlockFromTrans
 
 	channels.BlockToTrans <- block3
@@ -115,7 +115,7 @@ func TestCreateNewBlock(t *testing.T) {
 
 	var transList []TransData
 	for i := 0; i < 20; i++ {
-		t1 := CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)
+		t1 := TransData{Transaction: CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)}
 		transList = append(transList, t1)
 	}
 	newBlockData := CreateBlockData{transList, sk1, pk1, 2, "", BlockNonce{}, ""}
@@ -125,35 +125,6 @@ func TestCreateNewBlock(t *testing.T) {
 	if !newBlock.ValidateBlock() {
 		t.Error("Block validation failed")
 	}
-
-}
-
-func TestHandleContractCall(t *testing.T) {
-	var s State
-	_, pk := KeyGen(2048)
-	con1 := "contract1"
-	s.ConAccounts = map[string]ContractAccount{}
-	s.ConAccounts[con1] = ContractAccount{pk, 100}
-	s.ConStake = map[string]int{}
-	s.ConStake[con1] = 200
-	s.Ledger = map[string]int{}
-	s.Ledger[pk.String()] = 500
-
-	contract := ContractCall{}
-	contract.Caller = pk
-	contract.Gas = 13
-	contract.Amount = 150
-
-	newS, _, success := handleContractCall(s, contract)
-
-	if !success {
-		t.Error("ContractCall failed...")
-	}
-	if s.Ledger[pk.String()] != 339 {
-		t.Error("Not correct amount in callers account...")
-	}
-
-	fmt.Println(newS)
 
 }
 

@@ -137,3 +137,30 @@ func TestState_CollectStorageCost(t *testing.T) {
 		t.Error("Wrong amount in prepaid for 4")
 	}
 }
+
+func TestHandleContractCall(t *testing.T) {
+	var s State
+	_, pk := KeyGen(2048)
+	con1 := "contract1"
+	s.ConAccounts = map[string]ContractAccount{}
+	s.ConAccounts[con1] = ContractAccount{pk, 100, 15}
+	s.ConStake = map[string]int{}
+	s.ConStake[con1] = 200
+	s.Ledger = map[string]int{}
+	s.Ledger[pk.String()] = 500
+
+	contract := ContractCall{}
+	contract.Caller = pk
+	contract.Gas = 13
+	contract.Amount = 150
+
+	_, success := s.handleContractCall(contract)
+
+	if !success {
+		t.Error("ContractCall failed...")
+	}
+	if s.Ledger[pk.String()] != 339 {
+		t.Error("Not correct amount in callers account...")
+	}
+
+}

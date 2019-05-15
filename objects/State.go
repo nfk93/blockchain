@@ -139,7 +139,7 @@ func (s *State) CleanContractLedger() []string {
 
 // Switches depending on type of Trans. Returns amount of gas used
 func (s *State) HandleTransData(td TransData, transactionFee int) int {
-	switch td.Type {
+	switch td.getType() {
 
 	case 1:
 		s.AddTransaction(td.Transaction, transactionFee)

@@ -277,7 +277,7 @@ func getUnusedTransactions() []o.TransData {
 	trans := make([]o.TransData, len(unusedTransactions))
 	i := 0
 	for k := range unusedTransactions {
-		td := o.TransData{1, transactions[k], o.ContractCall{}, o.ContractInitialize{}}
+		td := o.TransData{Transaction: transactions[k]}
 		trans[i] = td
 		i++
 	}
