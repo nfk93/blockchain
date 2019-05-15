@@ -106,6 +106,7 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 		interpPanic("ran out of gas when building typed AST", gas)
 	}
 	if !ok {
+		fmt.Println(texp.String())
 		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)

@@ -14,7 +14,7 @@ func CallContract(
 	entry string,
 	params interpreter.Value,
 	amount uint64,
-	gas uint64,
+	gas_ uint64,
 ) (resultLedger map[string]uint64, transfers []Transfer, remainingGas uint64, callError error) {
 	tempBalances := make(map[string]uint64)
 	for k, v := range contractBalances {
@@ -25,18 +25,19 @@ func CallContract(
 		tempContracts[k] = v
 	}
 
+	gas := gas_
+
 	contract, exist := tempContracts[address]
 	if !exist {
 		if int64(gas)-10000 < 0 {
-			remainingGas = 0
+			gas = 0
 		} else {
-			remainingGas = gas - 10000
+			gas = gas - 10000
 		}
 		return nil, nil, remainingGas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
 	}
 
-	// check if contract exists
-	oplist, sto, spent, remainingGas := interpreter.InterpretContractCall(contract.tabs, params, entry,
+	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry,
 		contract.storage, amount, tempBalances[address], gas)
 
 	contract.storage = sto
@@ -44,13 +45,13 @@ func CallContract(
 	tempBalances[address] = tempBalances[address] + amount - spent
 
 	// handle operation list
-	transfers, err, remainingGas := handleOpList(oplist, address, tempBalances, tempContracts, gas)
+	transfers, err, gas := handleOpList(oplist, address, tempBalances, tempContracts, gas)
 	if err != nil {
-		return contractBalances, nil, remainingGas, err
+		return contractBalances, nil, gas, err
 	} else {
 		contracts = tempContracts
 		contractBalances = tempBalances
-		return contractBalances, transfers, remainingGas, nil
+		return contractBalances, transfers, gas, nil
 	}
 }
 
@@ -62,16 +63,16 @@ func ExpireContract(address string) {
 func InitiateContract(
 	contractCode []byte,
 	gas uint64,
-) (remainingGas uint64, err error) {
+) (addr string, remainingGas uint64, err error) {
 	address := getAddress(contractCode)
 
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
 	if returnErr != nil {
-		return remainingGas, returnErr
+		return "", remainingGas, returnErr
 	} else {
 		contracts[address] = Contract{string(contractCode), texp, initstor}
 		contractBalances[address] = 0
-		return remainingGas, nil
+		return address, remainingGas, nil
 	}
 }
 
@@ -95,7 +96,7 @@ func handleOpList(operations []interpreter.Operation, caller string, tempBalance
 			tempContracts[callop.Address] = contract
 			tempBalances[callop.Address] = tempBalances[callop.Address] + callop.Amount - spent
 
-			trans, err, remainingGas := handleOpList(oplist, caller, tempBalances, tempContracts, remainingGas)
+			trans, err, remainingGas := handleOpList(oplist, callop.Address, tempBalances, tempContracts, remainingGas)
 			if err != nil {
 				return nil, err, remainingGas
 			} else {

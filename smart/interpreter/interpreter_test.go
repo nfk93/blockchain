@@ -920,28 +920,6 @@ func TestCallContract(t *testing.T) {
 
 	param := UnitVal{}
 
-	/* This part of the test is deprecated. It is no longer the interpreter's responsibility to know if a contract
-		exists when it is called
-
-	oplist, sto, _, remaining := InterpretContractCall(texp, param, "main", sto, 900000,
-		0, 100000)
-	if len(oplist) != 1 {
-		t.Errorf("oplist should have length 1")
-		return
-	}
-	failwith1, ok := oplist[0].(FailWith)
-	if !ok {
-		t.Errorf("op[0] should be failwith operation")
-	} else {
-		if failwith1.Msg != "contract attempted to call an unexisting contract" {
-			t.Errorf("wrong failwith message")
-		}
-	}
-
-	fmt.Println(oplist)
-	fmt.Println(sto)
-	fmt.Println(remaining) */
-
 	oplist, sto, _, remaining := InterpretContractCall(texp, param, "second", sto, 900000,
 		0, 100000)
 	if len(oplist) != 1 {
@@ -956,9 +934,6 @@ func TestCallContract(t *testing.T) {
 			t.Errorf("wrong failwith message: %s", failwith2.Msg)
 		}
 	}
-	fmt.Println(oplist)
-	fmt.Println(sto)
-	fmt.Println(remaining)
 
 	oplist, sto, _, remaining = InterpretContractCall(texp, param, "second", sto, 90000000,
 		0, 100000)
