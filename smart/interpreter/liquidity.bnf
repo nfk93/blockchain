@@ -83,8 +83,8 @@ _version    : '[' '%' '%' 'v' 'e' 'r' 's' 'i' 'o' 'n' ' ' {.} ']' ;
 
 /* Syntax Part */
 
-<< import "github.com/nfk93/blockchain/interpreter/ast"
-   import "github.com/nfk93/blockchain/interpreter/util" >>
+<< import "github.com/nfk93/blockchain/smart/interpreter/ast"
+   import "github.com/nfk93/blockchain/smart/interpreter/util" >>
 
 Toplevel    : Structure                                         << ast.NewRoot($0) >>
             | Structure Toplevel                                << ast.AppendRoots($0, $1) >> ;
@@ -173,7 +173,7 @@ LookupExp   : Lookup lident                                     << ast.NewLookup
 Lookup      : Lookup lident dot                                 << ast.AddPathElement($0, util.ParseId($1)), nil // intermediate for lookup calls  >>
             | lident dot                                        << ast.LookupPathRoot(util.ParseId($0)), nil // see above >> ;
 
-Pattern     : lparen rparen                                     << ast.NewEmptyPattern() // TODO: Yikes, you can write let () = 12 in >>
+Pattern     : lparen rparen                                     << ast.NewEmptyPattern() // >>
             | lparen Paramlist rparen                           << ast.NewPattern($1) >>
             | Param                                             << ast.NewPattern($0) >> ;
 Param       : lident                                            << ast.NewParam(util.ParseId($0)) // param >>
