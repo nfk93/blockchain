@@ -262,7 +262,7 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 }
 
 func handleBlock(block objects.Block) {
-	fmt.Println("P2P handled block from network", block.Slot)
+	fmt.Println("P2P is handling new block", block.Slot)
 
 	blocksSeen.lock()
 	defer blocksSeen.unlock()

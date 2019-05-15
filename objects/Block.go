@@ -38,8 +38,11 @@ type BlockData struct {
 	GenesisData GenesisData
 }
 
-type TransData interface {
-	toString() string
+type TransData struct {
+	Type         int // 1=Transaction, 2=ContractCall, 3=ContractInitializer
+	Transaction  Transaction
+	ContractCall ContractCall
+	ContractInit ContractInitialize
 }
 
 // Block Functions
@@ -73,7 +76,15 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		buf.WriteString(t.toString())
+		switch t.Type {
+		case 1:
+			buf.WriteString(t.Transaction.toString())
+		case 2:
+			buf.WriteString(t.ContractCall.toString())
+		case 3:
+			buf.WriteString(t.ContractInit.toString())
+
+		}
 	}
 	return buf.String()
 }

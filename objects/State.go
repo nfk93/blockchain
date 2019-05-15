@@ -139,30 +139,29 @@ func (s *State) CleanContractLedger() []string {
 
 // Switches depending on type of Trans. Returns amount of gas used
 func (s *State) HandleTransData(td TransData, transactionFee int) int {
-	switch td.(type) {
+	switch td.Type {
 
-	case Transaction:
-		td := td.(Transaction)
-		s.AddTransaction(td, transactionFee)
+	case 1:
+		s.AddTransaction(td.Transaction, transactionFee)
 		return transactionFee
 
-	case ContractCall:
-		td := td.(ContractCall)
+	case 2:
+		contract := td.ContractCall
 		// Transfer funds from caller to contract
-		if !s.FundContractCall(td.Caller, td.Amount+td.Gas) {
+		if !s.FundContractCall(contract.Caller, contract.Amount+contract.Gas) {
 			return transactionFee // TODO price for funding contract? essentially just a transfer of money -> Transfee
 		}
 
 		// Runs contract at contract layer
-		callSuccess, newContractStake, transactionList, remainingGas := CallAtConLayer(td)
+		callSuccess, newContractStake, transactionList, remainingGas := CallAtConLayer(contract)
 
 		// Calc how much gas used and refund not used gas to caller
-		gasUsed := td.Gas - remainingGas
-		s.RefundContractCall(td.Caller, remainingGas)
+		gasUsed := contract.Gas - remainingGas
+		s.RefundContractCall(contract.Caller, remainingGas)
 
 		// If contract not successful, then return amount to caller
 		if !callSuccess {
-			s.RefundContractCall(td.Caller, td.Amount)
+			s.RefundContractCall(contract.Caller, contract.Amount)
 			return gasUsed
 		}
 
@@ -173,14 +172,14 @@ func (s *State) HandleTransData(td TransData, transactionFee int) int {
 		}
 		return gasUsed
 
-	case ContractInitialize:
-		td := td.(ContractInitialize)
-		addr, remainGas, storageCost, success := InitContractAtConLayer(td.Code, td.Gas)
-		s.RefundContractCall(td.Owner, remainGas)
+	case 3:
+		contractInit := td.ContractInit
+		addr, remainGas, storageCost, success := InitContractAtConLayer(contractInit.Code, contractInit.Gas)
+		s.RefundContractCall(contractInit.Owner, remainGas)
 		if success {
-			s.InitializeContract(addr, td.Owner, td.Prepaid, storageCost)
+			s.InitializeContract(addr, contractInit.Owner, contractInit.Prepaid, storageCost)
 		}
-		return td.Gas - remainGas
+		return contractInit.Gas - remainGas
 	}
 	return 0
 }

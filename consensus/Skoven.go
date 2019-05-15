@@ -178,7 +178,7 @@ func rollback(newHead o.Block) bool {
 func transactionsUnused(b o.Block) {
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		t := t.(o.Transaction)
+		t := t.Transaction
 		unusedTransactions[t.ID] = true
 	}
 }
@@ -192,7 +192,7 @@ func transactionsUsed(b o.Block) bool {
 	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		t := t.(o.Transaction)
+		t := t.Transaction
 		_, alreadyStored := transactions[t.ID]
 		if !alreadyStored {
 			transactions[t.ID] = t
@@ -277,7 +277,8 @@ func getUnusedTransactions() []o.TransData {
 	trans := make([]o.TransData, len(unusedTransactions))
 	i := 0
 	for k := range unusedTransactions {
-		trans[i] = transactions[k]
+		td := o.TransData{1, transactions[k], o.ContractCall{}, o.ContractInitialize{}}
+		trans[i] = td
 		i++
 	}
 	return trans
