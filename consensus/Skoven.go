@@ -35,8 +35,6 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
-			fmt.Println("CL received block from ", block.Slot, " Number of Transactions: ", len(block.BlockData.Trans))
-
 			handleBlock(block)
 		}
 	}()

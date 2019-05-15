@@ -34,7 +34,7 @@ func TestState_AddBlockReward(t *testing.T) {
 
 	trans := CreateTransaction(pk1, pk2, 50, "transOne", sk1)
 	s.AddTransaction(trans, 2)
-	s.AddBlockReward(pk1, 2)
+	s.PayBlockRewardOrRemainGas(pk1, 2)
 
 	if s.Ledger[pk1.String()] != 150 && s.Ledger[pk1.String()] != 50 {
 		t.Error("not correct amount!")
@@ -65,7 +65,7 @@ func TestState_FundContractCall(t *testing.T) {
 	s.ConAccounts = make(map[string]ContractAccount)
 	s.ConAccounts["address22"] = ContractAccount{pk1, 200, 15}
 
-	success := s.FundContractCall(pk1, 50)
+	success := s.FundContractCall(pk1, 50, 0)
 
 	if !success {
 		t.Error("Fund account didn't succeed!")

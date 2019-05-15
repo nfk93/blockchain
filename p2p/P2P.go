@@ -113,7 +113,6 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 	go func() {
 		for {
 			block := <-inputBlock
-			fmt.Println("P2P Receive block from CL", block.Slot)
 			go handleBlock(block)
 		}
 	}()
@@ -245,7 +244,6 @@ func broadcastNewConnection(data NewConnectionData) {
 
 func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	fmt.Println("P2P received block from network", block.Slot)
 	alreadyKnown := false
 	func() {
 		blocksSeen.rlock()
@@ -262,7 +260,6 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 }
 
 func handleBlock(block objects.Block) {
-	fmt.Println("P2P is handling new block", block.Slot)
 
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
@@ -272,7 +269,6 @@ func handleBlock(block objects.Block) {
 
 		// TODO: handle the block more?
 		go func() { deliverBlock <- block }()
-		fmt.Println("P2P send block from network to CL", block.Slot)
 		go broadcastBlock(block)
 	}
 }
@@ -280,7 +276,6 @@ func handleBlock(block objects.Block) {
 func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
-	fmt.Println("At Broadcast BLock")
 	for _, peer := range peers {
 		client, err := rpc.DialHTTP("tcp", peer)
 
@@ -288,7 +283,6 @@ func broadcastBlock(block objects.Block) {
 			fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
-			fmt.Println("P2P broadcasted BLock")
 
 			client.Call(RPC_SEND_BLOCK, block, &void)
 		}
@@ -297,7 +291,6 @@ func broadcastBlock(block objects.Block) {
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	//fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
