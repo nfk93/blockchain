@@ -34,7 +34,7 @@ func (t *Transaction) VerifyTransaction() bool {
 }
 
 func CreateTransaction(from PublicKey, to PublicKey, amount uint64, id string, sk SecretKey) Transaction {
-	t := Transaction{from, to, amount, from.String()[4:14] + "-" + id + "-" + time.Now().String(), ""}
+	t := Transaction{from, to, amount, from.Hash()[:10] + "-" + id + "-" + time.Now().String(), ""}
 	t.SignTransaction(sk)
 	return t
 }

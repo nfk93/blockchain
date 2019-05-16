@@ -111,7 +111,7 @@ func TestBadBlock(t *testing.T) {
 func TestInteraction(t *testing.T) {
 
 	resetMocksAndStart()
-	genesis.BlockData.GenesisData.InitialState.Ledger[pk.String()] = 1000000 //1 Million
+	genesis.BlockData.GenesisData.InitialState.Ledger[pk.Hash()] = 1000000 //1 Million
 
 	genHash := genesis.CalculateBlockHash()
 	sk2, pk2 := KeyGen(2048)
@@ -170,7 +170,7 @@ func TestInteraction(t *testing.T) {
 
 func TestBlockGeneration(t *testing.T) {
 	resetMocksAndStart()
-	genesis.BlockData.GenesisData.InitialState.Ledger[pk.String()] = 1000000 //1 Million
+	genesis.BlockData.GenesisData.InitialState.Ledger[pk.Hash()] = 1000000 //1 Million
 	genesis.BlockData.GenesisData.InitialState.TotalStake = 10000000
 	channels.BlockFromP2P <- genesis
 	_, pk2 := KeyGen(2048)

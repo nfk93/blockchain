@@ -28,7 +28,7 @@ func NewInitialState(key PublicKey) State {
 	ledger := make(map[string]uint64)
 	conStake := make(map[string]uint64)
 	conledger := make(map[string]PublicKey)
-	ledger[key.String()] = initialStake
+	ledger[key.Hash()] = initialStake
 	return State{ledger, conStake, conledger, "", initialStake}
 }
 
@@ -43,19 +43,19 @@ func (s *State) AddTransaction(t Transaction, gasCost uint64) uint64 {
 	}
 
 	// Sender has to be able to pay both the amount and the fee
-	if s.Ledger[t.From.String()] < amountWithFees {
+	if s.Ledger[t.From.Hash()] < amountWithFees {
 		fmt.Println("Not enough money on senders account")
 		return 0
 	}
 
-	s.Ledger[t.From.String()] -= amountWithFees
-	s.Ledger[t.To.String()] += t.Amount
+	s.Ledger[t.From.Hash()] -= amountWithFees
+	s.Ledger[t.To.Hash()] += t.Amount
 	s.TotalStake -= gasCost // Take the fee out of the system
 	return gasCost
 }
 
 func (s *State) PayBlockRewardOrRemainGas(pk PublicKey, reward uint64) {
-	s.Ledger[pk.String()] += reward
+	s.Ledger[pk.Hash()] += reward
 	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
 
@@ -101,9 +101,9 @@ func (s *State) AddContractTransaction(t smart.ContractTransaction) {
 
 // Returns true if caller has enough funds on account to pay for call
 func (s *State) FundContractCall(callerAccount PublicKey, amount uint64, gas uint64) bool {
-	if s.Ledger[callerAccount.String()] >= amount+gas {
+	if s.Ledger[callerAccount.Hash()] >= amount+gas {
 		s.TotalStake -= gas
-		s.Ledger[callerAccount.String()] -= amount + gas
+		s.Ledger[callerAccount.Hash()] -= amount + gas
 		return true
 	}
 	return false
@@ -111,7 +111,7 @@ func (s *State) FundContractCall(callerAccount PublicKey, amount uint64, gas uin
 
 //Used to refund money from contracts back into the original user ledger
 func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount uint64) {
-	s.Ledger[callerAccount.String()] += amount
+	s.Ledger[callerAccount.Hash()] += amount
 }
 
 // TODO: ask for expiring contracts at start of block execution
@@ -133,7 +133,7 @@ func (s *State) CollectStorageCost(blockhash string) uint64 {
 }
 
 func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
-	if s.Ledger[contractInit.Owner.String()] > contractInit.Prepaid+contractInit.Gas {
+	if s.Ledger[contractInit.Owner.Hash()] > contractInit.Prepaid+contractInit.Gas {
 		addr, remainGas, err := smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
 			contractInit.StorageLimit, blockhash, parenthash, slot)
 		s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)

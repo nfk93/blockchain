@@ -56,7 +56,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	slotLength = genesisData.SlotDuration
 	lastFinalizedLedger = genesisData.InitialState.Ledger
 	leadershipNonce = genesisData.Nonce
-	currentStake = lastFinalizedLedger[pk.String()]
+	currentStake = lastFinalizedLedger[pk.Hash()]
 	systemStake = genesisData.InitialState.TotalStake
 	genesisTime = genesisData.GenesisTime
 	go runSlot()
@@ -123,7 +123,7 @@ func sendBlock() {
 func getLotteryPower(pk PublicKey) float64 {
 	ledgerLock.RLock()
 	defer ledgerLock.RUnlock()
-	return float64(lastFinalizedLedger[pk.String()]) / float64(systemStake)
+	return float64(lastFinalizedLedger[pk.Hash()]) / float64(systemStake)
 }
 
 func GetLastFinalState() map[string]uint64 {
