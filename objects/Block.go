@@ -7,7 +7,7 @@ import (
 )
 
 type Block struct {
-	Slot           int
+	Slot           uint64
 	ParentPointer  string //a hash of parent block
 	BakerID        PublicKey
 	Draw           string
@@ -22,7 +22,7 @@ type CreateBlockData struct {
 	TransList     []TransData
 	Sk            SecretKey
 	Pk            PublicKey
-	SlotNo        int
+	SlotNo        uint64
 	Draw          string
 	BlockNonce    BlockNonce
 	LastFinalized string
@@ -56,7 +56,7 @@ func (b Block) ValidateBlock() bool {
 
 func (b Block) toString() string {
 	var buf bytes.Buffer
-	buf.WriteString(strconv.Itoa(b.Slot))
+	buf.WriteString(strconv.Itoa(int(b.Slot)))
 	buf.WriteString(b.ParentPointer)
 	buf.WriteString(b.BakerID.String())
 	buf.WriteString(b.Draw)
@@ -89,11 +89,11 @@ func (d *BlockData) toString() string {
 }
 
 // BlockNonce Functions
-func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot int) BlockNonce {
+func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot uint64) BlockNonce {
 	var buf bytes.Buffer
 	buf.WriteString("NONCE") //Old block nonce
 	buf.WriteString(leadershipNonce)
-	buf.WriteString(strconv.Itoa(slot))
+	buf.WriteString(strconv.Itoa(int(slot)))
 	newNonceString := buf.String()
 	proof := Sign(newNonceString, sk)
 	newNonce := HashSHA(proof)
@@ -104,7 +104,7 @@ func (b *Block) validateBlockNonce(leadershipNonce string) bool {
 	var buf bytes.Buffer
 	buf.WriteString("NONCE") //Old block nonce
 	buf.WriteString(leadershipNonce)
-	buf.WriteString(strconv.Itoa(b.Slot))
+	buf.WriteString(strconv.Itoa(int(b.Slot)))
 	correctSignature := Verify(buf.String(), b.BlockNonce.Proof, b.BakerID)
 	correctNonce := HashSHA(b.BlockNonce.Proof) == b.BlockNonce.Nonce
 	return correctSignature && correctNonce
@@ -112,16 +112,25 @@ func (b *Block) validateBlockNonce(leadershipNonce string) bool {
 
 func (t TransData) getType() int {
 	if t.Transaction != (Transaction{}) {
-		return 1
+		return TRANSACTION
 	}
 	if t.ContractCall != (ContractCall{}) {
-		return 2
+		return CONTRACTCALL
 	}
 	if t.ContractInit.Owner != (PublicKey{}) ||
 		t.ContractInit.Prepaid != 0 ||
 		t.ContractInit.Gas != 0 ||
 		string(t.ContractInit.Code) != "" {
-		return 3
+		return CONTRACTINIT
 	}
-	return 0
+	return ERROR
 }
+
+type transtype int
+
+const (
+	TRANSACTION = iota
+	CONTRACTCALL
+	CONTRACTINIT
+	ERROR
+)

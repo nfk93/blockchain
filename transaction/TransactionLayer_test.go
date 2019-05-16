@@ -115,7 +115,7 @@ func TestCreateNewBlock(t *testing.T) {
 
 	var transList []TransData
 	for i := 0; i < 20; i++ {
-		t1 := TransData{Transaction: CreateTransaction(pk1, pk2, 100+(i*100), "ID"+strconv.Itoa(i), sk1)}
+		t1 := TransData{Transaction: CreateTransaction(pk1, pk2, uint64(100+(i*100)), "ID"+strconv.Itoa(i), sk1)}
 		transList = append(transList, t1)
 	}
 	newBlockData := CreateBlockData{transList, sk1, pk1, 2, "", BlockNonce{}, ""}

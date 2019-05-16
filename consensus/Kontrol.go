@@ -12,22 +12,22 @@ import (
 )
 
 var slotLength time.Duration
-var currentSlot int
+var currentSlot uint64
 var slotLock sync.RWMutex
-var currentStake int
-var systemStake int
+var currentStake uint64
+var systemStake uint64
 var hardness float64
 var genesisTime time.Time
 var sk SecretKey
 var pk PublicKey
-var lastFinalizedLedger map[string]int
+var lastFinalizedLedger map[string]uint64
 var ledgerLock sync.RWMutex
 var leadershipNonce string
 var leadershipLock sync.RWMutex
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
-	finalizeInterval := 50
+	finalizeInterval := uint64(50)
 	for {
 		if (currentSlot)%finalizeInterval == 0 {
 			finalize(currentSlot - (finalizeInterval / 2))
@@ -44,7 +44,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 	}
 }
 
-func getCurrentSlot() int {
+func getCurrentSlot() uint64 {
 	slotLock.RLock()
 	defer slotLock.RUnlock()
 	return currentSlot
@@ -63,7 +63,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	go transaction.StartTransactionLayer(channels)
 }
 
-func finalize(slot int) { //TODO add generation of new leadershipNonce (when doing so also change all places using it)
+func finalize(slot uint64) { //TODO add generation of new leadershipNonce (when doing so also change all places using it)
 	finalLock.Lock()
 	defer finalLock.Unlock()
 	head := blocks.get(currentHead)
@@ -90,18 +90,18 @@ func updateStake() {
 	}
 }
 
-func drawLottery(slot int) {
+func drawLottery(slot uint64) {
 	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, slot)
 	if winner {
 		if isVerbose {
-			fmt.Println("We won slot " + strconv.Itoa(slot))
+			fmt.Println("We won slot " + strconv.Itoa(int(slot)))
 		}
 		generateBlock(draw, slot)
 	}
 }
 
 //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
-func generateBlock(draw string, slot int) {
+func generateBlock(draw string, slot uint64) {
 	blockData := o.CreateBlockData{
 		getUnusedTransactions(),
 		sk,
@@ -126,7 +126,7 @@ func getLotteryPower(pk PublicKey) float64 {
 	return float64(lastFinalizedLedger[pk.String()]) / float64(systemStake)
 }
 
-func GetLastFinalState() map[string]int {
+func GetLastFinalState() map[string]uint64 {
 	return lastFinalizedLedger
 }
 

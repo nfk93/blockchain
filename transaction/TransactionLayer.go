@@ -3,6 +3,7 @@ package transaction
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/smart"
 	"sort"
 )
 
@@ -18,9 +19,9 @@ type Tree struct {
 
 var tree Tree
 
-const transactionGas = 1
-const blockReward = 100
-const gasLimit = 1000 //(Gas limit for blocks) TODO What is good numbers?
+const transactionGas = uint64(1)
+const blockReward = uint64(100)
+const gasLimit = uint64(1000) //(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -75,7 +76,9 @@ func (t *Tree) processBlock(b Block) {
 
 	// Remove expired contracts from ledger in TL and from ConLayer
 	expiredContracts := s.CleanContractLedger()
-	ExpireAtConLayer(expiredContracts)
+	for _, v := range expiredContracts {
+		smart.ExpireContract(v)
+	}
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
@@ -119,7 +122,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
-	accumulatedGasUse := 0
+	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
 
 		if accumulatedGasUse < gasLimit {
@@ -146,18 +149,18 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 }
 
 // Helpers
-func min(a, b int) int {
+func min(a, b uint64) uint64 {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func copyMap(originalMap map[string]int) map[string]int {
+func copyMap(originalMap map[string]uint64) map[string]uint64 {
 	if originalMap == nil {
-		return make(map[string]int)
+		return make(map[string]uint64)
 	}
-	newMap := make(map[string]int)
+	newMap := make(map[string]uint64)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}
@@ -175,7 +178,7 @@ func copyContMap(originalMap map[string]ContractAccount) map[string]ContractAcco
 	return newMap
 }
 
-func GetCurrentLedger() map[string]int {
+func GetCurrentLedger() map[string]uint64 {
 	return tree.treeMap[tree.head].state.Ledger
 }
 

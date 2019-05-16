@@ -16,7 +16,7 @@ func resetMocksAndStart() {
 	StartConsensus(CreateChannelStruct(), pk, sk, true)
 }
 
-func createTestBlock(td []TransData, i int, parentHash string, finalHash string) Block {
+func createTestBlock(td []TransData, i uint64, parentHash string, finalHash string) Block {
 	sk, pk := KeyGen(2048)
 	block := Block{i,
 		parentHash,
@@ -34,7 +34,7 @@ func createTestBlock(td []TransData, i int, parentHash string, finalHash string)
 
 func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block {
 	gData := GenesisData{time.Now(), slotDuration,
-		"1001001010100100010101", hardness, State{map[string]int{}, map[string]int{}, map[string]ContractAccount{}, "", 100000}}
+		"1001001010100100010101", hardness, State{map[string]uint64{}, map[string]uint64{}, map[string]ContractAccount{}, "", 100000}}
 	return Block{0,
 		"",
 		PublicKey{},
@@ -47,10 +47,10 @@ func createTestGenesisBlock(slotDuration time.Duration, hardness float64) Block 
 	}
 }
 
-func createTestTransaction(ID int) Transaction {
+func createTestTransaction(ID uint64) Transaction {
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
-	trans := Transaction{pk1, pk2, 200, strconv.Itoa(ID), ""}
+	trans := Transaction{pk1, pk2, 200, strconv.Itoa(int(ID)), ""}
 	trans.SignTransaction(sk1)
 	return trans
 }
@@ -63,6 +63,7 @@ func TestTree(t *testing.T) {
 	resetMocksAndStart()
 	block := genesis
 	for i := 1; i < 10; i++ {
+		i := uint64(i)
 		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		td := TransData{Transaction: trans}
@@ -77,6 +78,7 @@ func TestRollBack(t *testing.T) {
 	resetMocksAndStart()
 	block := genesis
 	for i := 1; i < 10; i++ {
+		i := uint64(i)
 		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []TransData{{Transaction: trans}}
@@ -87,6 +89,7 @@ func TestRollBack(t *testing.T) {
 
 	block = createTestBlock([]TransData{}, 1, genesis.CalculateBlockHash(), genesis.CalculateBlockHash())
 	for i := 1; i < 11; i++ {
+		i := uint64(i)
 		time.Sleep(slotLength)
 		trans := createTestTransaction(i)
 		transarr := []TransData{{Transaction: trans}}

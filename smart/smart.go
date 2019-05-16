@@ -15,8 +15,11 @@ func CallContract(
 	params interpreter.Value,
 	amount uint64,
 	gas_ uint64,
-) (resultLedger map[string]uint64, transfers []Transfer, remainingGas uint64, callError error) {
+) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	tempBalances := make(map[string]uint64)
+
+	gas := gas_
+
 	for k, v := range contractBalances {
 		tempBalances[k] = v
 	}
@@ -24,8 +27,6 @@ func CallContract(
 	for k, v := range contracts {
 		tempContracts[k] = v
 	}
-
-	gas := gas_
 
 	contract, exist := tempContracts[address]
 	if !exist {
@@ -45,7 +46,7 @@ func CallContract(
 	tempBalances[address] = tempBalances[address] + amount - spent
 
 	// handle operation list
-	transfers, err, gas := handleOpList(oplist, address, tempBalances, tempContracts, gas)
+	transfers, err, gas := handleOpList(oplist, tempBalances, tempContracts, gas)
 	if err != nil {
 		return contractBalances, nil, gas, err
 	} else {
@@ -63,22 +64,28 @@ func ExpireContract(address string) {
 func InitiateContract(
 	contractCode []byte,
 	gas uint64,
-) (addr string, remainingGas uint64, err error) {
+) (addr string, remainingGas uint64, storageCost uint64, err error) {
 	address := getAddress(contractCode)
 
+	// TODO: IMPORTANT!!! calculate storage size
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
 	if returnErr != nil {
-		return "", remainingGas, returnErr
+		return "", remainingGas, 0, returnErr
 	} else {
 		contracts[address] = Contract{string(contractCode), texp, initstor}
 		contractBalances[address] = 0
-		return address, remainingGas, nil
+		return address, remainingGas, 0, nil
 	}
 }
 
-func handleOpList(operations []interpreter.Operation, caller string, tempBalances map[string]uint64,
-	tempContracts map[string]Contract, gas uint64) ([]Transfer, error, uint64) {
-	transfers := make([]Transfer, 0)
+type ContractTransaction struct {
+	To     string
+	Amount uint64
+}
+
+func handleOpList(operations []interpreter.Operation, tempBalances map[string]uint64,
+	tempContracts map[string]Contract, gas uint64) ([]ContractTransaction, error, uint64) {
+	transfers := make([]ContractTransaction, 0)
 	for _, op := range operations {
 		switch op.(type) {
 		case interpreter.ContractCall:
@@ -96,7 +103,7 @@ func handleOpList(operations []interpreter.Operation, caller string, tempBalance
 			tempContracts[callop.Address] = contract
 			tempBalances[callop.Address] = tempBalances[callop.Address] + callop.Amount - spent
 
-			trans, err, remainingGas := handleOpList(oplist, callop.Address, tempBalances, tempContracts, remainingGas)
+			trans, err, remainingGas := handleOpList(oplist, tempBalances, tempContracts, remainingGas)
 			if err != nil {
 				return nil, err, remainingGas
 			} else {
@@ -107,7 +114,7 @@ func handleOpList(operations []interpreter.Operation, caller string, tempBalance
 			return nil, fmt.Errorf(op.(interpreter.FailWith).Msg), gas
 		case interpreter.Transfer:
 			transferop := op.(interpreter.Transfer)
-			transfers = append(transfers, Transfer{transferop.Key, caller, transferop.Amount})
+			transfers = append(transfers, ContractTransaction{transferop.Key, transferop.Amount})
 		}
 	}
 	return transfers, nil, gas

@@ -10,8 +10,8 @@ type ContractCall struct {
 	Call      string
 	Entry     string
 	Params    Parameter
-	Amount    int
-	Gas       int
+	Amount    uint64
+	Gas       uint64
 	Address   string
 	Caller    crypto.PublicKey
 	Nonce     string
@@ -21,8 +21,8 @@ type ContractCall struct {
 type ContractInitialize struct {
 	Owner   crypto.PublicKey
 	Code    []byte
-	Gas     int
-	Prepaid int
+	Gas     uint64
+	Prepaid uint64
 }
 
 type Operation interface {
@@ -34,30 +34,12 @@ type Parameter interface {
 type Storage interface {
 }
 
-func CallAtConLayer(contract ContractCall) (bool, map[string]int, []ContractTransaction, int) {
-	// TODO Dummies for smart contract layer functions
-	_, pk := crypto.KeyGen(2048)
-	conStake := map[string]int{}
-	conStake["contract1"] = 200
-	conTrans := []ContractTransaction{{pk, contract.Amount}}
-	return true, conStake, conTrans, 0
-}
-
-func ExpireAtConLayer(expiredContracts []string) {
-	// TODO Dummies for smart contract layer functions
-}
-
-func InitContractAtConLayer(code []byte, gas int) (string, int, int, bool) {
-	// TODO Dummies for smart contract layer functions
-	return "", 0, 0, false
-}
-
 func (cc ContractCall) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(cc.Call)
 	buf.WriteString(cc.Entry)
-	buf.WriteString(strconv.Itoa(cc.Amount))
-	buf.WriteString(strconv.Itoa(cc.Gas))
+	buf.WriteString(strconv.Itoa(int(cc.Amount)))
+	buf.WriteString(strconv.Itoa(int(cc.Gas)))
 	buf.WriteString(cc.Address)
 	buf.WriteString(cc.Caller.String())
 	buf.WriteString(cc.Nonce)
@@ -69,8 +51,8 @@ func (ci ContractInitialize) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(ci.Owner.String())
 	buf.Write(ci.Code)
-	buf.WriteString(strconv.Itoa(ci.Gas))
-	buf.WriteString(strconv.Itoa(ci.Prepaid))
+	buf.WriteString(strconv.Itoa(int(ci.Gas)))
+	buf.WriteString(strconv.Itoa(int(ci.Prepaid)))
 
 	return buf.String()
 }

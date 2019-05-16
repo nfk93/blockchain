@@ -8,7 +8,7 @@ import (
 func TestState_AddContractTransaction(t *testing.T) {
 
 	var s State
-	s.Ledger = make(map[string]int)
+	s.Ledger = make(map[string]uint64)
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
@@ -30,7 +30,7 @@ func TestState_AddContractTransaction(t *testing.T) {
 func TestState_AddBlockReward(t *testing.T) {
 
 	var s State
-	s.Ledger = make(map[string]int)
+	s.Ledger = make(map[string]uint64)
 	sk1, pk1 := KeyGen(2048)
 	_, pk2 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
@@ -66,7 +66,7 @@ func TestState_PrepayContracts(t *testing.T) {
 
 func TestState_FundContractCall(t *testing.T) {
 	var s State
-	s.Ledger = make(map[string]int)
+	s.Ledger = make(map[string]uint64)
 	_, pk1 := KeyGen(2048)
 	s.Ledger[pk1.String()] = 100
 	s.TotalStake = 100
@@ -91,9 +91,9 @@ func TestState_FundContractCall(t *testing.T) {
 func TestState_CleanContractLedger(t *testing.T) {
 	var s State
 	_, pk := KeyGen(2048)
-	s.Ledger = make(map[string]int)
+	s.Ledger = make(map[string]uint64)
 	s.Ledger[pk.String()] = 100
-	s.ConStake = make(map[string]int)
+	s.ConStake = make(map[string]uint64)
 	s.ConStake["address1"] = 100
 	s.ConStake["address2"] = 100
 	s.ConStake["address3"] = 100
@@ -104,7 +104,7 @@ func TestState_CleanContractLedger(t *testing.T) {
 	s.ConAccounts["address1"] = ContractAccount{pk, 200, 15}
 	s.ConAccounts["address2"] = ContractAccount{pk, 1, 5}
 	s.ConAccounts["address3"] = ContractAccount{pk, 0, 5}
-	s.ConAccounts["address4"] = ContractAccount{pk, -1, 5}
+	s.ConAccounts["address4"] = ContractAccount{pk, 0, 5}
 
 	expiredContracts := s.CleanContractLedger()
 
@@ -155,15 +155,18 @@ func TestState_CollectStorageCost(t *testing.T) {
 }
 
 func TestHandleContractCall(t *testing.T) {
+
+	// TODO: make an actual test now
+
 	var s State
 	_, pk := KeyGen(2048)
 	con1 := "contract1"
 
 	s.ConAccounts = map[string]ContractAccount{}
 	s.ConAccounts[con1] = ContractAccount{pk, 100, 15}
-	s.ConStake = map[string]int{}
+	s.ConStake = map[string]uint64{}
 	s.ConStake[con1] = 200
-	s.Ledger = map[string]int{}
+	s.Ledger = map[string]uint64{}
 	s.Ledger[pk.String()] = 500
 	s.TotalStake = 200 + 500
 
@@ -172,9 +175,9 @@ func TestHandleContractCall(t *testing.T) {
 	contract.Gas = 13
 	contract.Amount = 150
 
-	_, success := s.handleContractCall(contract)
+	_, err := s.handleContractCall(contract)
 
-	if !success {
+	if err != nil {
 		t.Error("ContractCall failed...")
 	}
 	if s.Ledger[pk.String()] != 337 {

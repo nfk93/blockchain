@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 )
 
@@ -18,6 +19,11 @@ type PublicKey struct {
 
 func (t *PublicKey) String() string {
 	return "{n: " + t.N.String() + ", e: " + t.E.String() + "}"
+}
+
+func (t *PublicKey) Hash() string {
+	bytes := sha256.Sum256([]byte(t.N.String()))
+	return fmt.Sprintf("%x", bytes)
 }
 
 func makePublicKey(n *big.Int, e *big.Int) *PublicKey {
@@ -76,10 +82,15 @@ func Sign(m string, sk SecretKey) string {
 	return z.Exp(z, sk.D, sk.N).String()
 }
 
-func HashSHA(m string) string {
+/* func HashSHA(m string) string {
 	hash := sha256.Sum256([]byte(m))
 	z := big.NewInt(0)
 	return z.SetBytes(hash[:]).String()
+} */
+
+func HashSHA(m string) string {
+	hash := sha256.Sum256([]byte(m))
+	return fmt.Sprintf("%x", hash)
 }
 
 func Verify(m string, s string, pk PublicKey) bool {

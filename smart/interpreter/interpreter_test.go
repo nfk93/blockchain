@@ -913,14 +913,14 @@ func TestCallContract(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	texp, sto, remaining, err := InitiateContract(dat, 20000000)
+	texp, sto, _, err := InitiateContract(dat, 20000000)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
 	param := UnitVal{}
 
-	oplist, sto, _, remaining := InterpretContractCall(texp, param, "second", sto, 900000,
+	oplist, sto, _, _ := InterpretContractCall(texp, param, "second", sto, 900000,
 		0, 100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have length 1")
@@ -935,7 +935,7 @@ func TestCallContract(t *testing.T) {
 		}
 	}
 
-	oplist, sto, _, remaining = InterpretContractCall(texp, param, "second", sto, 90000000,
+	oplist, sto, _, _ = InterpretContractCall(texp, param, "second", sto, 90000000,
 		0, 100000)
 	call, ok := oplist[0].(ContractCall)
 	if !ok {
