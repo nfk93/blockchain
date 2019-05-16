@@ -16,9 +16,9 @@ var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
-var testDrawVal int //Remove when implementing proper calculateDrawVal
 var channels o.ChannelStruct
 var isVerbose bool
+var pendingBlocks map[string]bool
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose bool) {
 	pk = pkey
@@ -28,12 +28,13 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
+	pendingBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
-	testDrawVal = 0
 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
+			// TODO add processing of pending blocks
 			block := <-channels.BlockFromP2P
 			handleBlock(block)
 		}
@@ -62,7 +63,6 @@ func handleTransaction(t o.Transaction) {
 		transactions[t.ID] = t
 		unusedTransactions[t.ID] = true
 	}
-
 }
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
@@ -80,7 +80,6 @@ func handleBlock(b o.Block) {
 		fmt.Println("CL REJECTED! DRAW didn't validate...")
 		return
 	}
-
 	addBlock(b)
 }
 
@@ -92,7 +91,7 @@ func handleGenesisBlock(b o.Block) {
 	lastFinalized = b.CalculateBlockHash()
 }
 
-// Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
+// Calculates and compares pathWeight of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
@@ -109,6 +108,7 @@ func comparePathWeight(b o.Block) {
 		block = parent
 		l += 1
 	}
+
 	if l < currentLength {
 		return
 	}
@@ -214,9 +214,6 @@ func sendBranchToTL(branch []o.Block) {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
-	if block.BakerID.String() == pk.String() {
-	}
-
 	channels.BlockToTrans <- block
 }
 
@@ -247,7 +244,8 @@ func isLegalExtension(b o.Block) bool {
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
-	if b.Slot > getCurrentSlot() { //We do not accept early blocks
+	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) { //We do not immediately process blocks that are early or where the parent is missing.
+		pendingBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
 	return true

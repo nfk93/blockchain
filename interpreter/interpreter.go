@@ -42,12 +42,12 @@ func currentFailWith(failmessage StringVal, gas uint64) OperationVal {
 	return OperationVal{FailWith{failmessage.Value}}
 }
 
-func contractCall(address AddressVal, gas KoinVal, param Value) OperationVal {
-	return OperationVal{ContractCall{CallData{address.Value, gas.Value, param}}}
+func contractCall(address AddressVal, amount KoinVal, param Value) OperationVal { //TODO make check for amount being greater than balance + currentAmount
+	return OperationVal{ContractCall{CallData{address.Value, amount.Value, param}}}
 }
 
 func accountTransfer(key KeyVal, amount KoinVal) OperationVal {
-	return OperationVal{Transfer{TransferData{key.Value, amount.Value}}}
+	return OperationVal{Transfer{TransferData{key.Value, amount.Value}}} //TODO make check for amount being greater than balance + currentAmount
 }
 
 func accountDefault(key KeyVal) AddressVal {
