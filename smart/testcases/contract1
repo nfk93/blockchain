@@ -1,0 +1,10 @@
+type storage = int
+
+let%init storage = 0
+
+let%entry main () storage =
+    let storage = storage + 1 in
+    let (amount, rest) = ((Current.amount()) / 19p)  in
+    let transfer = Account.transfer kn1key1 amount in
+    let call_op = Contract.call kn2contract2 amount "main" storage in
+    ( [transfer; call_op], storage)

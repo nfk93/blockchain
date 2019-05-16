@@ -3,6 +3,7 @@ package transaction
 import (
 	"fmt"
 	. "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/smart"
 	"sort"
 )
 
@@ -17,9 +18,10 @@ type Tree struct {
 }
 
 var tree Tree
-var transactionFee = 1
-var blockReward = 100
-var pendingBlocks []Block
+
+const transactionGas = uint64(1)
+const blockReward = uint64(100)
+const gasLimit = uint64(1000) //(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -33,11 +35,6 @@ func StartTransactionLayer(channels ChannelStruct) {
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
-					if len(pendingBlocks) != 0 {
-						for _, b := range pendingBlocks {
-							tree.processBlock(b)
-						}
-					}
 				}
 			} else {
 				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
@@ -68,34 +65,40 @@ func StartTransactionLayer(channels ChannelStruct) {
 }
 
 func (t *Tree) processBlock(b Block) {
-	if _, exist := tree.treeMap[b.ParentPointer]; !exist {
-		pendingBlocks = append(pendingBlocks, b)
-		return
-	}
 
-	successfulTransactions := 0
+	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
+	s.ConAccounts = copyContMap(t.treeMap[s.ParentHash].state.ConAccounts)
+	s.ConStake = copyMap(t.treeMap[s.ParentHash].state.ConStake)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	if s.Ledger == nil {
-		s.Ledger = make(map[string]int)
+
+	// Remove expired contracts from ledger in TL and from ConLayer
+	expiredContracts := s.CleanContractLedger()
+	for _, v := range expiredContracts {
+		smart.ExpireContract(v)
 	}
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
-		for _, tr := range b.BlockData.Trans {
-			transSuccess := s.AddTransaction(tr, transactionFee)
-			if transSuccess {
-				successfulTransactions += 1
-			}
+		for _, td := range b.BlockData.Trans {
+
+			gasCost := s.HandleTransData(td, transactionGas)
+			accumulatedRewards += gasCost
+
 		}
 	}
+
+	// Collection storageCosts
+	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
+	collectedStorageCosts := s.CollectStorageCost(noOfSlots)
+	accumulatedRewards += collectedStorageCosts
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
 		// Pay the block creator
-		s.AddBlockReward(b.BakerID, blockReward+(successfulTransactions*transactionFee))
+		s.PayBlockRewardOrRemainGas(b.BakerID, accumulatedRewards)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -117,14 +120,17 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 	s.ParentHash = t.head
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
-	var addedTransactions []Transaction
+	var addedTransactions []TransData
 
-	noOfTrans := len(blockData.TransList)
+	accumulatedGasUse := uint64(0)
+	for _, td := range blockData.TransList {
 
-	for i := 0; i < min(1000, noOfTrans); i++ { //TODO: Change to only run i X time
-		newTrans := blockData.TransList[i]
-		s.AddTransaction(newTrans, transactionFee)
-		addedTransactions = append(addedTransactions, newTrans)
+		if accumulatedGasUse < gasLimit {
+			gasUse := s.HandleTransData(td, transactionGas)
+			accumulatedGasUse += gasUse
+			addedTransactions = append(addedTransactions, td)
+		}
+
 	}
 
 	b := Block{blockData.SlotNo,
@@ -143,22 +149,36 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 }
 
 // Helpers
-func min(a, b int) int {
+func min(a, b uint64) uint64 {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func copyMap(originalMap map[string]int) map[string]int {
-	newMap := make(map[string]int)
+func copyMap(originalMap map[string]uint64) map[string]uint64 {
+	if originalMap == nil {
+		return make(map[string]uint64)
+	}
+	newMap := make(map[string]uint64)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}
 	return newMap
 }
 
-func GetCurrentLedger() map[string]int {
+func copyContMap(originalMap map[string]ContractAccount) map[string]ContractAccount {
+	if originalMap == nil {
+		return make(map[string]ContractAccount)
+	}
+	newMap := make(map[string]ContractAccount)
+	for key, value := range originalMap {
+		newMap[key] = value
+	}
+	return newMap
+}
+
+func GetCurrentLedger() map[string]uint64 {
 	return tree.treeMap[tree.head].state.Ledger
 }
 

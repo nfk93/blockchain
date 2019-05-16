@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"github.com/nfk93/blockchain/interpreter/token"
+	"github.com/nfk93/blockchain/smart/interpreter/token"
 	"io/ioutil"
 	"os"
 	"testing"

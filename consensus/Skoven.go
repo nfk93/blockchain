@@ -176,6 +176,7 @@ func rollback(newHead o.Block) bool {
 func transactionsUnused(b o.Block) {
 	trans := b.BlockData.Trans
 	for _, t := range trans {
+		t := t.Transaction
 		unusedTransactions[t.ID] = true
 	}
 }
@@ -189,6 +190,7 @@ func transactionsUsed(b o.Block) bool {
 	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
+		t := t.Transaction
 		_, alreadyStored := transactions[t.ID]
 		if !alreadyStored {
 			transactions[t.ID] = t
@@ -230,7 +232,7 @@ func updateHead(b o.Block) {
 	} else {
 		comparePathWeight(b)
 	}
-	//log() //Used for testing purposes
+	log() //Used for testing purposes
 }
 
 // Checks if a block is a legal extension of the tree, and otherwise marks it as a bad block
@@ -265,13 +267,14 @@ func log() {
 	}
 }
 
-func getUnusedTransactions() []o.Transaction {
+func getUnusedTransactions() []o.TransData {
 	tLock.Lock()
 	defer tLock.Unlock()
-	trans := make([]o.Transaction, len(unusedTransactions))
+	trans := make([]o.TransData, len(unusedTransactions))
 	i := 0
 	for k := range unusedTransactions {
-		trans[i] = transactions[k]
+		td := o.TransData{Transaction: transactions[k]}
+		trans[i] = td
 		i++
 	}
 	return trans

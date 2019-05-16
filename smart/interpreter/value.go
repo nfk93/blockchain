@@ -31,7 +31,7 @@ type KoinVal struct {
 }
 
 type OperationVal struct {
-	Value Operation
+	Value interface{}
 }
 
 type OptionVal struct {

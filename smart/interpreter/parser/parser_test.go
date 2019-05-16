@@ -2,8 +2,8 @@ package parser
 
 import (
 	"fmt"
-	. "github.com/nfk93/blockchain/interpreter/ast"
-	"github.com/nfk93/blockchain/interpreter/lexer"
+	. "github.com/nfk93/blockchain/smart/interpreter/ast"
+	"github.com/nfk93/blockchain/smart/interpreter/lexer"
 	"io/ioutil"
 	"os"
 	"testing"

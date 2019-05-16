@@ -260,6 +260,7 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 }
 
 func handleBlock(block objects.Block) {
+
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
@@ -282,6 +283,7 @@ func broadcastBlock(block objects.Block) {
 			fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
 		} else {
 			void := struct{}{}
+
 			client.Call(RPC_SEND_BLOCK, block, &void)
 		}
 	}
@@ -289,7 +291,6 @@ func broadcastBlock(block objects.Block) {
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	//fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
