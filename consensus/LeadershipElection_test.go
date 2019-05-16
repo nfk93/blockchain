@@ -40,7 +40,6 @@ func TestLeadershipElection(t *testing.T) {
 }
 
 func TestHardness(t *testing.T) {
-
 	winCounter := 0
 	rounds := 1000
 	var sk, pk = KeyGen(2048)

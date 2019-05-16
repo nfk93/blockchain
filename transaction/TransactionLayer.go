@@ -66,6 +66,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 
 func (t *Tree) processBlock(b Block) {
 
+	blockhash := b.CalculateBlockHash()
 	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
@@ -83,16 +84,20 @@ func (t *Tree) processBlock(b Block) {
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, td := range b.BlockData.Trans {
-
-			gasCost := s.HandleTransData(td, transactionGas)
-			accumulatedRewards += gasCost
-
+			switch td.GetType() {
+			case CONTRACTCALL:
+				accumulatedRewards += s.HandleContractCall(td.ContractCall, blockhash, b.ParentPointer, b.Slot)
+			case CONTRACTINIT:
+				accumulatedRewards += s.HandleContractInit(td.ContractInit, blockhash, b.ParentPointer, b.Slot)
+			case TRANSACTION:
+				accumulatedRewards += s.AddTransaction(td.Transaction, transactionGas)
+			}
 		}
 	}
 
 	// Collection storageCosts
 	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
-	collectedStorageCosts := s.CollectStorageCost(noOfSlots)
+	collectedStorageCosts := s.CollectStorageCost(blockhash)
 	accumulatedRewards += collectedStorageCosts
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
@@ -107,7 +112,7 @@ func (t *Tree) processBlock(b Block) {
 	t.createNewNode(b, s)
 
 	// Update head
-	t.head = b.CalculateBlockHash()
+	t.head = blockhash
 
 }
 

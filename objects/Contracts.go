@@ -19,10 +19,11 @@ type ContractCall struct {
 }
 
 type ContractInitialize struct {
-	Owner   crypto.PublicKey
-	Code    []byte
-	Gas     uint64
-	Prepaid uint64
+	Owner        crypto.PublicKey
+	Code         []byte
+	Gas          uint64
+	Prepaid      uint64
+	StorageLimit uint64
 }
 
 type Operation interface {

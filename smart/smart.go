@@ -15,6 +15,7 @@ func CallContract(
 	params interpreter.Value,
 	amount uint64,
 	gas_ uint64,
+	slot uint64, // TODO use slot to check if a contract has expired. Don't expire contracts yet
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	tempBalances := make(map[string]uint64)
 
@@ -56,15 +57,18 @@ func CallContract(
 	}
 }
 
-func ExpireContract(address string) {
-	delete(contracts, address)
-	delete(contractBalances, address)
+func ExpiringContract(slot uint64) []string {
+	return nil
 }
 
 func InitiateContract(
 	contractCode []byte,
 	gas uint64,
-) (addr string, remainingGas uint64, storageCost uint64, err error) {
+	prepaid uint64,
+	storageLimit uint64,
+	blockhash, parenthash string,
+	slot uint64,
+) (addr string, remainingGas uint64, err error) {
 	address := getAddress(contractCode)
 
 	// TODO: IMPORTANT!!! calculate storage size
@@ -76,6 +80,10 @@ func InitiateContract(
 		contractBalances[address] = 0
 		return address, remainingGas, 0, nil
 	}
+}
+
+func StorageCost(blockhash string) (reward uint64) {
+	return 0 // TODO BIG FAT TODO
 }
 
 type ContractTransaction struct {

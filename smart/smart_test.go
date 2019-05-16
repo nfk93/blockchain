@@ -39,9 +39,6 @@ func TestCallContract(t *testing.T) {
 		t.Errorf("transferlist not long enough")
 	} else {
 		trans := transfers[0]
-		if trans.From != "A" {
-			t.Errorf("Wrong from in transaction: %s", trans.From)
-		}
 		if trans.To != "asdasda" {
 			t.Errorf("wrong to in transaction: %s", trans.To)
 		}
@@ -95,10 +92,10 @@ func TestCallContract2(t *testing.T) {
 	} else {
 		trans1 := transfers[0]
 		trans2 := transfers[1]
-		if trans1.Amount != 500000/19 || trans1.To != "key1" || trans1.From != "contract1" {
+		if trans1.Amount != 500000/19 || trans1.To != "key1" {
 			t.Errorf("transaction 1 is wrong: %v", trans1)
 		}
-		if trans2.Amount != 10 || trans2.To != "key2" || trans2.From != "contract2" {
+		if trans2.Amount != 10 || trans2.To != "key2" {
 			t.Errorf("transaction 2 is wrong: %v", trans2)
 		}
 	}
@@ -116,7 +113,7 @@ func TestInitiateContract(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	_, _, err = InitiateContract(dat, 1000000)
+	_, _, _, err = InitiateContract(dat, 1000000)
 	if err != nil {
 		t.Fail()
 	}
@@ -136,11 +133,11 @@ func TestExpireContract(t *testing.T) {
 		t.Error("Error reading testfile")
 	}
 
-	add1, _, err := InitiateContract(dat1, 99999999999999)
+	add1, _, _, err := InitiateContract(dat1, 99999999999999)
 	if err != nil {
 		t.Errorf("error initiating contract1: %s", err.Error())
 	}
-	add2, _, err := InitiateContract(dat2, 99999999999999999)
+	add2, _, _, err := InitiateContract(dat2, 99999999999999999)
 	if err != nil {
 		t.Errorf("error initiating contract2: %s", err.Error())
 	}
@@ -158,10 +155,10 @@ func TestExpireContract(t *testing.T) {
 	} else {
 		trans1 := transfers[0]
 		trans2 := transfers[1]
-		if trans1.Amount != 10000/19 || trans1.To != "key1" || trans1.From != add1 {
+		if trans1.Amount != 10000/19 || trans1.To != "key1" {
 			t.Errorf("transaction 1 is wrong: %v", trans1)
 		}
-		if trans2.Amount != 10 || trans2.To != "key2" || trans2.From != add2 {
+		if trans2.Amount != 10 || trans2.To != "key2" {
 			t.Errorf("transaction 2 is wrong: %v", trans2)
 		}
 	}
@@ -197,7 +194,7 @@ func TestOutOfGas(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	addr, _, _ := InitiateContract(dat, 999999999)
+	addr, _, _, _ := InitiateContract(dat, 999999999)
 	_, _, _, err = CallContract(addr, "main", interpreter.KeyVal{""}, 100, 1000)
 	if err == nil {
 		t.Errorf("this should return an error from running out of gas")
@@ -210,7 +207,7 @@ func TestInsufficientFunds(t *testing.T) {
 	if err != nil {
 		t.Error("Error reading testfile")
 	}
-	addr, _, _ := InitiateContract(dat, 999999999)
+	addr, _, _, _ := InitiateContract(dat, 999999999)
 	_, _, _, err = CallContract(addr, "main", interpreter.UnitVal{}, 100, 100000000000)
 	if err == nil {
 		t.Errorf("this should return an error from having insufficient funds")

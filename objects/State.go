@@ -16,18 +16,18 @@ type ContractAccount struct {
 }
 
 type State struct {
-	Ledger      map[string]uint64
-	ConStake    map[string]uint64
-	ConAccounts map[string]ContractAccount
-	ParentHash  string
-	TotalStake  uint64
+	Ledger     map[string]uint64
+	ConStake   map[string]uint64
+	ConOwners  map[string]PublicKey
+	ParentHash string
+	TotalStake uint64
 }
 
 func NewInitialState(key PublicKey) State {
 	initialStake := uint64(1000000) // 1 mil
 	ledger := make(map[string]uint64)
 	conStake := make(map[string]uint64)
-	conledger := make(map[string]ContractAccount)
+	conledger := make(map[string]PublicKey)
 	ledger[key.String()] = initialStake
 	return State{ledger, conStake, conledger, "", initialStake}
 }
@@ -90,18 +90,8 @@ func (s State) VerifyHashedState(sig string, pk PublicKey) bool {
 }
 
 // Opens account for contract and moves prepaid to its account
-func (s *State) InitializeContractAccount(addr string, owner PublicKey, prepaid uint64, storageCost uint64) {
-	s.TotalStake -= prepaid
-	s.ConAccounts[addr] = ContractAccount{owner, prepaid, storageCost}
-
-}
-
-// Used for putting more prepaid on an contract account
-func (s *State) PrepayContracts(addr string, amount uint64) {
-	s.TotalStake -= amount
-	newBalance := s.ConAccounts[addr]
-	newBalance.Prepaid += amount
-	s.ConAccounts[addr] = newBalance
+func (s *State) InitializeContractAccount(addr string, owner PublicKey) {
+	s.ConOwners[addr] = owner
 }
 
 // Used for handling contract layer transaction to users
@@ -124,107 +114,12 @@ func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount uint64
 	s.Ledger[callerAccount.String()] += amount
 }
 
-// Goes through the contract accounts and check which is out of prepaid.
-// These are deleted and a list of deleted contracts is returned
-func (s *State) CleanContractLedger() []string {
-	var expiredContracts []string
-	for c := range s.ConAccounts {
-		contract := s.ConAccounts[c]
-		if contract.Prepaid <= 0 {
-			expiredContracts = append(expiredContracts, c)
-			s.returnAmountFromContracts(contract.Owner, s.ConStake[c])
-			delete(s.ConAccounts, c)
-		}
-	}
-	return expiredContracts
-}
-
-// Switches depending on type of Trans. Returns amount of gas used
-func (s *State) HandleTransData(td TransData, transactionFee uint64) uint64 {
-	switch td.getType() {
-
-	case TRANSACTION:
-		gasCost := s.AddTransaction(td.Transaction, transactionFee)
-		return gasCost
-
-	case CONTRACTCALL:
-		contract := td.ContractCall
-		// Transfer funds from caller to contract
-		if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
-			return 0
-		}
-
-		// Runs contract at contract layer
-		newContractLedger, transferList, remainingGas, callerr := smart.CallContract(contract.Address,
-			contract.Entry, contract.Params, contract.Amount, contract.Gas)
-
-		// Calc how much gas used and refund not used gas to caller
-		gasUsed := contract.Gas - remainingGas
-		s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
-
-		// If contract not successful, then return amount to caller
-		if callerr != nil {
-			s.returnAmountFromContracts(contract.Caller, contract.Amount)
-			return gasUsed
-		}
-		// If contract succeeded, execute the transactions from the contract layer
-		s.ConStake = newContractLedger
-		for _, t := range transferList {
-			s.AddContractTransaction(t)
-		}
-		return gasUsed
-
-	case CONTRACTINIT:
-		contractInit := td.ContractInit
-		if s.Ledger[contractInit.Owner.String()] > contractInit.Prepaid+contractInit.Gas {
-			addr, remainGas, storageCost, err := smart.InitiateContract(contractInit.Code, contractInit.Gas)
-			s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)
-			if err != nil {
-				return contractInit.Gas - remainGas
-			} else {
-				s.InitializeContractAccount(addr, contractInit.Owner, contractInit.Prepaid, storageCost)
-				return contractInit.Gas - remainGas
-			}
-		}
-
-	}
-	return 0
-}
-
-// Returns the new State, cost of the Contract call and true if contract executed successful
-func (s *State) handleContractCall(contract ContractCall) (uint64, error) {
-
-	// Transfer funds from caller to contract
-	if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
-		return 0, fmt.Errorf("not enough money to pay for contract call")
-	}
-
-	// Runs contract at contract layer
-	newContractLedger, transactionList, remainingGas, err := smart.CallContract(contract.Address, contract.Entry, contract.Params,
-		contract.Amount, contract.Gas)
-	// this number can't be negative, it is checked in smart contract layer
-	gasUsed := contract.Gas - remainingGas
-
-	if err != nil {
-		// If contract not successful, then return remaining funds to caller
-		s.PayBlockRewardOrRemainGas(contract.Caller, contract.Amount+remainingGas)
-		return gasUsed, err
-	} else {
-		// If contract succeeded, execute the transactions from the contract layer
-		s.ConStake = newContractLedger
-		for _, t := range transactionList {
-			s.AddContractTransaction(t)
-		}
-		s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
-		return gasUsed, nil
-	}
-
-}
+// TODO: ask for expiring contracts at start of block execution
 
 // checks all contract accounts and withdraw the storage cost from their prepaid.
 // Takes as argument how many slots to pay for and then returns total amount of costs for all contracts
-func (s *State) CollectStorageCost(slots uint64) uint64 {
-	accumulatedStorageCosts := uint64(0)
+func (s *State) CollectStorageCost(blockhash string) uint64 {
+	/*accumulatedStorageCosts := uint64(0)
 
 	for acc := range s.ConAccounts {
 		account := s.ConAccounts[acc]
@@ -232,9 +127,53 @@ func (s *State) CollectStorageCost(slots uint64) uint64 {
 		account.Prepaid -= storageCost
 		s.ConAccounts[acc] = account
 		accumulatedStorageCosts += storageCost
+	} */
+
+	return smart.StorageCost(blockhash)
+}
+
+func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
+	if s.Ledger[contractInit.Owner.String()] > contractInit.Prepaid+contractInit.Gas {
+		addr, remainGas, err := smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
+			contractInit.StorageLimit, blockhash, parenthash, slot)
+		s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)
+		if err != nil {
+			return contractInit.Gas - remainGas
+		} else {
+			s.TotalStake -= contractInit.Prepaid
+			s.InitializeContractAccount(addr, contractInit.Owner)
+			return contractInit.Gas - remainGas
+		}
+	} else {
+		return 0
+	}
+}
+
+func (s *State) HandleContractCall(contract ContractCall, blockhash string, parenthash string, slot uint64) uint64 {
+	// Transfer funds from caller to contract
+	if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
+		return 0
 	}
 
-	return accumulatedStorageCosts
+	// Runs contract at contract layer
+	newContractLedger, transferList, remainingGas, callerr := smart.CallContract(contract.Address,
+		contract.Entry, contract.Params, contract.Amount, contract.Gas, slot)
+
+	// Calc how much gas used and refund not used gas to caller
+	gasUsed := contract.Gas - remainingGas
+	s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
+
+	// If contract not successful, then return amount to caller
+	if callerr != nil {
+		s.returnAmountFromContracts(contract.Caller, contract.Amount)
+		return gasUsed
+	}
+	// If contract succeeded, execute the transactions from the contract layer
+	s.ConStake = newContractLedger
+	for _, t := range transferList {
+		s.AddContractTransaction(t)
+	}
+	return gasUsed
 }
 
 func min(a, b uint64) uint64 {

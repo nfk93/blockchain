@@ -75,7 +75,7 @@ func (b *Block) CalculateBlockHash() string {
 func (d *BlockData) toString() string {
 	var buf bytes.Buffer
 	for _, t := range d.Trans {
-		switch t.getType() {
+		switch t.GetType() {
 		case 1:
 			buf.WriteString(t.Transaction.toString())
 		case 2:
@@ -110,7 +110,7 @@ func (b *Block) validateBlockNonce(leadershipNonce string) bool {
 	return correctSignature && correctNonce
 }
 
-func (t TransData) getType() int {
+func (t TransData) GetType() int {
 	if t.Transaction != (Transaction{}) {
 		return TRANSACTION
 	}
