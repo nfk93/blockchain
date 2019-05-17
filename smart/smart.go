@@ -4,56 +4,66 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter"
+	"log"
 )
 
-var contracts = make(map[string]Contract)
-var contractBalances = make(map[string]uint64)
+type state struct {
+	contractStates map[string]contractState
+	parentHash     string
+}
 
+type contractState struct {
+	balance        uint64
+	prepaidStorage uint64
+	storage        interpreter.Value
+}
+
+var contracts = make(map[string]Contract)
+var stateTree = make(map[string]state)
+
+/*
+ * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
+ */
 func CallContract(
 	address string,
 	entry string,
 	params interpreter.Value,
 	amount uint64,
-	gas_ uint64,
+	gas uint64,
+	blockhash string,
+	parenthash string,
 	slot uint64, // TODO use slot to check if a contract has expired. Don't expire contracts yet
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
-	tempBalances := make(map[string]uint64)
-
-	gas := gas_
-
-	for k, v := range contractBalances {
-		tempBalances[k] = v
+	if blockhash == "" {
+		// TODO making new block
 	}
-	tempContracts := make(map[string]Contract)
-	for k, v := range contracts {
-		tempContracts[k] = v
-	}
-
-	contract, exist := tempContracts[address]
-	if !exist {
-		if int64(gas)-10000 < 0 {
-			gas = 0
+	if blockstate, exists := stateTree[blockhash]; exists {
+		// add contractcall to state for given blockhash
+		contractstates := blockstate.contractStates
+		newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
+		if callError != nil {
+			return getContractBalances(contractstates), nil, gas, callError
 		} else {
-			gas = gas - 10000
+			blockstate.contractStates = newStates
+			stateTree[blockhash] = blockstate
+			return getContractBalances(newStates), transfers, gas, nil
 		}
-		return nil, nil, remainingGas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
-	}
-
-	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry,
-		contract.storage, amount, tempBalances[address], gas)
-
-	contract.storage = sto
-	tempContracts[address] = contract
-	tempBalances[address] = tempBalances[address] + amount - spent
-
-	// handle operation list
-	transfers, err, gas := handleOpList(oplist, tempBalances, tempContracts, gas)
-	if err != nil {
-		return contractBalances, nil, gas, err
+	} else if blockstate, exists = stateTree[parenthash]; exists {
+		// add contractcall to state for given blockhash
+		contractstates := blockstate.contractStates
+		newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
+		if callError != nil {
+			return getContractBalances(contractstates), nil, gas, callError
+		} else {
+			blockstate.contractStates = newStates
+			stateTree[blockhash] = blockstate
+			return getContractBalances(newStates), transfers, gas, nil
+		}
 	} else {
-		contracts = tempContracts
-		contractBalances = tempBalances
-		return contractBalances, transfers, gas, nil
+		// should never happen
+		errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
+		log.Fatal(errstring)
+		return nil, nil, 0, nil
 	}
 }
 
@@ -69,6 +79,7 @@ func InitiateContract(
 	blockhash, parenthash string,
 	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
+
 	address := getAddress(contractCode)
 
 	// TODO: IMPORTANT!!! calculate storage size
@@ -91,27 +102,74 @@ type ContractTransaction struct {
 	Amount uint64
 }
 
-func handleOpList(operations []interpreter.Operation, tempBalances map[string]uint64,
-	tempContracts map[string]Contract, gas uint64) ([]ContractTransaction, error, uint64) {
+func interpretContract(
+	address string,
+	entry string,
+	params interpreter.Value,
+	amount uint64,
+	gas_ uint64,
+	states map[string]contractState,
+) (contractStates map[string]contractState, transfers []ContractTransaction, remainingGas uint64, callError error) {
+
+	tempStates := make(map[string]contractState)
+	for k, v := range states {
+		tempStates[k] = v
+	}
+	gas := gas_
+
+	contract, exist1 := contracts[address]
+	state, exist2 := tempStates[address]
+	if !exist1 || !exist2 {
+		if int64(gas)-10000 < 0 {
+			gas = 0
+		} else {
+			gas = gas - 10000
+		}
+		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
+	}
+
+	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.storage, amount,
+		state.balance, gas)
+
+	// TODO: check if storage limit is exceeded
+	state.storage = sto
+	state.balance = state.balance + amount - spent // it is checked in the interpreter that this value isn't negative
+	tempStates[address] = state
+
+	// handle operation list
+	transfers, err, gas := handleOpList(oplist, tempStates, gas)
+	if err != nil {
+		return states, nil, gas, err
+	} else {
+		return tempStates, transfers, gas, nil
+	}
+}
+
+func handleOpList(
+	operations []interpreter.Operation,
+	tempStates map[string]contractState,
+	gas uint64,
+) ([]ContractTransaction, error, uint64) {
 	transfers := make([]ContractTransaction, 0)
 	for _, op := range operations {
 		switch op.(type) {
 		case interpreter.ContractCall:
 			callop := op.(interpreter.ContractCall)
 
-			contract, exist := tempContracts[callop.Address]
-			if !exist {
+			contract, exist1 := contracts[callop.Address]
+			state, exist2 := tempStates[callop.Address]
+			if !exist1 || !exist2 {
 				return nil, fmt.Errorf("attempted to call non-existing contract at address %s", callop.Address), gas
 			}
 
 			oplist, storage, spent, remainingGas := interpreter.InterpretContractCall(contract.tabs, callop.Params,
-				callop.Entry, contract.storage, callop.Amount, tempBalances[callop.Address], gas)
+				callop.Entry, state.storage, callop.Amount, state.balance, gas)
 
-			contract.storage = storage
-			tempContracts[callop.Address] = contract
-			tempBalances[callop.Address] = tempBalances[callop.Address] + callop.Amount - spent
+			state.storage = storage
+			state.balance = state.balance + callop.Amount - spent
+			tempStates[callop.Address] = state
 
-			trans, err, remainingGas := handleOpList(oplist, tempBalances, tempContracts, remainingGas)
+			trans, err, remainingGas := handleOpList(oplist, tempStates, remainingGas)
 			if err != nil {
 				return nil, err, remainingGas
 			} else {
@@ -131,4 +189,12 @@ func handleOpList(operations []interpreter.Operation, tempBalances map[string]ui
 func getAddress(contractCode []byte) string {
 	bytes := sha256.Sum256(contractCode)
 	return fmt.Sprintf("%x", bytes)
+}
+
+func getContractBalances(states map[string]contractState) map[string]uint64 {
+	result := make(map[string]uint64)
+	for k, v := range states {
+		result[k] = v.balance
+	}
+	return result
 }

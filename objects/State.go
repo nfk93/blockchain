@@ -157,7 +157,7 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 
 	// Runs contract at contract layer
 	newContractLedger, transferList, remainingGas, callerr := smart.CallContract(contract.Address,
-		contract.Entry, contract.Params, contract.Amount, contract.Gas, slot)
+		contract.Entry, contract.Params, contract.Amount, contract.Gas, blockhash, parenthash, slot)
 
 	// Calc how much gas used and refund not used gas to caller
 	gasUsed := contract.Gas - remainingGas
