@@ -16,6 +16,7 @@ type contractState struct {
 	balance        uint64
 	prepaidStorage uint64
 	storage        interpreter.Value
+	storagecap     uint64
 }
 
 var contracts = make(map[string]Contract)
@@ -30,40 +31,33 @@ func CallContract(
 	params interpreter.Value,
 	amount uint64,
 	gas uint64,
-	blockhash string,
-	parenthash string,
+	blockhash, parenthash string,
 	slot uint64, // TODO use slot to check if a contract has expired. Don't expire contracts yet
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	if blockhash == "" {
 		// TODO making new block
 	}
-	if blockstate, exists := stateTree[blockhash]; exists {
-		// add contractcall to state for given blockhash
-		contractstates := blockstate.contractStates
-		newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
-		if callError != nil {
-			return getContractBalances(contractstates), nil, gas, callError
-		} else {
-			blockstate.contractStates = newStates
-			stateTree[blockhash] = blockstate
-			return getContractBalances(newStates), transfers, gas, nil
-		}
-	} else if blockstate, exists = stateTree[parenthash]; exists {
-		// add contractcall to state for given blockhash
-		contractstates := blockstate.contractStates
-		newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
-		if callError != nil {
-			return getContractBalances(contractstates), nil, gas, callError
-		} else {
-			blockstate.contractStates = newStates
-			stateTree[blockhash] = blockstate
-			return getContractBalances(newStates), transfers, gas, nil
-		}
-	} else {
+
+	blockstate, exists := stateTree[blockhash]
+	if !exists {
+		blockstate, exists = stateTree[parenthash]
+	}
+	if !exists {
 		// should never happen
 		errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
 		log.Fatal(errstring)
 		return nil, nil, 0, nil
+	}
+
+	// add contractcall to state for given blockhash
+	contractstates := blockstate.contractStates
+	newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
+	if callError != nil {
+		return getContractBalances(contractstates), nil, gas, callError
+	} else {
+		blockstate.contractStates = newStates
+		stateTree[blockhash] = blockstate
+		return getContractBalances(newStates), transfers, gas, nil
 	}
 }
 
@@ -71,6 +65,9 @@ func ExpiringContract(slot uint64) []string {
 	return nil
 }
 
+/*
+ * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
+ */
 func InitiateContract(
 	contractCode []byte,
 	gas uint64,
@@ -79,17 +76,29 @@ func InitiateContract(
 	blockhash, parenthash string,
 	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
-
-	address := getAddress(contractCode)
-
-	// TODO: IMPORTANT!!! calculate storage size
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
 	if returnErr != nil {
-		return "", remainingGas, 0, returnErr
+		return "", remainingGas, returnErr
 	} else {
-		contracts[address] = Contract{string(contractCode), texp, initstor}
-		contractBalances[address] = 0
-		return address, remainingGas, 0, nil
+		if initstor.Size() > storageLimit {
+			return "", remainingGas, fmt.Errorf("initial storage exceeds storage cap")
+		}
+
+		address := getAddress(contractCode)
+		contracts[address] = Contract{string(contractCode), texp}
+
+		blockstate, exists := stateTree[blockhash]
+		if !exists {
+			blockstate, exists = stateTree[parenthash]
+		}
+		if !exists {
+			errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
+			log.Fatal(errstring)
+			return "", 0, nil
+		}
+		blockstate.contractStates[address] = contractState{0, prepaid, initstor, storageLimit}
+		stateTree[blockhash] = blockstate
+		return address, remainingGas, nil
 	}
 }
 
