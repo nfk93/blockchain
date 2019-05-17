@@ -51,7 +51,7 @@ else        : 'e' 'l' 's' 'e' ;
 type        : 't' 'y' 'p' 'e' ;
 koin        : 'k' 'o' 'i' 'n' ;
 
-/* TODO: make sure hashes without capital letters can be distinguished from ids */
+/* TODO: swap to hexchars */
 _b58char    :  '0'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 key_lit     : 'k' 'n' '1' _b58char { _b58char } ;
 address_lit : 'k' 'n' '2' _b58char { _b58char } ;

@@ -18,9 +18,9 @@ var currentAmt uint64
 var currentBal uint64
 var spentsofar uint64
 
-func todo(n int, gas uint64) int {
+func todo(n int, gas uint64) Value {
 	interpPanic("Hit todo nr. "+strconv.Itoa(n), gas)
-	return 0
+	return UnitVal{}
 }
 
 func interpPanic(message string, gas uint64) {
@@ -67,7 +67,7 @@ func accountDefault(key KeyVal) AddressVal {
 func lookupVar(id string, venv VarEnv) Value {
 	val, contained := venv.Lookup(id)
 	if contained {
-		return val
+		return val.(Value)
 	} else {
 		return nil
 	}
@@ -99,7 +99,7 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
+		return TypedExp{}, UnitVal{}, gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
 	}
 	texp, ok, gas := AddTypes(par.(Exp), gas)
 	if gas == 0 {
@@ -107,7 +107,7 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 	}
 	if !ok {
 		fmt.Println(texp.String())
-		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
+		return TypedExp{}, UnitVal{}, gas, fmt.Errorf("semantic error in contract code")
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)
 	return texp, initstorage, gas, nil
@@ -125,7 +125,7 @@ func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
 			return storageVal, gas
 		}
 	}
-	return -1, gas
+	return todo(-1, gas), gas
 }
 
 func InterpretContractCall(
@@ -165,12 +165,12 @@ func InterpretContractCall(
 				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
-					return []Operation{failwith(err.Error())}, stor, 0, gas // TODO return original storage
+					return []Operation{failwith(err.Error())}, stor, 0, gas
 				}
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, stor, 0, gas // TODO return original storage
+					return []Operation{failwith("storage doesn't match storage type definition")}, stor, 0, gas
 				}
 				bodyTuple_, gas := interpret(e.Body.(TypedExp), venv, gas)
 				bodyTuple := bodyTuple_.(TupleVal)
@@ -183,7 +183,7 @@ func InterpretContractCall(
 			}
 		}
 	}
-	return nil, 1, 0, gas // TODO this is just a dummy return Value
+	return nil, UnitVal{}, 0, gas // TODO this is just a dummy return Value. Should never happen
 }
 
 func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
@@ -341,7 +341,7 @@ func createStruct() StructVal {
 	return StructVal{m}
 }
 
-func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
+func interpret(texp TypedExp, venv VarEnv, gas uint64) (Value, uint64) {
 	// pay gas
 	if int64(gas)-1000 < 0 {
 		interpPanic("ran out of gas!", 0)
@@ -426,8 +426,8 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 				switch exp.Right.(TypedExp).Type.Type() {
 				case KOIN:
 					if rightval.(KoinVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
 						interpPanic("Can't divide by zero!", gas)
+						return OptionVal{Opt: false}, gas
 					}
 					left := leftval.(KoinVal).Value
 					right := rightval.(KoinVal).Value

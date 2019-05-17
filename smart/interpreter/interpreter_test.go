@@ -455,13 +455,13 @@ func TestCheckParams(t *testing.T) {
 		t.Fail()
 	}
 
-	lst := make([]interface{}, 0)
+	lst := make([]Value, 0)
 	listVal1 := ListVal{append(lst, intval1)}
-	listVal2 := ListVal{append(lst, int64(12))}
+	listVal2 := ListVal{append(lst, IntVal{int64(12)})}
 	if !checkParam(listVal1, ListType{IntType{}}) {
 		t.Errorf("1")
 	}
-	if checkParam(listVal2, ListType{IntType{}}) {
+	if !checkParam(listVal2, ListType{IntType{}}) {
 		t.Errorf("2")
 	}
 	if checkParam(listVal1, ListType{StringType{}}) {
