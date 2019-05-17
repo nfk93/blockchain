@@ -49,6 +49,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
 				channels.StateFromTrans <- finalizedNode.state
+				smart.FinalizeBlock(finalize)
 			} else {
 				fmt.Println("Couldn't finalize")
 				channels.StateFromTrans <- State{}

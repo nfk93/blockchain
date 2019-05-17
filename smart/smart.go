@@ -61,6 +61,10 @@ func ExpiringContract(slot uint64) []string {
 	return nil
 }
 
+func FinalizeBlock(blockHash string) {
+	// TODO Use for deleting old contracts
+}
+
 func InitiateContract(
 	contractCode []byte,
 	gas uint64,
@@ -74,11 +78,11 @@ func InitiateContract(
 	// TODO: IMPORTANT!!! calculate storage size
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
 	if returnErr != nil {
-		return "", remainingGas, 0, returnErr
+		return "", remainingGas, returnErr
 	} else {
 		contracts[address] = Contract{string(contractCode), texp, initstor}
 		contractBalances[address] = 0
-		return address, remainingGas, 0, nil
+		return address, remainingGas, nil
 	}
 }
 

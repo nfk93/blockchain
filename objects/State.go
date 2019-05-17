@@ -9,12 +9,6 @@ import (
 	"strconv"
 )
 
-type ContractAccount struct {
-	Owner       PublicKey
-	Prepaid     uint64
-	StorageCost uint64
-}
-
 type State struct {
 	Ledger     map[string]uint64
 	ConStake   map[string]uint64
