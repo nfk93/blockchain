@@ -13,7 +13,7 @@ func TestLeadershipElection(t *testing.T) {
 
 	//yourStake := 200
 	//systemStake := 300
-	slot := 3
+	slot := uint64(3)
 	hardness := 0.9
 
 	b, draw := CalculateDraw("8556", hardness, sk, pk, slot)
@@ -52,6 +52,7 @@ func TestHardness(t *testing.T) {
 	for i := 0; i < rounds; i++ {
 
 		//nonce = CreateNewBlockNonce(nonce, i, sk, pk)
+		i := uint64(i)
 
 		b, _ := CalculateDraw("8556", hardness, sk, pk, i)
 		if b {

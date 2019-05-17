@@ -65,6 +65,22 @@ func TestBlockNonce(t *testing.T) {
 	}
 }
 
+func TestGetType(t *testing.T) {
+	tdTrans := TransData{Transaction: Transaction{Amount: 500}}
+	if tdTrans.getType() != TRANSACTION {
+		t.Error("GetType didn't recognize type Transaction")
+	}
+	tdCon := TransData{ContractCall: ContractCall{Amount: 400}}
+	if tdCon.getType() != CONTRACTCALL {
+		t.Error("GetType didn't recognize type ContractCall")
+	}
+	tdConInit := TransData{ContractInit: ContractInitialize{Prepaid: 500}}
+	if tdConInit.getType() != CONTRACTINIT {
+		t.Error("GetType didn't recognize type ContractInitializer")
+	}
+
+}
+
 //func TestCreateAndVerifyNonce(t *testing.T) {
 //	var sk, pk = KeyGen(2048)
 //

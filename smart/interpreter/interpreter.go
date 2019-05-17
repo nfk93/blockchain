@@ -15,6 +15,8 @@ type PanicStruct struct {
 }
 
 var currentAmt uint64
+var currentBal uint64
+var spentsofar uint64
 
 func todo(n int, gas uint64) int {
 	interpPanic("Hit todo nr. "+strconv.Itoa(n), gas)
@@ -30,11 +32,11 @@ func NatToKoin(i uint64) uint64 {
 }
 
 func currentBalance() KoinVal {
-	return KoinVal{0.0} //TODO return proper value
+	return KoinVal{currentBal}
 }
 
 func currentAmount() KoinVal {
-	return KoinVal{currentAmt} //TODO return proper value
+	return KoinVal{currentAmt}
 }
 
 func currentFailWith(failmessage StringVal, gas uint64) OperationVal {
@@ -42,12 +44,20 @@ func currentFailWith(failmessage StringVal, gas uint64) OperationVal {
 	return OperationVal{FailWith{failmessage.Value}}
 }
 
-func contractCall(address AddressVal, gas KoinVal, param Value) OperationVal {
-	return OperationVal{ContractCall{CallData{address.Value, gas.Value, param}}}
+func contractCall(address AddressVal, amount KoinVal, entry StringVal, param Value, gas uint64) OperationVal {
+	spentsofar = spentsofar + amount.Value
+	if int64(currentBal+currentAmt)-int64(spentsofar) < 0 {
+		interpPanic("contract spendings exceed contract balance", gas)
+	}
+	return OperationVal{ContractCall{address.Value, amount.Value, entry.Value, param}}
 }
 
-func accountTransfer(key KeyVal, amount KoinVal) OperationVal {
-	return OperationVal{Transfer{TransferData{key.Value, amount.Value}}}
+func accountTransfer(key KeyVal, amount KoinVal, gas uint64) OperationVal {
+	spentsofar = spentsofar + amount.Value
+	if int64(currentBal+currentAmt)-int64(spentsofar) < 0 {
+		interpPanic("contract spendings exceed contract balance", gas)
+	}
+	return OperationVal{Transfer{key.Value, amount.Value}}
 }
 
 func accountDefault(key KeyVal) AddressVal {
@@ -66,17 +76,22 @@ func lookupVar(id string, venv VarEnv) Value {
 func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor Value, remainingGas uint64, returnErr error) {
 	defer func() {
 		if err := recover(); err != nil {
-			str := fmt.Sprintf("%s", err)
-			fmt.Println(str)
+			err := err.(PanicStruct)
+			fmt.Println(err.message)
 			texp = TypedExp{}
 			initstor = nil
-			returnErr = fmt.Errorf(str)
+			remainingGas = err.gas
+			returnErr = fmt.Errorf(err.message)
 		}
 	}()
 
+	currentBal = 0
+	currentAmt = 0
+	spentsofar = 0
+
 	// initial gas cost
 	if int64(gas)-100000 < 0 {
-		panic("ran out of gas!")
+		interpPanic("not enough gas to initialize contract", 0)
 	}
 	gas = gas - 100000
 
@@ -88,9 +103,10 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 	}
 	texp, ok, gas := AddTypes(par.(Exp), gas)
 	if gas == 0 {
-		panic("ran out of gas when building typed AST")
+		interpPanic("ran out of gas when building typed AST", gas)
 	}
 	if !ok {
+		fmt.Println(texp.String())
 		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)
@@ -118,16 +134,22 @@ func InterpretContractCall(
 	entry string,
 	stor Value,
 	amount uint64,
+	balance uint64,
 	gas uint64,
-) (oplist []Operation, storage Value, remainingGas uint64) {
+) (oplist []Operation, storage Value, spent uint64, remainingGas uint64) {
+
 	// initiate module variables
 	currentAmt = amount
+	currentBal = balance
+	spentsofar = 0
+
 	defer func() {
 		if err := recover(); err != nil {
 			err := err.(PanicStruct)
 			fmt.Println(err.message)
 			oplist = []Operation{FailWith{err.message}}
 			storage = stor
+			spent = 0
 			remainingGas = err.gas
 		}
 	}()
@@ -143,12 +165,12 @@ func InterpretContractCall(
 				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
-					return []Operation{failwith(err.Error())}, stor, gas // TODO return original storage
+					return []Operation{failwith(err.Error())}, stor, 0, gas // TODO return original storage
 				}
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, stor, gas // TODO return original storage
+					return []Operation{failwith("storage doesn't match storage type definition")}, stor, 0, gas // TODO return original storage
 				}
 				bodyTuple_, gas := interpret(e.Body.(TypedExp), venv, gas)
 				bodyTuple := bodyTuple_.(TupleVal)
@@ -157,11 +179,11 @@ func InterpretContractCall(
 				for _, v := range opvallist {
 					oplist = append(oplist, v.(OperationVal).Value)
 				}
-				return oplist, bodyTuple.Values[1], gas
+				return oplist, bodyTuple.Values[1], spentsofar, gas
 			}
 		}
 	}
-	return nil, 1, gas // TODO this is just a dummy return Value
+	return nil, 1, 0, gas // TODO this is just a dummy return Value
 }
 
 func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
@@ -611,16 +633,18 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		case CONTRACT_CALL:
 			address_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
 			address := address_.(AddressVal)
-			gasval_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
-			gasval := gasval_.(KoinVal)
-			param, gas := interpret(exp.ExpList[3].(TypedExp), venv, gas)
-			return contractCall(address, gasval, param), gas
+			amount_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
+			amount := amount_.(KoinVal)
+			entry_, gas := interpret(exp.ExpList[3].(TypedExp), venv, gas)
+			entry := entry_.(StringVal)
+			param, gas := interpret(exp.ExpList[4].(TypedExp), venv, gas)
+			return contractCall(address, amount, entry, param, gas), gas
 		case ACCOUNT_TRANSFER:
 			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
 			key := key_.(KeyVal)
 			amount_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
 			amount := amount_.(KoinVal)
-			return accountTransfer(key, amount), gas
+			return accountTransfer(key, amount, gas), gas
 		case ACCOUNT_DEFAULT:
 			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
 			key := key_.(KeyVal)

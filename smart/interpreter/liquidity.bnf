@@ -52,7 +52,7 @@ type        : 't' 'y' 'p' 'e' ;
 koin        : 'k' 'o' 'i' 'n' ;
 
 /* TODO: make sure hashes without capital letters can be distinguished from ids */
-_b58char    :  '1'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
+_b58char    :  '0'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
 key_lit     : 'k' 'n' '1' _b58char { _b58char } ;
 address_lit : 'k' 'n' '2' _b58char { _b58char } ;
 
@@ -173,7 +173,7 @@ LookupExp   : Lookup lident                                     << ast.NewLookup
 Lookup      : Lookup lident dot                                 << ast.AddPathElement($0, util.ParseId($1)), nil // intermediate for lookup calls  >>
             | lident dot                                        << ast.LookupPathRoot(util.ParseId($0)), nil // see above >> ;
 
-Pattern     : lparen rparen                                     << ast.NewEmptyPattern() // TODO: Yikes, you can write let () = 12 in >>
+Pattern     : lparen rparen                                     << ast.NewEmptyPattern() // >>
             | lparen Paramlist rparen                           << ast.NewPattern($1) >>
             | Param                                             << ast.NewPattern($0) >> ;
 Param       : lident                                            << ast.NewParam(util.ParseId($0)) // param >>

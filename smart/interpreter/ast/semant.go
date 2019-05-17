@@ -160,8 +160,8 @@ func GenerateCurrentModule() StructType {
 	return StructType{[]StructField{balance, amount, gas, failwith}}
 }
 
-func GenerateContractModule() StructType { //TODO change UnitType in call structfield to some generic type
-	call := StructField{"call", LambdaType{[]Type{AddressType{}, KoinType{}, UnitType{}}, OperationType{}}}
+func GenerateContractModule() StructType {
+	call := StructField{"call", LambdaType{[]Type{AddressType{}, KoinType{}, StringType{}, GenericType{}}, OperationType{}}}
 	return StructType{[]StructField{call}}
 }
 
@@ -256,6 +256,9 @@ func translateType(typ Type, tenv TypeEnv, gas uint64) (Type, uint64) {
 
 // ONLY CALL WITH ACTUAL TYPES, NOT DECLARED TYPES.
 func checkTypesEqual(typ1, typ2 Type) bool {
+	if typ1.Type() == GENERIC || typ2.Type() == GENERIC {
+		return true
+	}
 	switch typ1.Type() {
 	case STRING, INT, KEY, BOOL, KOIN, OPERATION, UNIT, NAT, ADDRESS:
 		return typ1.Type() == typ2.Type()

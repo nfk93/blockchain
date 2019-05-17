@@ -10,12 +10,12 @@ import (
 	"strconv"
 )
 
-func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk PublicKey, slot int) (bool, string) {
+func CalculateDraw(leadershipNonce string, hardness float64, sk SecretKey, pk PublicKey, slot uint64) (bool, string) {
 	// Creates the draw signature
 	var drawBuf bytes.Buffer
 	drawBuf.WriteString("LEADERSHIP_ELECTION")
 	drawBuf.WriteString(leadershipNonce)
-	drawBuf.WriteString(strconv.Itoa(slot))
+	drawBuf.WriteString(strconv.Itoa(int(slot)))
 	draw := Sign(drawBuf.String(), sk)
 
 	// Creates a block for transporting data to ValidateDraw
@@ -71,7 +71,7 @@ func CalculateDrawValue(b Block, leadershipNonce string) *big.Int {
 	var valBuf bytes.Buffer
 	valBuf.WriteString("LEADERSHIP_ELECTION")
 	valBuf.WriteString(leadershipNonce)
-	valBuf.WriteString(strconv.Itoa(b.Slot))
+	valBuf.WriteString(strconv.Itoa(int(b.Slot)))
 	hashVal := big.NewInt(0)
 	hashVal.SetString(HashSHA(valBuf.String()), 10)
 	return hashVal
@@ -81,6 +81,6 @@ func validateDrawSignature(b Block, leadershipNonce string) bool {
 	var buf bytes.Buffer
 	buf.WriteString("LEADERSHIP_ELECTION")
 	buf.WriteString(leadershipNonce)
-	buf.WriteString(strconv.Itoa(b.Slot))
+	buf.WriteString(strconv.Itoa(int(b.Slot)))
 	return Verify(buf.String(), b.Draw, b.BakerID)
 }

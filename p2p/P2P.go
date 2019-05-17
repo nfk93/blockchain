@@ -232,13 +232,19 @@ func broadcastNewConnection(data NewConnectionData) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		client, err := rpc.DialHTTP("tcp", peer)
-		if err != nil {
-			fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to "+peer+"\n\tError: ", err)
-		} else {
-			void := struct{}{}
-			client.Call(RPC_NEW_CONNECTION, data, &void)
-		}
+		func() {
+			client, err := rpc.DialHTTP("tcp", peer)
+			if err != nil {
+				fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to "+peer+"\n\tError: ", err)
+			} else {
+				defer client.Close()
+				void := struct{}{}
+				err := client.Call(RPC_NEW_CONNECTION, data, &void)
+				if err != nil {
+					fmt.Printf("error broadcasting new connection: %s", err.Error())
+				}
+			}
+		}()
 	}
 }
 
@@ -260,6 +266,7 @@ func (r *RPCHandler) SendBlock(block objects.Block, _ *struct{}) error {
 }
 
 func handleBlock(block objects.Block) {
+
 	blocksSeen.lock()
 	defer blocksSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
@@ -276,20 +283,21 @@ func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		client, err := rpc.DialHTTP("tcp", peer)
-
-		if err != nil {
-			fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
-		} else {
-			void := struct{}{}
-			client.Call(RPC_SEND_BLOCK, block, &void)
-		}
+		func() {
+			client, err := rpc.DialHTTP("tcp", peer)
+			if err != nil {
+				fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
+			} else {
+				defer client.Close()
+				void := struct{}{}
+				client.Call(RPC_SEND_BLOCK, block, &void)
+			}
+		}()
 	}
 }
 
 func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
-	//fmt.Println("received SendTransaction RPC")
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
@@ -322,17 +330,19 @@ func broadcastTrans(trans objects.Transaction) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		client, err := rpc.DialHTTP("tcp", peer)
-
-		if err != nil {
-			fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
-		} else {
-			void := struct{}{}
-			err := client.Call(RPC_SEND_TRANSACTION, trans, &void)
+		func() {
+			client, err := rpc.DialHTTP("tcp", peer)
 			if err != nil {
-				fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
+				fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
+			} else {
+				defer client.Close()
+				void := struct{}{}
+				err := client.Call(RPC_SEND_TRANSACTION, trans, &void)
+				if err != nil {
+					fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
+				}
 			}
-		}
+		}()
 	}
 }
 

@@ -28,6 +28,7 @@ const (
 	OPTION
 	ADDRESS
 	LAMBDA
+	GENERIC
 	ERROR
 	NOTIMPLEMENTED
 )
@@ -278,6 +279,18 @@ func (t LambdaType) String() string {
 }
 func (t LambdaType) Type() Typecode {
 	return LAMBDA
+}
+
+/* GenericType */
+
+type GenericType struct{}
+
+func (t GenericType) String() string {
+	return fmt.Sprint("generic")
+}
+
+func (t GenericType) Type() Typecode {
+	return GENERIC
 }
 
 /* Error */

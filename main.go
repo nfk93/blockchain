@@ -92,6 +92,8 @@ func cliLoop() {
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
+				autoTransStatus = !autoTransStatus // TODO DELETE
+				go autoTrans()                     // TODO DELETE
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}
@@ -113,7 +115,7 @@ func cliLoop() {
 
 				trans := objects.CreateTransaction(publicKey,
 					p,
-					currentStake/len(p2p.GetPublicKeys()),
+					currentStake/uint64(len(p2p.GetPublicKeys())),
 					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
 					secretKey)
 				channels.TransClientInput <- trans
@@ -126,7 +128,7 @@ func cliLoop() {
 			if currentStake == 0 {
 				continue
 			}
-			amount := rand.Intn(currentStake / 20)
+			amount := uint64(rand.Intn(int(currentStake) / 20))
 
 			for i := 0; i < 5; i++ {
 				receiverPK := pkList[rand.Intn(len(pkList))]
@@ -184,7 +186,7 @@ func autoTrans() {
 			receiverPK := pkList[rand.Intn(len(pkList))]
 			trans := objects.CreateTransaction(publicKey,
 				receiverPK,
-				rand.Intn(currentStake/50),
+				uint64(rand.Intn(int(currentStake)/50)),
 				strconv.Itoa(i),
 				secretKey)
 			channels.TransClientInput <- trans
