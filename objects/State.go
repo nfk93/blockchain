@@ -114,24 +114,6 @@ func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount uint64
 	s.Ledger[callerAccount.Hash()] += amount
 }
 
-// TODO: ask for expiring contracts at start of block execution
-
-// checks all contract accounts and withdraw the storage cost from their prepaid.
-// Takes as argument how many slots to pay for and then returns total amount of costs for all contracts
-func (s *State) CollectStorageCost(blockhash string) uint64 {
-	/*accumulatedStorageCosts := uint64(0)
-
-	for acc := range s.ConAccounts {
-		account := s.ConAccounts[acc]
-		storageCost := min(account.StorageCost*slots, account.Prepaid)
-		account.Prepaid -= storageCost
-		s.ConAccounts[acc] = account
-		accumulatedStorageCosts += storageCost
-	} */
-
-	return smart.StorageCost(blockhash)
-}
-
 func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
 	if s.Ledger[contractInit.Owner.Hash()] > contractInit.Prepaid+contractInit.Gas {
 		addr, remainGas, err := smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
@@ -176,9 +158,14 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 	return gasUsed
 }
 
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
+// Get list of contract addresses that expire from the smart contract layer
+// pay contract stake back to owner and delete account
+func (s *State) CleanExpiredContract(slot uint64) {
+	expiredContracts := smart.ExpiringContract(slot)
+	for _, conAddr := range expiredContracts {
+		owner := s.ConOwners[conAddr]
+		s.Ledger[owner.Hash()] += s.ConStake[conAddr]
+		delete(s.ConStake, conAddr) // TODO Is this needed? Does anyway get a new state from scl...
 	}
-	return b
+
 }

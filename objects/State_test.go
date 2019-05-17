@@ -106,7 +106,7 @@ func TestState_CleanContractLedger(t *testing.T) {
 	s.ConAccounts["address3"] = ContractAccount{pk, 0, 5}
 	s.ConAccounts["address4"] = ContractAccount{pk, 0, 5}
 
-	expiredContracts := s.CleanContractLedger()
+	expiredContracts := s.CleanExpiredContract()
 
 	if _, success := s.ConAccounts["address1"]; !success {
 		t.Error("address1 has been deleted...")
