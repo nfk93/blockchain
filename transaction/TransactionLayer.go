@@ -124,6 +124,9 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
+	// Remove expired contracts from ledger in TL and from ConLayer
+	s.CleanExpiredContract(blockData.SlotNo)
+
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
 
