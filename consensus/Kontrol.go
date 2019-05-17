@@ -139,6 +139,6 @@ func PrintFinalizedLedger() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
 	}
 }

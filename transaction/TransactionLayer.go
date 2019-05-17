@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
 	"sort"
@@ -48,6 +49,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
 				channels.StateFromTrans <- finalizedNode.state
+				smart.FinalizeBlock(finalize)
 			} else {
 				fmt.Println("Couldn't finalize")
 				channels.StateFromTrans <- State{}
@@ -66,29 +68,26 @@ func StartTransactionLayer(channels ChannelStruct) {
 
 func (t *Tree) processBlock(b Block) {
 
-	blockhash := b.CalculateBlockHash()
+	blockHash := b.CalculateBlockHash()
 	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
-	s.ConAccounts = copyContMap(t.treeMap[s.ParentHash].state.ConAccounts)
 	s.ConStake = copyMap(t.treeMap[s.ParentHash].state.ConStake)
+	s.ConOwners = copyContMap(t.treeMap[s.ParentHash].state.ConOwners)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 
 	// Remove expired contracts from ledger in TL and from ConLayer
-	expiredContracts := s.CleanContractLedger()
-	for _, v := range expiredContracts {
-		smart.ExpireContract(v)
-	}
+	s.CleanExpiredContract(b.Slot)
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, td := range b.BlockData.Trans {
 			switch td.GetType() {
 			case CONTRACTCALL:
-				accumulatedRewards += s.HandleContractCall(td.ContractCall, blockhash, b.ParentPointer, b.Slot)
+				accumulatedRewards += s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
 			case CONTRACTINIT:
-				accumulatedRewards += s.HandleContractInit(td.ContractInit, blockhash, b.ParentPointer, b.Slot)
+				accumulatedRewards += s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
 			case TRANSACTION:
 				accumulatedRewards += s.AddTransaction(td.Transaction, transactionGas)
 			}
@@ -96,9 +95,7 @@ func (t *Tree) processBlock(b Block) {
 	}
 
 	// Collection storageCosts
-	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
-	collectedStorageCosts := s.CollectStorageCost(blockhash)
-	accumulatedRewards += collectedStorageCosts
+	accumulatedRewards += smart.StorageCost(blockHash)
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
@@ -112,7 +109,7 @@ func (t *Tree) processBlock(b Block) {
 	t.createNewNode(b, s)
 
 	// Update head
-	t.head = blockhash
+	t.head = blockHash
 
 }
 
@@ -127,12 +124,21 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
+	// Remove expired contracts from ledger in TL and from ConLayer
+	s.CleanExpiredContract(blockData.SlotNo)
+
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
 
 		if accumulatedGasUse < gasLimit {
-			gasUse := s.HandleTransData(td, transactionGas)
-			accumulatedGasUse += gasUse
+			switch td.GetType() {
+			case CONTRACTCALL:
+				accumulatedGasUse += s.HandleContractCall(td.ContractCall, "", t.head, blockData.SlotNo)
+			case CONTRACTINIT:
+				accumulatedGasUse += s.HandleContractInit(td.ContractInit, "", t.head, blockData.SlotNo)
+			case TRANSACTION:
+				accumulatedGasUse += s.AddTransaction(td.Transaction, transactionGas)
+			}
 			addedTransactions = append(addedTransactions, td)
 		}
 
@@ -154,13 +160,6 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 }
 
 // Helpers
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func copyMap(originalMap map[string]uint64) map[string]uint64 {
 	if originalMap == nil {
 		return make(map[string]uint64)
@@ -172,11 +171,11 @@ func copyMap(originalMap map[string]uint64) map[string]uint64 {
 	return newMap
 }
 
-func copyContMap(originalMap map[string]ContractAccount) map[string]ContractAccount {
+func copyContMap(originalMap map[string]crypto.PublicKey) map[string]crypto.PublicKey {
 	if originalMap == nil {
-		return make(map[string]ContractAccount)
+		return make(map[string]crypto.PublicKey)
 	}
-	newMap := make(map[string]ContractAccount)
+	newMap := make(map[string]crypto.PublicKey)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}
@@ -197,6 +196,6 @@ func PrintCurrentLedger() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
 	}
 }

@@ -65,6 +65,10 @@ func ExpiringContract(slot uint64) []string {
 	return nil
 }
 
+func FinalizeBlock(blockHash string) {
+	// TODO Use for deleting old contracts
+}
+
 /*
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
  */
