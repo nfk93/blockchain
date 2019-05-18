@@ -72,8 +72,10 @@ func CalculateDrawValue(b Block, leadershipNonce string) *big.Int {
 	valBuf.WriteString("LEADERSHIP_ELECTION")
 	valBuf.WriteString(leadershipNonce)
 	valBuf.WriteString(strconv.Itoa(int(b.Slot)))
+	valBuf.WriteString(b.Draw)
+	hashString := HashSHA(valBuf.String())
 	hashVal := big.NewInt(0)
-	hashVal.SetString(HashSHA(valBuf.String()), 10)
+	hashVal.SetString(hashString, 16)
 	return hashVal
 }
 
