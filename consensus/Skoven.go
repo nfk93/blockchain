@@ -16,6 +16,7 @@ var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
+var lastFinalizedSlot uint64
 var channels o.ChannelStruct
 var isVerbose bool
 var pendingBlocks map[string]bool
@@ -89,6 +90,7 @@ func handleGenesisBlock(b o.Block) {
 	sendBlockToTL(b)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
+	lastFinalizedSlot = 0
 }
 
 // Calculates and compares pathWeight of currentHead and a new block not extending the tree of the head.
@@ -102,7 +104,8 @@ func comparePathWeight(b o.Block) {
 		}
 		parent := blocks.get(block.ParentPointer)
 
-		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
+		if parent.CalculateBlockHash() == lastFinalized {
+			l += int(lastFinalizedSlot)
 			break
 		}
 		block = parent
