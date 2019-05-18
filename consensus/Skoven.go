@@ -35,8 +35,8 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
-			// TODO add processing of pending blocks
 			block := <-channels.BlockFromP2P
+			processPendingBlocks()
 			handleBlock(block)
 		}
 	}()
@@ -50,6 +50,16 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 			go handleTransaction(trans)
 		}
 	}()
+}
+
+func processPendingBlocks() {
+	for k := range pendingBlocks {
+		b := blocks.get(k)
+		if b.Slot <= getCurrentSlot() && blocks.contains(b.ParentPointer) {
+			delete(pendingBlocks, b.CalculateBlockHash())
+			handleBlock(b)
+		}
+	}
 }
 
 //Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
