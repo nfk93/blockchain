@@ -9,6 +9,7 @@ import (
 
 type state struct {
 	contractStates map[string]contractState
+	slot           uint64
 	parentHash     string
 }
 
@@ -17,6 +18,7 @@ type contractState struct {
 	prepaidStorage uint64
 	storage        interpreter.Value
 	storagecap     uint64
+	expirationslot uint64
 }
 
 var contracts = make(map[string]Contract)
@@ -51,12 +53,18 @@ func CallContract(
 
 	// add contractcall to state for given blockhash
 	contractstates := blockstate.contractStates
-	newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, contractstates)
+
+	tempStates := make(map[string]contractState)
+	for k, v := range contractstates {
+		tempStates[k] = v
+	}
+
+	newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, tempStates, slot)
 	if callError != nil {
 		return getContractBalances(contractstates), nil, gas, callError
 	} else {
-		blockstate.contractStates = newStates
-		stateTree[blockhash] = blockstate
+		newState := state{newStates, slot, parenthash}
+		stateTree[blockhash] = newState
 		return getContractBalances(newStates), transfers, gas, nil
 	}
 }
@@ -80,7 +88,16 @@ func InitiateContract(
 	blockhash, parenthash string,
 	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
+
+	if storageLimit == 0 {
+		return "", remainingGas, fmt.Errorf("storagelimit can't be 0")
+	}
+	if prepaid == 0 {
+		return "", remainingGas, fmt.Errorf("initial storage exceeds storage cap")
+	}
+
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
+
 	if returnErr != nil {
 		return "", remainingGas, returnErr
 	} else {
@@ -100,7 +117,10 @@ func InitiateContract(
 			log.Fatal(errstring)
 			return "", 0, nil
 		}
-		blockstate.contractStates[address] = contractState{0, prepaid, initstor, storageLimit}
+
+		expiration := slot + (prepaid / storageLimit)
+		blockstate.contractStates[address] = contractState{0, prepaid, initstor,
+			storageLimit, expiration}
 		stateTree[blockhash] = blockstate
 		return address, remainingGas, nil
 	}
@@ -122,16 +142,13 @@ func interpretContract(
 	amount uint64,
 	gas_ uint64,
 	states map[string]contractState,
+	slot uint64,
 ) (contractStates map[string]contractState, transfers []ContractTransaction, remainingGas uint64, callError error) {
 
-	tempStates := make(map[string]contractState)
-	for k, v := range states {
-		tempStates[k] = v
-	}
 	gas := gas_
 
 	contract, exist1 := contracts[address]
-	state, exist2 := tempStates[address]
+	state, exist2 := states[address]
 	if !exist1 || !exist2 {
 		if int64(gas)-10000 < 0 {
 			gas = 0
@@ -141,51 +158,48 @@ func interpretContract(
 		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
 	}
 
+	// check if contract has expired
+	if slot > state.expirationslot {
+		return nil, nil, gas, fmt.Errorf("attempted to call expired contract")
+	}
+
 	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.storage, amount,
 		state.balance, gas)
 
-	// TODO: check if storage limit is exceeded
+	if sto.Size() > state.storagecap {
+		return nil, nil, gas, fmt.Errorf("storage cap exceeded")
+	}
+
 	state.storage = sto
 	state.balance = state.balance + amount - spent // it is checked in the interpreter that this value isn't negative
-	tempStates[address] = state
+	states[address] = state
 
 	// handle operation list
-	transfers, err, gas := handleOpList(oplist, tempStates, gas)
+	transfers, err, gas := handleOpList(oplist, states, gas, slot)
 	if err != nil {
-		return states, nil, gas, err
+		return nil, nil, gas, err
 	} else {
-		return tempStates, transfers, gas, nil
+		return states, transfers, gas, nil
 	}
 }
 
 func handleOpList(
 	operations []interpreter.Operation,
 	tempStates map[string]contractState,
-	gas uint64,
+	gas, slot uint64,
 ) ([]ContractTransaction, error, uint64) {
+
 	transfers := make([]ContractTransaction, 0)
 	for _, op := range operations {
 		switch op.(type) {
 		case interpreter.ContractCall:
 			callop := op.(interpreter.ContractCall)
-
-			contract, exist1 := contracts[callop.Address]
-			state, exist2 := tempStates[callop.Address]
-			if !exist1 || !exist2 {
-				return nil, fmt.Errorf("attempted to call non-existing contract at address %s", callop.Address), gas
-			}
-
-			oplist, storage, spent, remainingGas := interpreter.InterpretContractCall(contract.tabs, callop.Params,
-				callop.Entry, state.storage, callop.Amount, state.balance, gas)
-
-			state.storage = storage
-			state.balance = state.balance + callop.Amount - spent
-			tempStates[callop.Address] = state
-
-			trans, err, remainingGas := handleOpList(oplist, tempStates, remainingGas)
-			if err != nil {
-				return nil, err, remainingGas
+			tempStates_, trans, remainingGas, callError :=
+				interpretContract(callop.Address, callop.Entry, callop.Params, callop.Amount, gas, tempStates, slot)
+			if callError != nil {
+				return nil, callError, remainingGas
 			} else {
+				tempStates = tempStates_
 				gas = remainingGas
 				transfers = append(transfers, trans...)
 			}
