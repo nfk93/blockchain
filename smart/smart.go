@@ -34,7 +34,7 @@ func CallContract(
 	amount uint64,
 	gas uint64,
 	blockhash, parenthash string,
-	slot uint64, // TODO use slot to check if a contract has expired. Don't expire contracts yet
+	slot uint64, // TODO use slot and parent slot to update prepaidstorage and expire contracts
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	if blockhash == "" {
 		// TODO making new block
@@ -97,7 +97,7 @@ func InitiateContract(
 	prepaid uint64,
 	storageLimit uint64,
 	blockhash, parenthash string,
-	slot uint64,
+	slot uint64, // TODO use slot and parent slot to update prepaidstorage and expire contracts
 ) (addr string, remainingGas uint64, err error) {
 
 	if storageLimit == 0 {
@@ -129,10 +129,16 @@ func InitiateContract(
 			return "", 0, nil
 		}
 
+		tempStates := make(map[string]contractState)
+		for k, v := range blockstate.contractStates {
+			tempStates[k] = v
+		}
+
 		expiration := slot + (prepaid / storageLimit)
-		blockstate.contractStates[address] = contractState{0, prepaid, initstor,
+		tempStates[address] = contractState{0, prepaid, initstor,
 			storageLimit, expiration}
-		stateTree[blockhash] = blockstate
+		newState := state{tempStates, slot, parenthash}
+		stateTree[blockhash] = newState
 		return address, remainingGas, nil
 	}
 }
