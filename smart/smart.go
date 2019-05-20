@@ -69,12 +69,23 @@ func CallContract(
 	}
 }
 
-func ExpiringContract(slot uint64) []string {
-	return nil
+/*
+ * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
+ */
+func ExpiringContract(slot uint64, parenthash string) []string {
+	result := make([]string, 0)
+	for k, v := range stateTree[parenthash].contractStates {
+		if v.expirationslot < slot {
+			result = append(result, k)
+		}
+	}
+	return result
 }
 
 func FinalizeBlock(blockHash string) {
 	// TODO Use for deleting old contracts
+	// do this by going through the state of each contract in the blockstate and deleting all contracts for which its
+	// expiration slot is lower than the slot of the block
 }
 
 /*
@@ -126,8 +137,21 @@ func InitiateContract(
 	}
 }
 
-func StorageCost(blockhash string) (reward uint64) {
-	return 0 // TODO BIG FAT TODO
+/*
+ * Precondition: blockhash is a hash for a block that exists in the statetree
+ */
+func StorageReward(blockhash string) (reward uint64) {
+	block := stateTree[blockhash]
+	parent := stateTree[block.parentHash]
+	slots := block.slot - parent.slot
+
+	reward = uint64(0)
+
+	for _, k := range parent.contractStates {
+		reward += min(k.prepaidStorage, slots*k.storagecap)
+	}
+
+	return reward
 }
 
 type ContractTransaction struct {
@@ -224,4 +248,12 @@ func getContractBalances(states map[string]contractState) map[string]uint64 {
 		result[k] = v.balance
 	}
 	return result
+}
+
+func min(a, b uint64) uint64 {
+	if a <= b {
+		return a
+	} else {
+		return b
+	}
 }
