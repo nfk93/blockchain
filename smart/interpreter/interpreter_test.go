@@ -5,6 +5,7 @@ import (
 	. "github.com/nfk93/blockchain/smart/interpreter/ast"
 	"github.com/nfk93/blockchain/smart/interpreter/lexer"
 	"github.com/nfk93/blockchain/smart/interpreter/parser"
+	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -125,19 +126,18 @@ var emptyContractList = make([]string, 0)
 
 func TestIntConstant(t *testing.T) {
 	testpath := "test_cases/constants/int"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", IntVal{13}, 0, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.IntVal{13}, 0, 0,
 		99999999999)
 	switch sto.(type) {
-	case IntVal:
-		if sto.(IntVal).Value != 15 {
-			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+	case value.IntVal:
+		if sto.(value.IntVal).Value != 15 {
+			t.Errorf("storage has unexpected value of %d", sto.(value.IntVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -149,19 +149,18 @@ func TestIntConstant(t *testing.T) {
 
 func TestAddressConstant(t *testing.T) {
 	testpath := "test_cases/constants/address"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", AddressVal{"123123aA"}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.AddressVal{"123123aA"}, 0,
 		0, 9999999999)
 	switch sto.(type) {
-	case AddressVal:
-		if sto.(AddressVal).Value != "3132141AAAa" {
-			t.Errorf("storage has unexpected value of %s", sto.(AddressVal).Value)
+	case value.AddressVal:
+		if sto.(value.AddressVal).Value != "3132141abba3132141abba3132141abb" {
+			t.Errorf("storage has unexpected value of %s", sto.(value.AddressVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type but of type %s", reflect.TypeOf(sto).String())
@@ -173,19 +172,18 @@ func TestAddressConstant(t *testing.T) {
 
 func TestBoolConstant(t *testing.T) {
 	testpath := "test_cases/constants/bool"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", BoolVal{true}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.BoolVal{true}, 0,
 		0, 999999999999999999)
 	switch sto.(type) {
-	case BoolVal:
-		if sto.(BoolVal).Value != false {
-			t.Errorf("storage has unexpected value of %t", sto.(BoolVal).Value)
+	case value.BoolVal:
+		if sto.(value.BoolVal).Value != false {
+			t.Errorf("storage has unexpected value of %t", sto.(value.BoolVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -197,28 +195,27 @@ func TestBoolConstant(t *testing.T) {
 
 func TestDeclaredConstant(t *testing.T) {
 	testpath := "test_cases/constants/declared"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
+	unitval := value.UnitVal{}
 	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main",
-		TupleVal{[]Value{IntVal{123}, TupleVal{[]Value{IntVal{2}, StringVal{"serser"}}}}},
+		value.TupleVal{[]value.Value{value.IntVal{123}, value.TupleVal{[]value.Value{value.IntVal{2}, value.StringVal{"serser"}}}}},
 		0, 0, 9999999)
 	switch sto.(type) {
-	case TupleVal:
-		sto := sto.(TupleVal)
-		if sto.Values[0].(IntVal).Value != 4 {
+	case value.TupleVal:
+		sto := sto.(value.TupleVal)
+		if sto.Values[0].(value.IntVal).Value != 4 {
 			t.Errorf("storage has unexpected value")
 		}
-		if sto.Values[1].(TupleVal).Values[0].(IntVal).Value != 5 {
+		if sto.Values[1].(value.TupleVal).Values[0].(value.IntVal).Value != 5 {
 			t.Errorf("storage has unexpected value")
 		}
-		if sto.Values[1].(TupleVal).Values[1].(StringVal).Value != "bye" {
+		if sto.Values[1].(value.TupleVal).Values[1].(value.StringVal).Value != "bye" {
 			t.Errorf("storage has unexpected value of %s",
-				sto.Values[1].(TupleVal).Values[1].(StringVal).Value)
+				sto.Values[1].(value.TupleVal).Values[1].(value.StringVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -230,19 +227,18 @@ func TestDeclaredConstant(t *testing.T) {
 
 func TestKeyConstant(t *testing.T) {
 	testpath := "test_cases/constants/key"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", KeyVal{"1212Ddd"}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.KeyVal{"1212Ddd"}, 0,
 		0, 999999999)
 	switch sto.(type) {
-	case KeyVal:
-		if sto.(KeyVal).Value != "aaAAaaA" {
-			t.Errorf("storage has unexpected value of %s", sto.(KeyVal).Value)
+	case value.KeyVal:
+		if sto.(value.KeyVal).Value != "aaffaafaaffaafaaffaafaaffaafaaff" {
+			t.Errorf("storage has unexpected value of %s", sto.(value.KeyVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -254,19 +250,18 @@ func TestKeyConstant(t *testing.T) {
 
 func TestKoinConstant(t *testing.T) {
 	testpath := "test_cases/constants/koin"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", KoinVal{uint64(110000)}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.KoinVal{uint64(110000)}, 0,
 		0, 99999999999)
 	switch sto.(type) {
-	case KoinVal:
-		if sto.(KoinVal).Value != 13355000 {
-			t.Errorf("storage has unexpected value of %d", sto.(KoinVal).Value)
+	case value.KoinVal:
+		if sto.(value.KoinVal).Value != 13355000 {
+			t.Errorf("storage has unexpected value of %d", sto.(value.KoinVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -278,26 +273,25 @@ func TestKoinConstant(t *testing.T) {
 
 func TestListConstant(t *testing.T) {
 	testpath := "test_cases/constants/list"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", ListVal{[]Value{IntVal{2}}},
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.ListVal{[]value.Value{value.IntVal{2}}},
 		0, 0, 9999999999)
 	switch sto.(type) {
-	case ListVal:
-		sto := sto.(ListVal)
-		if sto.Values[0].(IntVal).Value != 7 {
+	case value.ListVal:
+		sto := sto.(value.ListVal)
+		if sto.Values[0].(value.IntVal).Value != 7 {
 			t.Errorf("storage has unexpected value")
 		}
-		if sto.Values[1].(IntVal).Value != 9 {
+		if sto.Values[1].(value.IntVal).Value != 9 {
 			t.Errorf("storage has unexpected value")
 		}
-		if sto.Values[2].(IntVal).Value != 13 {
-			t.Errorf("storage has unexpected value of %d at index 2", sto.Values[2].(IntVal).Value)
+		if sto.Values[2].(value.IntVal).Value != 13 {
+			t.Errorf("storage has unexpected value of %d at index 2", sto.Values[2].(value.IntVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -309,19 +303,18 @@ func TestListConstant(t *testing.T) {
 
 func TestNatConstant(t *testing.T) {
 	testpath := "test_cases/constants/nat"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", NatVal{13}, 0, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.NatVal{13}, 0, 0,
 		99999999999)
 	switch sto.(type) {
-	case NatVal:
-		if sto.(NatVal).Value != 117 {
-			t.Errorf("storage has unexpected value of %d", sto.(NatVal).Value)
+	case value.NatVal:
+		if sto.(value.NatVal).Value != 117 {
+			t.Errorf("storage has unexpected value of %d", sto.(value.NatVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -333,19 +326,18 @@ func TestNatConstant(t *testing.T) {
 
 func TestStringConstant(t *testing.T) {
 	testpath := "test_cases/constants/string"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", StringVal{"eymom"}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.StringVal{"eymom"}, 0,
 		0, 99999999999)
 	switch sto.(type) {
-	case StringVal:
-		if !(sto.(StringVal).Value == "dank") {
-			t.Errorf("storage has unexpected value of %s", sto.(StringVal).Value)
+	case value.StringVal:
+		if !(sto.(value.StringVal).Value == "dank") {
+			t.Errorf("storage has unexpected value of %s", sto.(value.StringVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -357,17 +349,16 @@ func TestStringConstant(t *testing.T) {
 
 func TestUnitConstant(t *testing.T) {
 	testpath := "test_cases/constants/unit"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", UnitVal{}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.UnitVal{}, 0,
 		0, 99999999999)
 	switch sto.(type) {
-	case UnitVal:
+	case value.UnitVal:
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
 	}
@@ -378,32 +369,31 @@ func TestUnitConstant(t *testing.T) {
 
 func TestStructConstant(t *testing.T) {
 	testpath := "test_cases/constants/struct"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
+	unitval := value.UnitVal{}
 	storageinit := createStruct()
-	storageinit.Field["a"] = IntVal{1213}
-	storageinit.Field["b"] = TupleVal{[]Value{IntVal{5}, IntVal{6}}}
+	storageinit.Field["a"] = value.IntVal{1213}
+	storageinit.Field["b"] = value.TupleVal{[]value.Value{value.IntVal{5}, value.IntVal{6}}}
 	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", storageinit, 0,
 		0, 99999999999)
 	switch sto.(type) {
-	case StructVal:
-		sto, oksto := sto.(StructVal)
+	case value.StructVal:
+		sto, oksto := sto.(value.StructVal)
 		if oksto {
-			a, oka := sto.Field["a"].(IntVal)
+			a, oka := sto.Field["a"].(value.IntVal)
 			if !oka || a.Value != 1111 {
 				t.Errorf("storage.a has unexpected value of %d", sto.Field["a"])
 			}
-			b, okb := sto.Field["b"].(TupleVal)
+			b, okb := sto.Field["b"].(value.TupleVal)
 			if !okb {
 				t.Errorf("storage.b has unexpected type")
 			} else {
-				tup1, ok1 := b.Values[0].(IntVal)
-				tup2, ok2 := b.Values[1].(IntVal)
+				tup1, ok1 := b.Values[0].(value.IntVal)
+				tup2, ok2 := b.Values[1].(value.IntVal)
 				if !ok1 || !ok2 || tup1.Value != 4 || tup2.Value != 5 {
 					t.Errorf("storage.b has wrong value. It is %d", b)
 				}
@@ -421,18 +411,17 @@ func TestStructConstant(t *testing.T) {
 
 func TestCurrentModule(t *testing.T) {
 	testpath := "test_cases/currentbalance_interp"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.KoinVal{1000000}, 0,
 		0, 999999999)
 	switch sto.(type) {
-	case KoinVal:
-		sto := sto.(KoinVal)
+	case value.KoinVal:
+		sto := sto.(value.KoinVal)
 		if sto.Value != 0 {
 			t.Errorf("return value is %d, expected 0.0", sto.Value)
 		}
@@ -445,19 +434,19 @@ func TestCurrentModule(t *testing.T) {
 }
 
 func TestCheckParams(t *testing.T) {
-	stringval := StringVal{"ey"}
+	stringval := value.StringVal{"ey"}
 	stringtype := StringType{}
 	if !checkParam(stringval, stringtype) {
 		t.Fail()
 	}
-	intval1 := IntVal{1}
+	intval1 := value.IntVal{1}
 	if checkParam(intval1, stringtype) {
 		t.Fail()
 	}
 
-	lst := make([]Value, 0)
-	listVal1 := ListVal{append(lst, intval1)}
-	listVal2 := ListVal{append(lst, IntVal{int64(12)})}
+	lst := make([]value.Value, 0)
+	listVal1 := value.ListVal{append(lst, intval1)}
+	listVal2 := value.ListVal{append(lst, value.IntVal{int64(12)})}
 	if !checkParam(listVal1, ListType{IntType{}}) {
 		t.Errorf("1")
 	}
@@ -467,8 +456,8 @@ func TestCheckParams(t *testing.T) {
 	if checkParam(listVal1, ListType{StringType{}}) {
 		t.Errorf("3")
 	}
-	tupleval1 := TupleVal{[]Value{TupleVal{[]Value{IntVal{1}, IntVal{2}}}, StringVal{"ey"}}}
-	tupleval2 := TupleVal{[]Value{TupleVal{[]Value{IntVal{1}, IntVal{2}}}, IntVal{123}}}
+	tupleval1 := value.TupleVal{[]value.Value{value.TupleVal{[]value.Value{value.IntVal{1}, value.IntVal{2}}}, value.StringVal{"ey"}}}
+	tupleval2 := value.TupleVal{[]value.Value{value.TupleVal{[]value.Value{value.IntVal{1}, value.IntVal{2}}}, value.IntVal{123}}}
 	tupletyp1 := TupleType{[]Type{TupleType{[]Type{IntType{}, IntType{}}}, StringType{}}}
 	if !checkParam(tupleval1, tupletyp1) {
 		t.Errorf("4")
@@ -478,8 +467,8 @@ func TestCheckParams(t *testing.T) {
 	}
 
 	structval := createStruct()
-	structval.Field["a"] = IntVal{123}
-	structval.Field["b"] = StringVal{"eytyyyyy"}
+	structval.Field["a"] = value.IntVal{123}
+	structval.Field["b"] = value.StringVal{"eytyyyyy"}
 	structtyp1 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", StringType{}}}}
 	/*	structtyp2 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"c", StringType{}}}}
 		structtyp3 := StructType{[]StructField{StructField{"a", IntType{}}, StructField{"b", IntType{}}}}
@@ -493,8 +482,8 @@ func TestCheckParams(t *testing.T) {
 		t.Errorf("8")
 	} */
 
-	optval1 := OptionVal{tupleval1, true}
-	optval2 := OptionVal{UnitVal{}, false}
+	optval1 := value.OptionVal{tupleval1, true}
+	optval2 := value.OptionVal{value.UnitVal{}, false}
 	opttyp1 := OptionType{tupletyp1}
 	opttyp2 := OptionType{IntType{}}
 	if !checkParam(optval1, opttyp1) {
@@ -513,49 +502,48 @@ func TestCheckParams(t *testing.T) {
 
 func TestInterpretUpdateStruct(t *testing.T) {
 	testpath := "test_cases/updatestruct_interp"
-	texp, ok := getTypedAST(t, testpath)
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, testpath)
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	params := TupleVal{[]Value{IntVal{173}, StringVal{"newinner"}, StringVal{"newa"}}}
+	params := value.TupleVal{[]value.Value{value.IntVal{173}, value.StringVal{"newinner"}, value.StringVal{"newa"}}}
 	innermost := createStruct()
-	innermost.Field["buried"] = IntVal{12}
-	innermost.Field["deep"] = StringVal{"very deep"}
+	innermost.Field["buried"] = value.IntVal{12}
+	innermost.Field["deep"] = value.StringVal{"very deep"}
 	inner := createStruct()
-	inner.Field["id"] = StringVal{"innerid"}
+	inner.Field["id"] = value.StringVal{"innerid"}
 	inner.Field["innermost"] = innermost
 	storage := createStruct()
-	storage.Field["a"] = StringVal{"test"}
+	storage.Field["a"] = value.StringVal{"test"}
 	storage.Field["b"] = inner
 
 	oplist, sto, _, _ := InterpretContractCall(texp, params, "main", storage, 0,
 		0, 999999999999)
 	switch sto.(type) {
-	case StructVal:
-		sto := sto.(StructVal)
-		a, ok := sto.Field["a"].(StringVal)
+	case value.StructVal:
+		sto := sto.(value.StructVal)
+		a, ok := sto.Field["a"].(value.StringVal)
 		if !ok || a.Value != "newa" {
 			t.Errorf("sto.a has unexpected value of %s", a)
 		}
-		b, ok := sto.Field["b"].(StructVal)
+		b, ok := sto.Field["b"].(value.StructVal)
 		if !ok {
 			t.Errorf("sto.b has unexpected type. It is %s", b)
 		} else {
-			bid, ok := b.Field["id"].(StringVal)
+			bid, ok := b.Field["id"].(value.StringVal)
 			if !ok || bid.Value != "newinner" {
 				t.Errorf("sto.b.id has unexpected value of %s", bid)
 			}
-			binnermost, ok := b.Field["innermost"].(StructVal)
+			binnermost, ok := b.Field["innermost"].(value.StructVal)
 			if !ok {
 				t.Errorf("sto.b.innermost has unexpected type. It is %s", binnermost)
 			} else {
-				buried, ok := binnermost.Field["buried"].(IntVal)
+				buried, ok := binnermost.Field["buried"].(value.IntVal)
 				if !ok || buried.Value != 173+12 {
 					t.Errorf("sto.b.innermost.buried has unexpected value of %d", buried)
 				}
-				deep, ok := binnermost.Field["deep"].(StringVal)
+				deep, ok := binnermost.Field["deep"].(value.StringVal)
 				if !ok || deep.Value != "very deep" {
 					t.Errorf("sto.b.innermost.deep has unexpected value of %s", deep)
 				}
@@ -570,20 +558,19 @@ func TestInterpretUpdateStruct(t *testing.T) {
 }
 
 func TestInterpretBinOps(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/binop_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/binop_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
-	storage := IntVal{19}
+	params := value.TupleVal{[]value.Value{value.IntVal{13}, value.IntVal{17}}}
+	storage := value.IntVal{19}
 	oplist, sto, _, _ := InterpretContractCall(texp, params, "main", storage, 0,
 		0, 999999999999)
 	switch sto.(type) {
-	case IntVal:
-		if sto.(IntVal).Value != 13+17+19 {
-			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+	case value.IntVal:
+		if sto.(value.IntVal).Value != 13+17+19 {
+			t.Errorf("storage has unexpected value of %d", sto.(value.IntVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -595,35 +582,34 @@ func TestInterpretBinOps(t *testing.T) {
 }
 
 func TestIntDivision(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/division_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/division_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	params := TupleVal{[]Value{IntVal{13}, IntVal{17}}}
-	storage := TupleVal{[]Value{IntVal{19}, NatVal{0}}}
+	params := value.TupleVal{[]value.Value{value.IntVal{13}, value.IntVal{17}}}
+	storage := value.TupleVal{[]value.Value{value.IntVal{19}, value.NatVal{0}}}
 	oplist, sto, _, _ := InterpretContractCall(texp, params, "main", storage, 0,
 		0, 100000)
 
 	switch sto.(type) {
-	case TupleVal:
-		sto := sto.(TupleVal)
+	case value.TupleVal:
+		sto := sto.(value.TupleVal)
 		if len(sto.Values) != 2 {
 			t.Errorf("storage tuple has unexpeted length of %d", len(sto.Values))
 		}
 		switch sto.Values[0].(type) {
-		case IntVal:
+		case value.IntVal:
 		default:
 			t.Errorf("First value of returned storage tuple is wrong type")
 		}
 		switch sto.Values[1].(type) {
-		case NatVal:
+		case value.NatVal:
 		default:
 			t.Errorf("Second value of returned storage tuple is wrong type")
 		}
-		val1 := sto.Values[0].(IntVal).Value
-		val2 := sto.Values[1].(NatVal).Value
+		val1 := sto.Values[0].(value.IntVal).Value
+		val2 := sto.Values[1].(value.NatVal).Value
 		if val1 != 0 || val2 != 10 {
 			t.Errorf("storage has unexpected value of (%d, %d)", val1, val2)
 		}
@@ -634,14 +620,14 @@ func TestIntDivision(t *testing.T) {
 		t.Errorf("oplist isn't empty. It is %s", oplist)
 	}
 
-	params = TupleVal{[]Value{IntVal{0}, IntVal{0}}}
+	params = value.TupleVal{[]value.Value{value.IntVal{0}, value.IntVal{0}}}
 	oplist, sto, _, _ = InterpretContractCall(texp, params, "main", storage, 0,
 		0, 100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist is len %d should be 1", len(oplist))
 	}
 
-	failwithOp, ok := oplist[0].(FailWith)
+	failwithOp, ok := oplist[0].(value.FailWith)
 	if !ok {
 		fmt.Println(failwithOp.Msg)
 		t.Errorf("unexpected returned operation")
@@ -649,36 +635,35 @@ func TestIntDivision(t *testing.T) {
 }
 
 func TestKoinDivision(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/koindivision_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/koindivision_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
 
-	params := TupleVal{[]Value{KoinVal{NatToKoin(5)}, KoinVal{NatToKoin(2)}}}
-	storage := TupleVal{[]Value{NatVal{10}, KoinVal{NatToKoin(2)}}}
+	params := value.TupleVal{[]value.Value{value.KoinVal{NatToKoin(5)}, value.KoinVal{NatToKoin(2)}}}
+	storage := value.TupleVal{[]value.Value{value.NatVal{10}, value.KoinVal{NatToKoin(2)}}}
 	oplist, sto, _, _ := InterpretContractCall(texp, params, "main", storage, 0,
 		0, 100000)
 
 	switch sto.(type) {
-	case TupleVal:
-		sto := sto.(TupleVal)
+	case value.TupleVal:
+		sto := sto.(value.TupleVal)
 		if len(sto.Values) != 2 {
 			t.Errorf("storage tuple has unexpeted length of %d", len(sto.Values))
 		}
 		switch sto.Values[0].(type) {
-		case NatVal:
+		case value.NatVal:
 		default:
 			t.Errorf("First value of returned storage tuple is wrong type")
 		}
 		switch sto.Values[1].(type) {
-		case KoinVal:
+		case value.KoinVal:
 		default:
 			t.Errorf("Second value of returned storage tuple is wrong type")
 		}
-		val1 := sto.Values[0].(NatVal).Value
-		val2 := sto.Values[1].(KoinVal).Value
+		val1 := sto.Values[0].(value.NatVal).Value
+		val2 := sto.Values[1].(value.KoinVal).Value
 		if val1 != 2 || val2 != NatToKoin(1) {
 			t.Errorf("storage has unexpected value of (%d, %d)", val1, val2)
 		}
@@ -692,16 +677,15 @@ func TestKoinDivision(t *testing.T) {
 }
 
 func TestInterpretFailwithGas(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/currentfailwith_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/currentfailwith_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
 	fmt.Println(texp.String())
-	unitval := UnitVal{}
+	unitval := value.UnitVal{}
 	initgas := NatToKoin(100)
-	_, _, _, gas := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0,
+	_, _, _, gas := InterpretContractCall(texp, unitval, "main", value.KoinVal{1000000}, 0,
 		0, initgas)
 	if gas != initgas-6000 {
 		t.Errorf("remaining gas is %d, expected %d", gas, initgas-6000)
@@ -709,18 +693,17 @@ func TestInterpretFailwithGas(t *testing.T) {
 }
 
 func TestInterpretFailwith(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/currentfailwith_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/currentfailwith_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	unitval := UnitVal{}
-	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", KoinVal{1000000}, 0,
+	unitval := value.UnitVal{}
+	oplist, sto, _, _ := InterpretContractCall(texp, unitval, "main", value.KoinVal{1000000}, 0,
 		0, 99999999999)
 	switch sto.(type) {
-	case KoinVal:
-		sto := sto.(KoinVal)
+	case value.KoinVal:
+		sto := sto.(value.KoinVal)
 		if sto.Value != 1000000 {
 			t.Errorf("return value is %d, expected 1000000", sto.Value)
 		}
@@ -733,20 +716,19 @@ func TestInterpretFailwith(t *testing.T) {
 }
 
 func TestInterpretLetexps(t *testing.T) {
-	texp, ok := getTypedAST(t, "test_cases/letexps_interp")
-	if !ok {
-		t.Errorf("Semant error")
-		fmt.Println(texp.String())
+	texp, err := getTypedAST(t, "test_cases/letexps_interp")
+	if err != nil {
+		t.Errorf("Semant error: %s", err.Error())
 		return
 	}
-	params := TupleVal{[]Value{IntVal{7}, StringVal{"not imporatnt"}, NatVal{13}}}
-	storage := IntVal{19}
+	params := value.TupleVal{[]value.Value{value.IntVal{7}, value.StringVal{"not imporatnt"}, value.NatVal{13}}}
+	storage := value.IntVal{19}
 	oplist, sto, _, _ := InterpretContractCall(texp, params, "main", storage, 0,
 		0, 999999999999)
 	switch sto.(type) {
-	case IntVal:
-		if sto.(IntVal).Value != 19-(15+7+13) {
-			t.Errorf("storage has unexpected value of %d", sto.(IntVal).Value)
+	case value.IntVal:
+		if sto.(value.IntVal).Value != 19-(15+7+13) {
+			t.Errorf("storage has unexpected value of %d", sto.(value.IntVal).Value)
 		}
 	default:
 		t.Errorf("storage isn't expected type. It is type %s", reflect.TypeOf(sto).String())
@@ -768,18 +750,18 @@ func TestInitStorage(t *testing.T) {
 	}
 
 	switch init.(type) {
-	case StructVal:
-		init := init.(StructVal)
-		owner, ok := init.Field["owner"].(KeyVal)
-		if !ok || owner.Value != "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc" {
+	case value.StructVal:
+		init := init.(value.StructVal)
+		owner, ok := init.Field["owner"].(value.KeyVal)
+		if !ok || owner.Value != "1234567890abcdef1234567890abcdef" {
 			t.Errorf("init storage has wrong value in field %s", "owner")
 		}
-		funding_goal, ok := init.Field["funding_goal"].(KoinVal)
+		funding_goal, ok := init.Field["funding_goal"].(value.KoinVal)
 		if !ok || funding_goal.Value != 1100000 {
 			t.Errorf("init storage has wrong value in field %s. expected: 1100000, actual: %d",
 				"funding_goal", funding_goal.Value)
 		}
-		amount_raised, ok := init.Field["amount_raised"].(KoinVal)
+		amount_raised, ok := init.Field["amount_raised"].(value.KoinVal)
 		if !ok || amount_raised.Value != 0 {
 			t.Errorf("init storage has wrong value in field %s", "amount_raised")
 		}
@@ -797,28 +779,28 @@ func TestRunFundme(t *testing.T) {
 		return
 	}
 
-	checkstorage := func(msg string, stor Value, owner_ string, funding_goal_ uint64, amount_raised_ uint64) {
+	checkstorage := func(msg string, stor value.Value, owner_ string, funding_goal_ uint64, amount_raised_ uint64) {
 		switch stor.(type) {
-		case StructVal:
-			init := stor.(StructVal)
-			owner, ok := init.Field["owner"].(KeyVal)
+		case value.StructVal:
+			init := stor.(value.StructVal)
+			owner, ok := init.Field["owner"].(value.KeyVal)
 			if !ok || owner.Value != owner_ {
 				t.Errorf("storage has wrong value in field %s. msg: %s", "owner", msg)
 			}
-			funding_goal, ok := init.Field["funding_goal"].(KoinVal)
+			funding_goal, ok := init.Field["funding_goal"].(value.KoinVal)
 			if !ok || funding_goal.Value != funding_goal_ {
 				t.Errorf("storage has wrong value in field %s. msg: %s", "funding_goal", msg)
 			}
-			amount_raised, ok := init.Field["amount_raised"].(KoinVal)
+			amount_raised, ok := init.Field["amount_raised"].(value.KoinVal)
 			if !ok || amount_raised.Value != amount_raised_ {
 				t.Errorf("storage has wrong value in field %s. msg: %s", "amount_raised", msg)
 			}
 		}
 	}
 
-	ownerkey := "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc"
+	ownerkey := "1234567890abcdef1234567890abcdef"
 	otherkey := "asdasdasd"
-	param1 := KeyVal{otherkey}
+	param1 := value.KeyVal{otherkey}
 	oplist, stor, _, _ := InterpretContractCall(texp, param1, "main", stor, 900000,
 		0, 999999)
 	checkstorage("call1", stor, ownerkey, 1100000, 900000)
@@ -838,7 +820,7 @@ func TestRunFundme(t *testing.T) {
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
 	} else {
-		transferOp, ok := oplist[0].(Transfer)
+		transferOp, ok := oplist[0].(value.Transfer)
 		if !ok || transferOp.Amount != 400000 {
 			t.Errorf("unexpected returned operation")
 		}
@@ -853,19 +835,19 @@ func TestRunFundme(t *testing.T) {
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
 	} else {
-		failwithOp, ok := oplist[0].(FailWith)
+		failwithOp, ok := oplist[0].(value.FailWith)
 		if !ok || failwithOp.Msg != "funding goal already reached" {
 			t.Errorf("unexpected returned operation")
 		}
 	}
 
-	oplist, stor, _, _ = InterpretContractCall(texp, KeyVal{ownerkey}, "main", stor, 0,
+	oplist, stor, _, _ = InterpretContractCall(texp, value.KeyVal{ownerkey}, "main", stor, 0,
 		1100000, 999999)
 	checkstorage("call5", stor, ownerkey, 1100000, 1100000)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
 	} else {
-		transferOp, ok := oplist[0].(Transfer)
+		transferOp, ok := oplist[0].(value.Transfer)
 		if !ok || transferOp.Amount != 1100000 {
 			t.Errorf("unexpected returned operation")
 		}
@@ -889,16 +871,20 @@ func TestRunOutOfGas(t *testing.T) {
 		t.Errorf("didn't run out of gas in semantic check, %d remaining gas", remaining)
 	}
 
-	ownerkey := "YLtLqD1fWHthSVHPD116oYvsd4PTAHUoc"
-	param1 := KeyVal{ownerkey}
+	ownerkey := "1234567890abcdef1234567890abcdef"
+	param1 := value.KeyVal{ownerkey}
 
-	texp, stor, remaining, _ := InitiateContract(dat, 207000)
+	texp, stor, remaining, err := InitiateContract(dat, 207000)
+	if err != nil {
+		t.Errorf("error initiating contract")
+		return
+	}
 	oplist, stor, _, remaining := InterpretContractCall(texp, param1, "main", stor, 900000,
 		0, remaining)
 	if len(oplist) != 1 {
 		t.Errorf("oplist should have 1 operation but had %d", len(oplist))
 	} else {
-		failWith, ok := oplist[0].(FailWith)
+		failWith, ok := oplist[0].(value.FailWith)
 		if !ok || failWith.Msg != "ran out of gas!" {
 			t.Errorf("unexpected returned operation")
 		}
@@ -915,10 +901,11 @@ func TestCallContract(t *testing.T) {
 	}
 	texp, sto, _, err := InitiateContract(dat, 20000000)
 	if err != nil {
-		fmt.Println(err.Error())
+		t.Errorf(err.Error())
+		return
 	}
 
-	param := UnitVal{}
+	param := value.UnitVal{}
 
 	oplist, sto, _, _ := InterpretContractCall(texp, param, "second", sto, 900000,
 		0, 100000)
@@ -926,7 +913,7 @@ func TestCallContract(t *testing.T) {
 		t.Errorf("oplist should have length 1")
 		return
 	}
-	failwith2, ok := oplist[0].(FailWith)
+	failwith2, ok := oplist[0].(value.FailWith)
 	if !ok {
 		t.Errorf("op[0] should be failwith operation")
 	} else {
@@ -937,21 +924,21 @@ func TestCallContract(t *testing.T) {
 
 	oplist, sto, _, _ = InterpretContractCall(texp, param, "second", sto, 90000000,
 		0, 100000)
-	call, ok := oplist[0].(ContractCall)
+	call, ok := oplist[0].(value.ContractCall)
 	if !ok {
 		t.Errorf("op[0] should be failwith operation")
 	} else {
 		if call.Entry != "main" {
 			t.Errorf("entry has wrong value of %s", call.Entry)
 		}
-		if call.Address != "Aasa1231333" {
+		if call.Address != "aaba1231333aaba1231333aaba123133" {
 			t.Errorf("address has wrong value of %s", call.Address)
 		}
 		if call.Amount != 11500000 {
 			t.Errorf("amount has wrong value of %d", call.Amount)
 		}
 
-		if params, ok := call.Params.(KeyVal); !ok || params.Value != "aaaAAA" {
+		if params, ok := call.Params.(value.KeyVal); !ok || params.Value != "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
 			t.Errorf("params has wrong value of %s and type %s", params, reflect.TypeOf(params).String())
 		}
 	}
@@ -979,7 +966,7 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 		t.Errorf("parse error: " + err.Error())
 	} else {
 		parsed := par.(Exp)
-		typed, noErrors, remainingGas := AddTypes(parsed, 10000000)
+		typed, err, remainingGas := AddTypes(parsed, 10000000)
 		if remainingGas > 0 {
 			print("\n" + typed.String() + "\n")
 		} else {
@@ -987,18 +974,18 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 			return
 		}
 		if shouldFail {
-			if noErrors {
+			if err == nil {
 				t.Errorf("Didn't find any noErrors")
 			}
 		} else {
-			if !noErrors {
+			if err != nil {
 				t.Errorf("Found ErrorType")
 			}
 		}
 	}
 }
 
-func getTypedAST(t *testing.T, testpath string) (TypedExp, bool) {
+func getTypedAST(t *testing.T, testpath string) (TypedExp, error) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
 		t.Error("Error reading testfile:", testpath)
@@ -1008,8 +995,8 @@ func getTypedAST(t *testing.T, testpath string) (TypedExp, bool) {
 	par, err := p.Parse(lex)
 	if err != nil {
 		t.Errorf("parse error: " + err.Error())
-		return TypedExp{}, false
+		return TypedExp{}, err
 	}
-	texp, ok, _ := AddTypes(par.(Exp), 999999999)
-	return texp, ok
+	texp, err, _ := AddTypes(par.(Exp), 999999999)
+	return texp, err
 }

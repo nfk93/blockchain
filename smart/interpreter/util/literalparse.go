@@ -5,28 +5,33 @@ import (
 	"github.com/nfk93/blockchain/smart/interpreter/token"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 func ParseId(id interface{}) string {
 	return string(id.(*token.Token).Lit)
 }
 
-func ParseKey(key interface{}) string {
-	return string(key.(*token.Token).Lit)[3:]
+func ParseKey(key interface{}) (string, error) {
+	return removePrefixAndCheckLen(key)
 }
 
-func ParseAddress(add interface{}) string {
-	return string(add.(*token.Token).Lit)[3:]
+func ParseAddress(add interface{}) (string, error) {
+	return removePrefixAndCheckLen(add)
 }
 
-func ParseFloat(float interface{}) float64 {
-	f, _ := strconv.ParseFloat(string(float.(*token.Token).Lit), 64)
-	return f
+func removePrefixAndCheckLen(str interface{}) (string, error) {
+	str = string(str.(*token.Token).Lit)[3:]
+	if utf8.RuneCountInString(str.(string)) != 32 {
+		return "", fmt.Errorf("keys and addresses must have length 32")
+	} else {
+		return str.(string), nil
+	}
 }
 
-func ParseInt(i interface{}) int64 {
-	integer, _ := strconv.ParseInt(string(i.(*token.Token).Lit), 10, 64)
-	return integer
+func ParseInt(i interface{}) (int64, error) {
+	integer, err := strconv.ParseInt(string(i.(*token.Token).Lit), 10, 64)
+	return integer, err
 }
 
 func ParseString(str interface{}) string {

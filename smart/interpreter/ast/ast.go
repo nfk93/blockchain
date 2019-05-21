@@ -182,7 +182,10 @@ func (k KeyLit) String() string {
 	return fmt.Sprintf("KeyLit(key: %s)", k.Key)
 }
 
-func NewKeyLit(key string) (Exp, error) {
+func NewKeyLit(key string, err error) (Exp, error) {
+	if err != nil {
+		return nil, err
+	}
 	return KeyLit{key}, nil
 }
 
@@ -213,7 +216,10 @@ func (i IntLit) String() string {
 	return fmt.Sprintf("IntLit(val: %d)", i.Val)
 }
 
-func NewIntLit(val int64) (Exp, error) {
+func NewIntLit(val int64, err error) (Exp, error) {
+	if err != nil {
+		return nil, err
+	}
 	return IntLit{val}, nil
 }
 
@@ -239,7 +245,10 @@ func (a AddressLit) String() string {
 	return fmt.Sprintf("AddressLit(val: %s)", a.Val)
 }
 
-func NewAddressLit(val string) (Exp, error) {
+func NewAddressLit(val string, err error) (Exp, error) {
+	if err != nil {
+		return nil, err
+	}
 	return AddressLit{val}, nil
 }
 

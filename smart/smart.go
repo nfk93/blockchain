@@ -2,8 +2,10 @@ package smart
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter"
+	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"log"
 )
 
@@ -16,7 +18,7 @@ type state struct {
 type contractState struct {
 	balance        uint64
 	prepaidStorage uint64
-	storage        interpreter.Value
+	storage        value.Value
 	storagecap     uint64
 	expirationslot uint64
 }
@@ -30,7 +32,7 @@ var stateTree = make(map[string]state)
 func CallContract(
 	address string,
 	entry string,
-	params interpreter.Value,
+	params value.Value,
 	amount uint64,
 	gas uint64,
 	blockhash, parenthash string,
@@ -168,7 +170,7 @@ type ContractTransaction struct {
 func interpretContract(
 	address string,
 	entry string,
-	params interpreter.Value,
+	params value.Value,
 	amount uint64,
 	gas_ uint64,
 	states map[string]contractState,
@@ -214,7 +216,7 @@ func interpretContract(
 }
 
 func handleOpList(
-	operations []interpreter.Operation,
+	operations []value.Operation,
 	tempStates map[string]contractState,
 	gas, slot uint64,
 ) ([]ContractTransaction, error, uint64) {
@@ -222,8 +224,8 @@ func handleOpList(
 	transfers := make([]ContractTransaction, 0)
 	for _, op := range operations {
 		switch op.(type) {
-		case interpreter.ContractCall:
-			callop := op.(interpreter.ContractCall)
+		case value.ContractCall:
+			callop := op.(value.ContractCall)
 			tempStates_, trans, remainingGas, callError :=
 				interpretContract(callop.Address, callop.Entry, callop.Params, callop.Amount, gas, tempStates, slot)
 			if callError != nil {
@@ -233,14 +235,24 @@ func handleOpList(
 				gas = remainingGas
 				transfers = append(transfers, trans...)
 			}
-		case interpreter.FailWith:
-			return nil, fmt.Errorf(op.(interpreter.FailWith).Msg), gas
-		case interpreter.Transfer:
-			transferop := op.(interpreter.Transfer)
+		case value.FailWith:
+			return nil, fmt.Errorf(op.(value.FailWith).Msg), gas
+		case value.Transfer:
+			transferop := op.(value.Transfer)
 			transfers = append(transfers, ContractTransaction{transferop.Key, transferop.Amount})
 		}
 	}
 	return transfers, nil, gas
+}
+
+func decodeParameters(data []byte) (value.Value, error) {
+	var unmarshalled interface{}
+	err := json.Unmarshal(data, unmarshalled)
+	if err != nil {
+		return nil, err
+	}
+	m := unmarshalled.(map[string]interface{})
+	return nil, nil
 }
 
 func getAddress(contractCode []byte) string {

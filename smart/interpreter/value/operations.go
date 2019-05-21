@@ -1,4 +1,4 @@
-package interpreter
+package value
 
 type Operation interface{}
 

@@ -2,6 +2,7 @@ package smart
 
 import (
 	"github.com/nfk93/blockchain/smart/interpreter"
+	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -22,17 +23,17 @@ func TestCallContract(t *testing.T) {
 
 	address := "A"
 	entry := "main"
-	params := interpreter.KeyVal{"asdasda"}
+	params := value.KeyVal{"asdasda"}
 	amount := uint64(500000)
 	gas := uint64(100000)
 
 	_, transfers, _, err := CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(interpreter.StructVal).Field["amount_raised"].(interpreter.KoinVal).Value != 500000 {
+	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 500000 {
 		t.Errorf("contract A storage has wrong value in amount_raised")
 	}
 	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
 	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(interpreter.StructVal).Field["amount_raised"].(interpreter.KoinVal).Value != 1100000 {
+	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 1100000 {
 		t.Errorf("contract A storage has wrong value in amount_raised")
 	}
 	if len(transfers) != 1 {
@@ -75,7 +76,7 @@ func TestCallContract2(t *testing.T) {
 
 	address := "contract1"
 	entry := "main"
-	params := interpreter.UnitVal{}
+	params := value.UnitVal{}
 	amount := uint64(500000)
 	gas := uint64(100000)
 	ledger, transfers, remainingGas, err := CallContract(address, entry, params, amount, gas)
@@ -117,7 +118,7 @@ func TestInitiateContract(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	if contract, exists := contracts[getAddress(dat)]; !exists || contract.storage.(interpreter.IntVal).Value != 0 {
+	if contract, exists := contracts[getAddress(dat)]; !exists || contract.storage.(value.IntVal).Value != 0 {
 		t.Fail()
 	}
 }
@@ -142,7 +143,7 @@ func TestExpireContract(t *testing.T) {
 		t.Errorf("error initiating contract2: %s", err.Error())
 	}
 
-	ledger, transfers, remainingGas, err := CallContract(add1, "main", interpreter.UnitVal{}, 10000, 100000)
+	ledger, transfers, remainingGas, err := CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
 	if ledger[add1] != uint64(10000-(2*(int(10000/19)))) {
 		t.Errorf("contract1 has wrong balance: %d, expected %d", ledger[add1], 10000-(2*(int(500000/19))))
 	}
@@ -170,7 +171,7 @@ func TestExpireContract(t *testing.T) {
 	}
 
 	ExpireContract(add2)
-	ledger, transfers, remainingGas, err = CallContract(add1, "main", interpreter.UnitVal{}, 10000, 100000)
+	ledger, transfers, remainingGas, err = CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
 	if ledger[add2] != 0 {
 		t.Errorf("contract 2 balance not empty")
 	}
@@ -195,7 +196,7 @@ func TestOutOfGas(t *testing.T) {
 		t.Error("Error reading testfile")
 	}
 	addr, _, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", interpreter.KeyVal{""}, 100, 1000)
+	_, _, _, err = CallContract(addr, "main", value.KeyVal{""}, 100, 1000)
 	if err == nil {
 		t.Errorf("this should return an error from running out of gas")
 	}
@@ -208,7 +209,7 @@ func TestInsufficientFunds(t *testing.T) {
 		t.Error("Error reading testfile")
 	}
 	addr, _, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", interpreter.UnitVal{}, 100, 100000000000)
+	_, _, _, err = CallContract(addr, "main", value.UnitVal{}, 100, 100000000000)
 	if err == nil {
 		t.Errorf("this should return an error from having insufficient funds")
 	}

@@ -79,21 +79,6 @@ func TestLexSimpleEntry(t *testing.T) {
 	compare_tokens(t, strings, lex)
 } */
 
-func TestLexFloat(t *testing.T) {
-	bytes := read_file("test_cases/float", t)
-	lex := NewLexer(bytes)
-
-	strings := []string{
-		LET, LIDENT, EQ, FLOAT_LIT, IN,
-		LET, LIDENT, EQ, FLOAT_LIT, IN,
-		LET, LIDENT, EQ, FLOAT_LIT, IN,
-		LET, LIDENT, EQ, INT_LIT, IN,
-		LET, LIDENT, EQ, FLOAT_LIT, IN,
-		LET, LIDENT, EQ, FLOAT_LIT, IN,
-		LET, LIDENT, EQ, LIDENT, PLUS, LIDENT, MINUS, LIDENT, EOF}
-	compare_tokens(t, strings, lex)
-}
-
 func TestNoInvalidsInFundMe(t *testing.T) {
 	bytes := read_file(os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme", t)
 	lex := NewLexer(bytes)

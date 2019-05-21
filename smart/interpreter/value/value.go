@@ -1,4 +1,4 @@
-package interpreter
+package value
 
 const bitcost = uint64(1)
 const charcost = uint64(32)
