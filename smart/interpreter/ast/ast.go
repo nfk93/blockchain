@@ -232,8 +232,8 @@ func (n NatLit) String() string {
 	return fmt.Sprintf("NatLit(val: %d)", n.Val)
 }
 
-func NewNatLit(val uint64) (Exp, error) {
-	return NatLit{val}, nil
+func NewNatLit(val uint64, err error) (Exp, error) {
+	return NatLit{val}, err
 }
 
 /* AddressLit */

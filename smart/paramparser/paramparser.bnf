@@ -1,0 +1,53 @@
+/* Lexical Part */
+
+_hex        : 'a'-'f' | '0'-'9' ;
+_hex32      : _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
+              _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex ;
+key_lit     : 'k' 'n' '1' _hex32 ;
+add_lit     : 'k' 'n' '2' _hex32 ;
+
+_digit      : '0'-'9' ;
+_amount     : _digit { _digit } ;
+koin_lit    : _amount '.' _amount 'k' 'n'
+            | _amount 'k' 'n' ;
+nat_lit     : _amount 'p' ;
+int_lit     : {'-'} _digit { _digit } ;
+
+_idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;
+lident      : ( 'a'-'z' | '_' ) { _idchars } ;
+
+string_lit  : '"' {.} '"' ;
+
+!whitespace : ' ' | '\t' | '\n' | '\r' ;
+
+
+
+/* Syntax Part */
+
+<< import "github.com/nfk93/blockchain/smart/paramparser/valuebuilder" >>
+
+Constant    : key_lit                                      << valuebuilder.NewKeyVal($0) >>
+            | add_lit                                      << valuebuilder.NewAddressVal($0) >>
+            | "true"                                       << valuebuilder.NewBoolVal(true) >>
+            | "false"                                      << valuebuilder.NewBoolVal(false) >>
+            | nat_lit                                      << valuebuilder.NewNatVal($0) >>
+            | koin_lit                                     << valuebuilder.NewKoinVal($0) >>
+            | int_lit                                      << valuebuilder.NewIntVal($0) >>
+            | string_lit                                   << valuebuilder.NewStringVal($0) >>
+            | "()"                                         << valuebuilder.NewUnitVal() >>
+            | Tuple                                        << >>
+            | Array                                        << >>
+            | Struct                                       << >> ;
+
+Array       : "[" Array1 "]"                               << >>
+            | "[]"                                         << >> ;
+Array1      : Constant                                     << >>
+            | Array1 ";" Constant                          << >> ;
+
+Struct      : "{" Struct1 "}"                              << >> ;
+Struct1     : lident "=" Constant ";"                      << >>
+            | Struct1 lident "=" Constant ";"              << >> ;
+
+Tuple       : "(" Tuple1 ")"                               << >> ;
+Tuple1      : Constant "," Tuple1                          << >>
+            | Constant                                     << >> ;

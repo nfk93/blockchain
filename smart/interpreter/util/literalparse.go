@@ -59,8 +59,8 @@ func ParseKoin(kn interface{}) (uint64, error) {
 	}
 }
 
-func ParseNat(i interface{}) uint64 {
+func ParseNat(i interface{}) (uint64, error) {
 	str := string(i.(*token.Token).Lit)
-	val, _ := strconv.ParseUint(str[:(len(str)-1)], 10, 64)
-	return val
+	val, err := strconv.ParseUint(str[:(len(str)-1)], 10, 64)
+	return val, err
 }
