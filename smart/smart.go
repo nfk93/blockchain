@@ -2,10 +2,10 @@ package smart
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
+	"github.com/nfk93/blockchain/smart/paramparser"
 	"log"
 )
 
@@ -32,9 +32,9 @@ var stateTree = make(map[string]state)
 func CallContract(
 	address string,
 	entry string,
-	params value.Value,
+	params string,
 	amount uint64,
-	gas uint64,
+	gas_ uint64,
 	blockhash, parenthash string,
 	slot uint64, // TODO use slot and parent slot to update prepaidstorage and expire contracts
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
@@ -61,7 +61,22 @@ func CallContract(
 		tempStates[k] = v
 	}
 
-	newStates, transfers, gas, callError := interpretContract(address, entry, params, amount, gas, tempStates, slot)
+	// initial cost
+	gas := gas_
+	if int64(gas)-10000 < 0 {
+		gas = 0
+		return nil, nil, gas, fmt.Errorf("not enough gas. calling a contract has a minimum cost of 0.1kn")
+	} else {
+		gas = gas - 10000
+	}
+
+	// decode parameters
+	paramval, paramErr := decodeParameters(params)
+	if paramErr != nil {
+		return nil, nil, gas, fmt.Errorf("syntax error in parameters:, %s", paramErr.Error())
+	}
+
+	newStates, transfers, gas, callError := interpretContract(address, entry, paramval, amount, gas, tempStates, slot)
 	if callError != nil {
 		return getContractBalances(contractstates), nil, gas, callError
 	} else {
@@ -176,17 +191,10 @@ func interpretContract(
 	states map[string]contractState,
 	slot uint64,
 ) (contractStates map[string]contractState, transfers []ContractTransaction, remainingGas uint64, callError error) {
-
 	gas := gas_
-
 	contract, exist1 := contracts[address]
 	state, exist2 := states[address]
 	if !exist1 || !exist2 {
-		if int64(gas)-10000 < 0 {
-			gas = 0
-		} else {
-			gas = gas - 10000
-		}
 		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
 	}
 
@@ -245,14 +253,8 @@ func handleOpList(
 	return transfers, nil, gas
 }
 
-func decodeParameters(data []byte) (value.Value, error) {
-	var unmarshalled interface{}
-	err := json.Unmarshal(data, unmarshalled)
-	if err != nil {
-		return nil, err
-	}
-	m := unmarshalled.(map[string]interface{})
-	return nil, nil
+func decodeParameters(params string) (value.Value, error) {
+	return paramparser.ParseParams(params)
 }
 
 func getAddress(contractCode []byte) string {

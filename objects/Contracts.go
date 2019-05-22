@@ -9,7 +9,7 @@ import (
 type ContractCall struct {
 	Call      string
 	Entry     string
-	Params    Parameter
+	Params    string
 	Amount    uint64
 	Gas       uint64
 	Address   string
