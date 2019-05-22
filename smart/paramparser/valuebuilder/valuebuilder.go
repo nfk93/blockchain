@@ -48,12 +48,12 @@ func NewUnitVal() (Value, error) {
 	return UnitVal{}, nil
 }
 
-func NewEmptyArrayVal() (Value, error) {
+func NewEmptyListVal() (Value, error) {
 	vals := make([]Value, 0)
 	return ListVal{vals}, nil
 }
 
-func NewArrayVal(v interface{}) (Value, error) {
+func NewListVal(v interface{}) (Value, error) {
 	val, ok := v.(Value)
 	if !ok {
 		return nil, fmt.Errorf("encountered error when parsing values in list")
@@ -75,6 +75,60 @@ func ConcatListVal(list_, val_ interface{}) (Value, error) {
 	} else {
 		return ListVal{append(list.Values, val)}, nil
 	}
+}
+
+func NewStructVal(ident, val interface{}) (Value, error) {
+	id := ParseId(ident)
+	m := make(map[string]Value)
+	v, ok := val.(Value)
+	if !ok {
+		return nil, fmt.Errorf("struct field %s has unknown value", id)
+	} else {
+		m[id] = v
+		return StructVal{m}, nil
+	}
+}
+
+func AddStructField(struc, ident, val interface{}) (Value, error) {
+	s, ok := struc.(StructVal)
+	if !ok {
+		return nil, fmt.Errorf("trying to add field to a non-struct value")
+	}
+	id := ParseId(ident)
+	v, ok := val.(Value)
+	if !ok {
+		return nil, fmt.Errorf("struct field %s has unknown value", id)
+	} else if _, exists := s.Field[id]; exists {
+		return nil, fmt.Errorf("struct field %s is already defined", id)
+	} else {
+		s.Field[id] = v
+		return s, nil
+	}
+}
+
+func NewTupleVal(v1, v2 interface{}) (Value, error) {
+	val1, ok1 := v1.(Value)
+	val2, ok2 := v2.(Value)
+	if !ok1 || !ok2 {
+		return nil, fmt.Errorf("unknown value encountered in tuple")
+	}
+	return TupleVal{[]Value{val1, val2}}, nil
+}
+
+func AddTupleEntry(tup, v interface{}) (Value, error) {
+	tuple, ok := tup.(TupleVal)
+	if !ok {
+		return nil, fmt.Errorf("trying to add entry to non-tuple value")
+	}
+	val, ok := v.(Value)
+	if !ok {
+		return nil, fmt.Errorf("unknown value encountered in tuple")
+	}
+	return TupleVal{append(tuple.Values, val)}, nil
+}
+
+func ParseId(id interface{}) string {
+	return string(id.(*token.Token).Lit)
 }
 
 func ParseKey(key interface{}) (string, error) {
@@ -159,6 +213,8 @@ func getTypeCode(val Value) code {
 		return ADDRESS
 	case NatVal:
 		return NAT
+	case KoinVal:
+		return KOIN
 	case BoolVal:
 		return BOOL
 	case ListVal:

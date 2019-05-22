@@ -12,7 +12,7 @@ func TestCallContract(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestCallContract2(t *testing.T) {
 	// testing chain of calls
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestCallContract2(t *testing.T) {
 
 	dat, err = ioutil.ReadFile("testcases/contract2")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err = interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
@@ -112,7 +112,7 @@ func TestInitiateContract(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	_, _, _, err = InitiateContract(dat, 1000000)
 	if err != nil {
@@ -127,11 +127,11 @@ func TestExpireContract(t *testing.T) {
 	resetMaps()
 	dat1, err := ioutil.ReadFile("testcases/contract1_altaddress")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	dat2, err := ioutil.ReadFile("testcases/contract2")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 
 	add1, _, _, err := InitiateContract(dat1, 99999999999999)
@@ -193,7 +193,7 @@ func TestOutOfGas(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	addr, _, _, _ := InitiateContract(dat, 999999999)
 	_, _, _, err = CallContract(addr, "main", value.KeyVal{""}, 100, 1000)
@@ -206,7 +206,7 @@ func TestInsufficientFunds(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile("testcases/expensive")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	addr, _, _, _ := InitiateContract(dat, 999999999)
 	_, _, _, err = CallContract(addr, "main", value.UnitVal{}, 100, 100000000000)

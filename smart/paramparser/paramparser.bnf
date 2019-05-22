@@ -36,18 +36,18 @@ Constant    : key_lit                                      << valuebuilder.NewKe
             | string_lit                                   << valuebuilder.NewStringVal($0) >>
             | "()"                                         << valuebuilder.NewUnitVal() >>
             | Tuple                                        << >>
-            | Array                                        << >>
+            | List                                         << >>
             | Struct                                       << >> ;
 
-Array       : "[" Array1 "]"                               << >>
-            | "[]"                                         << >> ;
-Array1      : Constant                                     << >>
-            | Array1 ";" Constant                          << >> ;
+Tuple       : "(" Tuple1 ")"                               << $1, nil >> ;
+Tuple1      : Tuple1 "," Constant                          << valuebuilder.AddTupleEntry($0, $2) >>
+            | Constant "," Constant                        << valuebuilder.NewTupleVal($0, $2) >> ;
 
-Struct      : "{" Struct1 "}"                              << >> ;
-Struct1     : lident "=" Constant ";"                      << >>
-            | Struct1 lident "=" Constant ";"              << >> ;
+List        : "[" List1 "]"                                << $1, nil >>
+            | "[]"                                         << valuebuilder.NewEmptyListVal() >> ;
+List1       : Constant                                     << valuebuilder.NewListVal($0) >>
+            | List1 ";" Constant                           << valuebuilder.ConcatListVal($0, $2) >> ;
 
-Tuple       : "(" Tuple1 ")"                               << >> ;
-Tuple1      : Constant "," Tuple1                          << >>
-            | Constant                                     << >> ;
+Struct      : "{" Struct1 "}"                              << $1, nil >> ;
+Struct1     : lident "=" Constant ";"                      << valuebuilder.NewStructVal($0, $2) >>
+            | Struct1 lident "=" Constant ";"              << valuebuilder.AddStructField($0, $1, $3) >> ;

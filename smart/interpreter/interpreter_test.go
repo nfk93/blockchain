@@ -741,7 +741,7 @@ func TestInterpretLetexps(t *testing.T) {
 func TestInitStorage(t *testing.T) {
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	_, init, _, err := InitiateContract(dat, 999999999999999)
 	if err != nil {
@@ -771,7 +771,7 @@ func TestInitStorage(t *testing.T) {
 func TestRunFundme(t *testing.T) {
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err := InitiateContract(dat, 999999999)
 	if err != nil {
@@ -860,7 +860,7 @@ func TestRunFundme(t *testing.T) {
 func TestRunOutOfGas(t *testing.T) {
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	_, _, remaining, err := InitiateContract(dat, 200000)
 	if err == nil {
@@ -897,7 +897,7 @@ func TestRunOutOfGas(t *testing.T) {
 func TestCallContract(t *testing.T) {
 	dat, err := ioutil.ReadFile("test_cases/unexistingcontract_interp")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, sto, _, err := InitiateContract(dat, 20000000)
 	if err != nil {
@@ -957,7 +957,7 @@ func testFileError(t *testing.T, testpath string) {
 func testFile(t *testing.T, testpath string, shouldFail bool) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
-		t.Error("Error reading testfile:", testpath)
+		t.Error("Error reading testfile_noerror:", testpath)
 	}
 	lex := lexer.NewLexer(dat)
 	p := parser.NewParser()
@@ -988,7 +988,7 @@ func testFile(t *testing.T, testpath string, shouldFail bool) {
 func getTypedAST(t *testing.T, testpath string) (TypedExp, error) {
 	dat, err := ioutil.ReadFile(testpath)
 	if err != nil {
-		t.Error("Error reading testfile:", testpath)
+		t.Error("Error reading testfile_noerror:", testpath)
 	}
 	lex := lexer.NewLexer(dat)
 	p := parser.NewParser()
