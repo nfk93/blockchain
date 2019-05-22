@@ -78,7 +78,10 @@ func (t *Tree) processBlock(b Block) {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 
 	// Remove expired contracts from ledger in TL and from ConLayer
-	s.CleanExpiredContract(b.Slot)
+	// Collection storageCosts
+	expiring, reward := smart.NewBlockTreeNode(blockHash, b.ParentPointer, b.Slot)
+	s.CleanExpiredContract(expiring) // TODO: check if correct placement
+	accumulatedRewards += reward
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
@@ -93,9 +96,6 @@ func (t *Tree) processBlock(b Block) {
 			}
 		}
 	}
-
-	// Collection storageCosts
-	accumulatedRewards += smart.StorageCost(blockHash)
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {

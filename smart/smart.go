@@ -20,11 +20,38 @@ type contractState struct {
 	prepaidStorage uint64
 	storage        value.Value
 	storagecap     uint64
-	expirationslot uint64
 }
 
 var contracts = make(map[string]Contract)
 var stateTree = make(map[string]state)
+
+// TODO initialise statetree with genesisnode
+
+/*
+ * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
+ */
+func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContracts []string, storagereward uint64) {
+	expiring := make([]string, 0)
+	parentState := stateTree[parenthash]
+	slots := slot - parentState.slot
+
+	tempStates := make(map[string]contractState)
+	reward := uint64(0)
+	for k, v := range parentState.contractStates {
+		if v.prepaidStorage < slots*v.storagecap {
+			reward += v.prepaidStorage
+			expiring = append(expiring, k)
+		} else {
+			contractReward := slots * v.storagecap
+			v.prepaidStorage -= contractReward // this is positive, and so doesn't panic
+			tempStates[k] = v
+			reward += contractReward
+		}
+	}
+
+	stateTree[blockhash] = state{tempStates, slot, parenthash}
+	return expiring, reward
+}
 
 /*
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
@@ -36,7 +63,7 @@ func CallContract(
 	amount uint64,
 	gas_ uint64,
 	blockhash, parenthash string,
-	slot uint64, // TODO use slot and parent slot to update prepaidstorage and expire contracts
+	slot uint64,
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	if blockhash == "" {
 		// TODO making new block
@@ -44,10 +71,7 @@ func CallContract(
 
 	blockstate, exists := stateTree[blockhash]
 	if !exists {
-		blockstate, exists = stateTree[parenthash]
-	}
-	if !exists {
-		// should never happen
+		// should never happen, because of precondition
 		errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
 		log.Fatal(errstring)
 		return nil, nil, 0, nil
@@ -86,19 +110,6 @@ func CallContract(
 	}
 }
 
-/*
- * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
- */
-func ExpiringContract(slot uint64, parenthash string) []string {
-	result := make([]string, 0)
-	for k, v := range stateTree[parenthash].contractStates {
-		if v.expirationslot < slot {
-			result = append(result, k)
-		}
-	}
-	return result
-}
-
 func FinalizeBlock(blockHash string) {
 	// TODO Use for deleting old contracts
 	// do this by going through the state of each contract in the blockstate and deleting all contracts for which its
@@ -114,7 +125,7 @@ func InitiateContract(
 	prepaid uint64,
 	storageLimit uint64,
 	blockhash, parenthash string,
-	slot uint64, // TODO use slot and parent slot to update prepaidstorage and expire contracts
+	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
 
 	if storageLimit == 0 {
@@ -151,30 +162,12 @@ func InitiateContract(
 			tempStates[k] = v
 		}
 
-		expiration := slot + (prepaid / storageLimit)
 		tempStates[address] = contractState{0, prepaid, initstor,
-			storageLimit, expiration}
+			storageLimit}
 		newState := state{tempStates, slot, parenthash}
 		stateTree[blockhash] = newState
 		return address, remainingGas, nil
 	}
-}
-
-/*
- * Precondition: blockhash is a hash for a block that exists in the statetree
- */
-func StorageReward(blockhash string) (reward uint64) {
-	block := stateTree[blockhash]
-	parent := stateTree[block.parentHash]
-	slots := block.slot - parent.slot
-
-	reward = uint64(0)
-
-	for _, k := range parent.contractStates {
-		reward += min(k.prepaidStorage, slots*k.storagecap)
-	}
-
-	return reward
 }
 
 type ContractTransaction struct {
@@ -196,11 +189,6 @@ func interpretContract(
 	state, exist2 := states[address]
 	if !exist1 || !exist2 {
 		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
-	}
-
-	// check if contract has expired
-	if slot > state.expirationslot {
-		return nil, nil, gas, fmt.Errorf("attempted to call expired contract")
 	}
 
 	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.storage, amount,
@@ -268,12 +256,4 @@ func getContractBalances(states map[string]contractState) map[string]uint64 {
 		result[k] = v.balance
 	}
 	return result
-}
-
-func min(a, b uint64) uint64 {
-	if a <= b {
-		return a
-	} else {
-		return b
-	}
 }

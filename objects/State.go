@@ -154,12 +154,13 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 
 // Get list of contract addresses that expire from the smart contract layer
 // pay contract stake back to owner and delete account
-func (s *State) CleanExpiredContract(slot uint64) {
-	expiredContracts := smart.ExpiringContract(slot)
-	for _, conAddr := range expiredContracts {
+func (s *State) CleanExpiredContract(expiring []string) {
+	for _, conAddr := range expiring {
 		owner := s.ConOwners[conAddr]
 		s.Ledger[owner.Hash()] += s.ConStake[conAddr]
-		delete(s.ConStake, conAddr) // TODO Is this needed? Does anyway get a new state from scl...
+		delete(s.ConStake, conAddr)
+		// TODO Is this needed? Does anyway get a new state from scl...
+		// not sure what you mean, but I think it is very important, because of the resulting change in state -Niko
 	}
 
 }
