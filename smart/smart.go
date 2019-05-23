@@ -28,14 +28,16 @@ var stateTree = make(map[string]state)
 var newBlockState state
 var newBlockContracts = make(map[string]contract)
 
-// TODO initialise statetree with genesisnode
+func StartSmartContractLayer(genesishash string) {
+	contractStates := make(map[string]contractState)
+	stateTree[genesishash] = state{contractStates, 0, ""}
+}
 
 /*
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
  */
 func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContracts []string, storagereward uint64) {
 	expiring, newstate, reward := getNewState(parenthash, slot)
-
 	stateTree[blockhash] = newstate
 	return expiring, reward
 }

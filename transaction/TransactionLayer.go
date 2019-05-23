@@ -34,6 +34,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
+				smart.StartSmartContractLayer(tree.head)
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
