@@ -1,6 +1,7 @@
 package smart
 
 import (
+	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"log"
@@ -106,6 +107,30 @@ func TestInitiateContract4(t *testing.T) {
 		t.Errorf("should have no remaining gas. Had: %d", remaining)
 	}
 }
+
+func TestCallContract(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	fundme := getFundMeCode(t)
+	addr, _, _ := InitiateContract(fundme, 400000, 100000, 10000, "1")
+	ledger, trans, remainingGas, err := CallContract(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		100000, 10000, "1")
+
+	if err != nil {
+		t.Errorf("error in contractcall: %s", err.Error())
+		return
+	}
+	fmt.Println(ledger)
+	fmt.Println(trans)
+	fmt.Println(remainingGas)
+}
+
+// updating contractstate 1 and 2
+// branching contracts
+// chain of calls
+// previous state not mutated
+// expiring contract
+// storage reward
 
 func getFundMeCode(t *testing.T) []byte {
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")

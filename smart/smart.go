@@ -83,7 +83,7 @@ func CallContract(
 
 	newstate, transfers, remainingGas, err := handleContractCall(blockstate, contracts, amount, gas_, address, entry, params)
 	if err != nil {
-		return nil, nil, remainingGas, callError
+		return nil, nil, remainingGas, err
 	} else {
 		stateTree[blockhash] = newstate
 		return getContractBalances(newstate.contractStates), transfers, remainingGas, nil
@@ -294,7 +294,6 @@ func interpretContract(
 
 	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.storage, amount,
 		state.balance, gas)
-
 	if sto.Size() > state.storagecap {
 		return nil, nil, gas, fmt.Errorf("storage cap exceeded")
 	}
@@ -318,7 +317,6 @@ func handleOpList(
 	contracts_ map[string]contract,
 	gas uint64,
 ) ([]ContractTransaction, error, uint64) {
-
 	transfers := make([]ContractTransaction, 0)
 	for _, op := range operations {
 		switch op.(type) {
@@ -334,6 +332,7 @@ func handleOpList(
 				transfers = append(transfers, trans...)
 			}
 		case value.FailWith:
+			fmt.Println("hit here")
 			return nil, fmt.Errorf(op.(value.FailWith).Msg), gas
 		case value.Transfer:
 			transferop := op.(value.Transfer)
