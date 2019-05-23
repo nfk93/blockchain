@@ -99,7 +99,6 @@ func InitiateContract(
 	prepaid uint64,
 	storageLimit uint64,
 	blockhash string,
-	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
 
 	blockstate, exists := stateTree[blockhash]
@@ -115,7 +114,7 @@ func InitiateContract(
 	if err != nil {
 		return "", remainingGas, err
 	} else {
-		contracts[address] = contract{string(contractCode), texp, slot}
+		contracts[address] = contract{string(contractCode), texp, blockstate.slot}
 		stateTree[blockhash] = newstate
 		return address, remainingGas, nil
 	}
@@ -175,14 +174,13 @@ func InitiateContractOnNewBlock(
 	gas uint64,
 	prepaid uint64,
 	storageLimit uint64,
-	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
 	address := getAddress(contractCode)
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, newBlockState)
 	if err != nil {
 		return "", remainingGas, err
 	} else {
-		newBlockContracts[address] = contract{string(contractCode), texp, slot}
+		newBlockContracts[address] = contract{string(contractCode), texp, newstate.slot}
 		newBlockState = newstate
 		return address, remainingGas, nil
 	}

@@ -1,25 +1,93 @@
 package smart
 
 import (
-	"github.com/nfk93/blockchain/smart/interpreter"
+	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 )
 
+func TestNewBlockTreeNode(t *testing.T) {
+	reset()
+	expiring, reward := NewBlockTreeNode("newblock", "genesis", 5)
+	if len(expiring) != 0 {
+		t.Errorf("")
+	}
+	if reward != 0 {
+		t.Errorf("")
+	}
+}
+
+func TestNewBlockTreeNode1(t *testing.T) {
+	reset()
+	expiring, reward := NewBlockTreeNode("newblock", "genesis", 5)
+	if len(expiring) != 0 {
+		t.Errorf("")
+	}
+	if reward != 0 {
+		t.Errorf("")
+	}
+}
+
+func TestInitiateContract(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	fundme := getFundMeCode(t)
+	addr, remaining, err := InitiateContract(fundme, 1000000, 100000, 10000, "1")
+	fmt.Println(addr)
+	fmt.Println(remaining)
+	fmt.Println(err)
+	if c, exists := contracts[addr]; exists {
+		if c.createdAtSlot != 5 {
+			t.Errorf("createdAtSlot has wrong value")
+		}
+	} else {
+		t.Errorf("contract doesn't exist")
+	}
+	contstate, exists := stateTree["1"].contractStates[addr]
+	if !exists {
+		t.Errorf("contract state doesn't exist")
+	} else {
+		if contstate.storagecap != 10000 {
+			t.Errorf("")
+		}
+		if !value.Equals(contstate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef", 1100000, 0)) {
+			t.Errorf("storage has wrong value of %s", contstate.storage)
+		}
+	}
+}
+
+// not high enough storage limit
+// not enough prepaid
+// not enough gas
+
+func getFundMeCode(t *testing.T) []byte {
+	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+	if err != nil {
+		t.Error("Error reading testfile_noerror")
+		log.Fatal("can't read file")
+		return nil
+	}
+	return dat
+}
+
+func getFundmeStorage(owner string, fundgoal uint64, amountrsd uint64) value.Value {
+	return value.StructVal{Field: map[string]value.Value{
+		"owner":         value.KeyVal{owner},
+		"funding_goal":  value.KoinVal{fundgoal},
+		"amount_raised": value.KoinVal{amountrsd}}}
+}
+
+/*
 func TestCallContract(t *testing.T) {
-	resetMaps()
+	reset()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
 		t.Error("Error reading testfile_noerror")
 	}
-	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	contracts["A"] = contract{string(dat), texp, stor}
+
 
 	address := "A"
 	entry := "main"
@@ -48,9 +116,10 @@ func TestCallContract(t *testing.T) {
 		}
 	}
 }
-
+*/
+/*
 func TestCallContract2(t *testing.T) {
-	resetMaps()
+	reset()
 	// testing chain of calls
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
@@ -109,7 +178,7 @@ func TestCallContract2(t *testing.T) {
 }
 
 func TestInitiateContract(t *testing.T) {
-	resetMaps()
+	reset()
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
 		t.Error("Error reading testfile_noerror")
@@ -124,7 +193,7 @@ func TestInitiateContract(t *testing.T) {
 }
 
 func TestExpireContract(t *testing.T) {
-	resetMaps()
+	reset()
 	dat1, err := ioutil.ReadFile("testcases/contract1_altaddress")
 	if err != nil {
 		t.Error("Error reading testfile_noerror")
@@ -190,7 +259,7 @@ func TestExpireContract(t *testing.T) {
 }
 
 func TestOutOfGas(t *testing.T) {
-	resetMaps()
+	reset()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
 		t.Error("Error reading testfile_noerror")
@@ -203,7 +272,7 @@ func TestOutOfGas(t *testing.T) {
 }
 
 func TestInsufficientFunds(t *testing.T) {
-	resetMaps()
+	reset()
 	dat, err := ioutil.ReadFile("testcases/expensive")
 	if err != nil {
 		t.Error("Error reading testfile_noerror")
@@ -214,8 +283,11 @@ func TestInsufficientFunds(t *testing.T) {
 		t.Errorf("this should return an error from having insufficient funds")
 	}
 }
+*/
 
-func resetMaps() {
+func reset() {
 	contracts = make(map[string]contract)
-	contractBalances = make(map[string]uint64)
+	stateTree = make(map[string]state)
+	StartSmartContractLayer("genesis")
+	DoneCreatingNewBlock()
 }

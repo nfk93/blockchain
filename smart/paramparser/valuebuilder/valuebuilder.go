@@ -184,55 +184,9 @@ func ParseNat(i interface{}) (uint64, error) {
 	return val, err
 }
 
-type code int
-
-const (
-	STRING code = iota
-	INT
-	KEY
-	ADDRESS
-	NAT
-	BOOL
-	KOIN
-	LIST
-	TUPLE
-	STRUCT
-	UNIT
-	ERROR
-)
-
-func getTypeCode(val Value) code {
-	switch val.(type) {
-	case StringVal:
-		return STRING
-	case IntVal:
-		return INT
-	case KeyVal:
-		return KEY
-	case AddressVal:
-		return ADDRESS
-	case NatVal:
-		return NAT
-	case KoinVal:
-		return KOIN
-	case BoolVal:
-		return BOOL
-	case ListVal:
-		return LIST
-	case TupleVal:
-		return TUPLE
-	case StructVal:
-		return STRUCT
-	case UnitVal:
-		return UNIT
-	default:
-		return ERROR
-	}
-}
-
 func checkValueTypesEqual(val1, val2 Value) bool {
-	code1 := getTypeCode(val1)
-	code2 := getTypeCode(val2)
+	code1 := GetTypeCode(val1)
+	code2 := GetTypeCode(val2)
 	switch code1 {
 	case STRING, INT, KEY, BOOL, KOIN, UNIT, NAT, ADDRESS:
 		return code1 == code2
