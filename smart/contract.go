@@ -5,6 +5,7 @@ import (
 )
 
 type contract struct {
-	code string
-	tabs ast.TypedExp
+	code          string
+	tabs          ast.TypedExp
+	createdAtSlot uint64
 }

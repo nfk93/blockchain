@@ -116,10 +116,10 @@ func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash st
 
 		if blockhash == "" {
 			addr, remainGas, err = smart.InitiateContractOnNewBlock(contractInit.Code, contractInit.Gas,
-				contractInit.Prepaid, contractInit.StorageLimit)
+				contractInit.Prepaid, contractInit.StorageLimit, slot)
 		} else {
 			addr, remainGas, err = smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
-				contractInit.StorageLimit, blockhash)
+				contractInit.StorageLimit, blockhash, slot)
 		}
 
 		s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)

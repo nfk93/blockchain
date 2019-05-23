@@ -99,6 +99,7 @@ func InitiateContract(
 	prepaid uint64,
 	storageLimit uint64,
 	blockhash string,
+	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
 
 	blockstate, exists := stateTree[blockhash]
@@ -114,16 +115,21 @@ func InitiateContract(
 	if err != nil {
 		return "", remainingGas, err
 	} else {
-		contracts[address] = contract{string(contractCode), texp}
+		contracts[address] = contract{string(contractCode), texp, slot}
 		stateTree[blockhash] = newstate
 		return address, remainingGas, nil
 	}
 }
 
 func FinalizeBlock(blockHash string) {
-	// TODO Use for deleting old contracts
-	// do this by going through the state of each contract in the blockstate and deleting all contracts for which its
-	// expiration slot is lower than the slot of the block
+	blockstate := stateTree[blockHash]
+	for k, v := range contracts {
+		if _, exists := blockstate.contractStates[k]; !exists {
+			if v.createdAtSlot < blockstate.slot {
+				delete(contracts, k)
+			}
+		}
+	}
 }
 
 /*
@@ -169,13 +175,14 @@ func InitiateContractOnNewBlock(
 	gas uint64,
 	prepaid uint64,
 	storageLimit uint64,
+	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
 	address := getAddress(contractCode)
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, newBlockState)
 	if err != nil {
 		return "", remainingGas, err
 	} else {
-		newBlockContracts[address] = contract{string(contractCode), texp}
+		newBlockContracts[address] = contract{string(contractCode), texp, slot}
 		newBlockState = newstate
 		return address, remainingGas, nil
 	}
