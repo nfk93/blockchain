@@ -199,16 +199,25 @@ type ContractTransaction struct {
 func initiateContract(
 	contractCode []byte,
 	address string,
-	gas uint64,
+	gas_ uint64,
 	prepaid uint64,
 	storageLimit uint64,
 	blockstate state,
 ) (texp ast.TypedExp, s state, remainingGas uint64, err error) {
+
+	gas := gas_
+	if int64(gas)-10000 < 0 {
+		gas = 0
+		return ast.TypedExp{}, state{}, gas, fmt.Errorf("not enough gas. Initiating a contract has a minimum cost of 0.1kn")
+	} else {
+		gas = gas - 10000
+	}
+
 	if storageLimit == 0 {
 		return ast.TypedExp{}, state{}, gas, fmt.Errorf("storagelimit can't be 0")
 	}
-	if prepaid == 0 {
-		return ast.TypedExp{}, state{}, gas, fmt.Errorf("initial storage exceeds storage cap")
+	if prepaid == 0 || prepaid < storageLimit {
+		return ast.TypedExp{}, state{}, gas, fmt.Errorf("prepaid storage is too low")
 	}
 
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)

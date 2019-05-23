@@ -1,7 +1,6 @@
 package smart
 
 import (
-	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"log"
@@ -36,9 +35,13 @@ func TestInitiateContract(t *testing.T) {
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
 	addr, remaining, err := InitiateContract(fundme, 1000000, 100000, 10000, "1")
-	fmt.Println(addr)
-	fmt.Println(remaining)
-	fmt.Println(err)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err.Error())
+		return
+	}
+	if remaining >= 900000 {
+		t.Errorf("should have less remaining gas. Had: %d", remaining)
+	}
 	if c, exists := contracts[addr]; exists {
 		if c.createdAtSlot != 5 {
 			t.Errorf("createdAtSlot has wrong value")
@@ -59,9 +62,50 @@ func TestInitiateContract(t *testing.T) {
 	}
 }
 
-// not high enough storage limit
-// not enough prepaid
-// not enough gas
+func TestInitiateContract2(t *testing.T) {
+	// not high enough storage limit
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	fundme := getFundMeCode(t)
+	_, remaining, err := InitiateContract(fundme, 1000000, 100000, 100, "1")
+	if err == nil {
+		t.Errorf("should have error")
+		return
+	}
+	if remaining >= 900000 {
+		t.Errorf("should have less remaining gas. Had: %d", remaining)
+	}
+}
+
+func TestInitiateContract3(t *testing.T) {
+	// not enough prepaid
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	fundme := getFundMeCode(t)
+	_, remaining, err := InitiateContract(fundme, 1000000, 9000, 10000, "1")
+	if err == nil {
+		t.Errorf("should have error")
+		return
+	}
+	if remaining >= 1000000 {
+		t.Errorf("should have less remaining gas. Had: %d", remaining)
+	}
+}
+
+func TestInitiateContract4(t *testing.T) {
+	// not enough gas
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	fundme := getFundMeCode(t)
+	_, remaining, err := InitiateContract(fundme, 200000, 100000, 10000, "1")
+	if err == nil {
+		t.Errorf("should have error")
+		return
+	}
+	if remaining != 0 {
+		t.Errorf("should have no remaining gas. Had: %d", remaining)
+	}
+}
 
 func getFundMeCode(t *testing.T) []byte {
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
