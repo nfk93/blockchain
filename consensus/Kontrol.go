@@ -71,6 +71,7 @@ func finalize(slot uint64) { //TODO add generation of new leadershipNonce (when 
 		if head.Slot <= slot {
 			finalHash := head.CalculateBlockHash()
 			lastFinalized = finalHash
+			lastFinalizedSlot = head.Slot
 			go updateStake()
 			channels.FinalizeToTrans <- finalHash
 			break

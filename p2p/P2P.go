@@ -109,7 +109,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 			go handleTransaction(trans)
 		}
 	}()
-	// Send blocks coming from the Consensus layer via p2p, without delivering them back to consensuslayer
+	// Send blocks coming from the Consensus layer via p2p
 	go func() {
 		for {
 			block := <-inputBlock

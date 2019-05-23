@@ -16,9 +16,10 @@ var badBlocks map[string]bool
 var currentHead string
 var currentLength int
 var lastFinalized string
-var testDrawVal int //Remove when implementing proper calculateDrawVal
+var lastFinalizedSlot uint64
 var channels o.ChannelStruct
 var isVerbose bool
+var pendingBlocks map[string]bool
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose bool) {
 	pk = pkey
@@ -28,13 +29,14 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.Transaction)
 	badBlocks = make(map[string]bool)
+	pendingBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
-	testDrawVal = 0
 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
+			processPendingBlocks()
 			handleBlock(block)
 		}
 	}()
@@ -50,6 +52,16 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	}()
 }
 
+func processPendingBlocks() {
+	for k := range pendingBlocks {
+		b := blocks.get(k)
+		if b.Slot <= getCurrentSlot() && blocks.contains(b.ParentPointer) {
+			delete(pendingBlocks, b.CalculateBlockHash())
+			handleBlock(b)
+		}
+	}
+}
+
 //Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
 func handleTransaction(t o.Transaction) {
 	tLock.Lock()
@@ -62,7 +74,6 @@ func handleTransaction(t o.Transaction) {
 		transactions[t.ID] = t
 		unusedTransactions[t.ID] = true
 	}
-
 }
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
@@ -80,7 +91,6 @@ func handleBlock(b o.Block) {
 		fmt.Println("CL REJECTED! DRAW didn't validate...")
 		return
 	}
-
 	addBlock(b)
 }
 
@@ -90,9 +100,10 @@ func handleGenesisBlock(b o.Block) {
 	sendBlockToTL(b)
 	currentHead = b.CalculateBlockHash()
 	lastFinalized = b.CalculateBlockHash()
+	lastFinalizedSlot = 0
 }
 
-// Calculates and compares pathWeigth of currentHead and a new block not extending the tree of the head.
+// Calculates and compares pathWeight of currentHead and a new block not extending the tree of the head.
 // Updates the head and initiates rollbacks accordingly
 func comparePathWeight(b o.Block) {
 	l := 1
@@ -103,12 +114,14 @@ func comparePathWeight(b o.Block) {
 		}
 		parent := blocks.get(block.ParentPointer)
 
-		if parent.Slot == 0 { // *TODO Should probably refactor to use the last finalized block, to prevent excessive work
+		if parent.CalculateBlockHash() == lastFinalized {
+			l += int(lastFinalizedSlot)
 			break
 		}
 		block = parent
 		l += 1
 	}
+
 	if l < currentLength {
 		return
 	}
@@ -216,9 +229,6 @@ func sendBranchToTL(branch []o.Block) {
 
 //Used to send a new head to the transaction layer
 func sendBlockToTL(block o.Block) {
-	if block.BakerID.String() == pk.String() {
-	}
-
 	channels.BlockToTrans <- block
 }
 
@@ -249,7 +259,8 @@ func isLegalExtension(b o.Block) bool {
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
-	if b.Slot > getCurrentSlot() { //We do not accept early blocks
+	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) { //We do not immediately process blocks that are early or where the parent is missing.
+		pendingBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
 	return true

@@ -31,7 +31,7 @@ func main() {
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", int(time.Second*1), "Specify the slot length (default=10sec)")
-	hardness = flag.Float64("hardness", 0.30, "Specify hardness (default=0.90)")
+	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	flag.Parse()
 	secretKey, publicKey = crypto.KeyGen(2048)
