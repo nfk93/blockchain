@@ -19,7 +19,7 @@ func TestCallContract(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	contracts["A"] = Contract{string(dat), texp, stor}
+	contracts["A"] = contract{string(dat), texp, stor}
 
 	address := "A"
 	entry := "main"
@@ -61,7 +61,7 @@ func TestCallContract2(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	contracts["contract1"] = Contract{string(dat), texp, stor}
+	contracts["contract1"] = contract{string(dat), texp, stor}
 
 	dat, err = ioutil.ReadFile("testcases/contract2")
 	if err != nil {
@@ -72,7 +72,7 @@ func TestCallContract2(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	contracts["contract2"] = Contract{string(dat), texp, stor}
+	contracts["contract2"] = contract{string(dat), texp, stor}
 
 	address := "contract1"
 	entry := "main"
@@ -216,6 +216,6 @@ func TestInsufficientFunds(t *testing.T) {
 }
 
 func resetMaps() {
-	contracts = make(map[string]Contract)
+	contracts = make(map[string]contract)
 	contractBalances = make(map[string]uint64)
 }

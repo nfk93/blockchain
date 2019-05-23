@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter"
+	"github.com/nfk93/blockchain/smart/interpreter/ast"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"github.com/nfk93/blockchain/smart/paramparser"
 	"log"
@@ -12,7 +13,7 @@ import (
 type state struct {
 	contractStates map[string]contractState
 	slot           uint64
-	parentHash     string
+	parenthash     string
 }
 
 type contractState struct {
@@ -22,8 +23,10 @@ type contractState struct {
 	storagecap     uint64
 }
 
-var contracts = make(map[string]Contract)
+var contracts = make(map[string]contract)
 var stateTree = make(map[string]state)
+var newBlockState state
+var newBlockContracts = make(map[string]contract)
 
 // TODO initialise statetree with genesisnode
 
@@ -31,10 +34,16 @@ var stateTree = make(map[string]state)
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
  */
 func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContracts []string, storagereward uint64) {
+	expiring, newstate, reward := getNewState(parenthash, slot)
+
+	stateTree[blockhash] = newstate
+	return expiring, reward
+}
+
+func getNewState(parenthash string, slot uint64) (expires []string, s state, storageReward uint64) {
 	expiring := make([]string, 0)
 	parentState := stateTree[parenthash]
 	slots := slot - parentState.slot
-
 	tempStates := make(map[string]contractState)
 	reward := uint64(0)
 	for k, v := range parentState.contractStates {
@@ -48,13 +57,11 @@ func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContra
 			reward += contractReward
 		}
 	}
-
-	stateTree[blockhash] = state{tempStates, slot, parenthash}
-	return expiring, reward
+	return expiring, state{tempStates, slot, parenthash}, reward
 }
 
 /*
- * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
+ * Precondition: blockhash points to an existing state, i.e. _, exists := stateTree[blockhash] is always true
  */
 func CallContract(
 	address string,
@@ -62,51 +69,52 @@ func CallContract(
 	params string,
 	amount uint64,
 	gas_ uint64,
-	blockhash, parenthash string,
-	slot uint64,
+	blockhash string,
 ) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
-	if blockhash == "" {
-		// TODO making new block
-	}
-
 	blockstate, exists := stateTree[blockhash]
 	if !exists {
 		// should never happen, because of precondition
-		errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
+		errstring := fmt.Sprintf("blockhash node does not exist for hash: %s", blockhash)
 		log.Fatal(errstring)
 		return nil, nil, 0, nil
 	}
 
-	// add contractcall to state for given blockhash
-	contractstates := blockstate.contractStates
-
-	tempStates := make(map[string]contractState)
-	for k, v := range contractstates {
-		tempStates[k] = v
-	}
-
-	// initial cost
-	gas := gas_
-	if int64(gas)-10000 < 0 {
-		gas = 0
-		return nil, nil, gas, fmt.Errorf("not enough gas. calling a contract has a minimum cost of 0.1kn")
+	newstate, transfers, remainingGas, err := handleContractCall(blockstate, contracts, amount, gas_, address, entry, params)
+	if err != nil {
+		return nil, nil, remainingGas, callError
 	} else {
-		gas = gas - 10000
+		stateTree[blockhash] = newstate
+		return getContractBalances(newstate.contractStates), transfers, remainingGas, nil
+	}
+}
+
+/*
+ * Precondition: blockhash points to an existing state, i.e. _, exists := stateTree[blockhash] is always true
+ */
+func InitiateContract(
+	contractCode []byte,
+	gas uint64,
+	prepaid uint64,
+	storageLimit uint64,
+	blockhash string,
+) (addr string, remainingGas uint64, err error) {
+
+	blockstate, exists := stateTree[blockhash]
+	if !exists {
+		// should never happen, because of precondition
+		errstring := fmt.Sprintf("blockhash node does not exist for hash: %s", blockhash)
+		log.Fatal(errstring)
+		return "", 0, nil
 	}
 
-	// decode parameters
-	paramval, paramErr := decodeParameters(params)
-	if paramErr != nil {
-		return nil, nil, gas, fmt.Errorf("syntax error in parameters:, %s", paramErr.Error())
-	}
-
-	newStates, transfers, gas, callError := interpretContract(address, entry, paramval, amount, gas, tempStates, slot)
-	if callError != nil {
-		return getContractBalances(contractstates), nil, gas, callError
+	address := getAddress(contractCode)
+	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, blockstate)
+	if err != nil {
+		return "", remainingGas, err
 	} else {
-		newState := state{newStates, slot, parenthash}
-		stateTree[blockhash] = newState
-		return getContractBalances(newStates), transfers, gas, nil
+		contracts[address] = contract{string(contractCode), texp}
+		stateTree[blockhash] = newstate
+		return address, remainingGas, nil
 	}
 }
 
@@ -119,42 +127,90 @@ func FinalizeBlock(blockHash string) {
 /*
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
  */
-func InitiateContract(
+func ResetAndSetNewBlockStartPoint(parenthash string, slot uint64) (expiring []string, err error) {
+	newBlockContracts = make(map[string]contract)
+	expires, newstate, _ := getNewState(parenthash, slot)
+	newBlockState = newstate
+	return expires, nil
+}
+
+func CallContractOnNewBlock(
+	address string,
+	entry string,
+	params string,
+	amount uint64,
+	gas_ uint64,
+) (resultLedger map[string]uint64, transfers []ContractTransaction, remainingGas uint64, callError error) {
+
+	allcontracts := make(map[string]contract)
+	for k, v := range contracts {
+		allcontracts[k] = v
+	}
+	for k, v := range newBlockContracts {
+		allcontracts[k] = v
+	}
+
+	newstate, transfers, remainingGas, err := handleContractCall(newBlockState, allcontracts, amount, gas_, address, entry, params)
+	if err != nil {
+		return nil, nil, remainingGas, callError
+	} else {
+		newBlockState = newstate
+		return getContractBalances(newstate.contractStates), transfers, remainingGas, nil
+	}
+}
+
+/*
+ * Precondition: newBlockState is defined
+ */
+func InitiateContractOnNewBlock(
 	contractCode []byte,
 	gas uint64,
 	prepaid uint64,
 	storageLimit uint64,
-	blockhash, parenthash string,
-	slot uint64,
 ) (addr string, remainingGas uint64, err error) {
+	address := getAddress(contractCode)
+	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, newBlockState)
+	if err != nil {
+		return "", remainingGas, err
+	} else {
+		newBlockContracts[address] = contract{string(contractCode), texp}
+		newBlockState = newstate
+		return address, remainingGas, nil
+	}
+}
 
+func DoneCreatingNewBlock() {
+	newBlockContracts = nil
+	newBlockState = state{}
+}
+
+type ContractTransaction struct {
+	To     string
+	Amount uint64
+}
+
+func initiateContract(
+	contractCode []byte,
+	address string,
+	gas uint64,
+	prepaid uint64,
+	storageLimit uint64,
+	blockstate state,
+) (texp ast.TypedExp, s state, remainingGas uint64, err error) {
 	if storageLimit == 0 {
-		return "", remainingGas, fmt.Errorf("storagelimit can't be 0")
+		return ast.TypedExp{}, state{}, gas, fmt.Errorf("storagelimit can't be 0")
 	}
 	if prepaid == 0 {
-		return "", remainingGas, fmt.Errorf("initial storage exceeds storage cap")
+		return ast.TypedExp{}, state{}, gas, fmt.Errorf("initial storage exceeds storage cap")
 	}
 
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
 
 	if returnErr != nil {
-		return "", remainingGas, returnErr
+		return ast.TypedExp{}, state{}, remainingGas, returnErr
 	} else {
 		if initstor.Size() > storageLimit {
-			return "", remainingGas, fmt.Errorf("initial storage exceeds storage cap")
-		}
-
-		address := getAddress(contractCode)
-		contracts[address] = Contract{string(contractCode), texp}
-
-		blockstate, exists := stateTree[blockhash]
-		if !exists {
-			blockstate, exists = stateTree[parenthash]
-		}
-		if !exists {
-			errstring := fmt.Sprintf("parenthash node does not exist for hash: %s", parenthash)
-			log.Fatal(errstring)
-			return "", 0, nil
+			return ast.TypedExp{}, state{}, remainingGas, fmt.Errorf("initial storage exceeds storage cap")
 		}
 
 		tempStates := make(map[string]contractState)
@@ -164,15 +220,44 @@ func InitiateContract(
 
 		tempStates[address] = contractState{0, prepaid, initstor,
 			storageLimit}
-		newState := state{tempStates, slot, parenthash}
-		stateTree[blockhash] = newState
-		return address, remainingGas, nil
+		newState := state{tempStates, blockstate.slot, blockstate.parenthash}
+		return texp, newState, remainingGas, nil
 	}
 }
 
-type ContractTransaction struct {
-	To     string
-	Amount uint64
+func handleContractCall(
+	blockstate state,
+	contracts_ map[string]contract,
+	amount, gas_ uint64,
+	address, entry, params string,
+) (newstate state, transfers []ContractTransaction, remainingGas uint64, err error) {
+	// initial cost
+	gas := gas_
+	if int64(gas)-10000 < 0 {
+		gas = 0
+		return state{}, nil, gas, fmt.Errorf("not enough gas. calling a contract has a minimum cost of 0.1kn")
+	} else {
+		gas = gas - 10000
+	}
+
+	// decode parameters
+	paramval, paramErr := decodeParameters(params)
+	if paramErr != nil {
+		return state{}, nil, gas, fmt.Errorf("syntax error in parameters:, %s", paramErr.Error())
+	}
+
+	tempStates := make(map[string]contractState)
+	for k, v := range blockstate.contractStates {
+		tempStates[k] = v
+	}
+
+	newStates, transfers, gas, callError := interpretContract(address, entry, paramval, amount, gas, tempStates, contracts_)
+	if callError != nil {
+		return state{}, nil, gas, callError
+	} else {
+		newState := state{newStates, blockstate.slot, blockstate.parenthash}
+		return newState, transfers, gas, nil
+	}
 }
 
 func interpretContract(
@@ -182,10 +267,10 @@ func interpretContract(
 	amount uint64,
 	gas_ uint64,
 	states map[string]contractState,
-	slot uint64,
+	contracts_ map[string]contract,
 ) (contractStates map[string]contractState, transfers []ContractTransaction, remainingGas uint64, callError error) {
 	gas := gas_
-	contract, exist1 := contracts[address]
+	contract, exist1 := contracts_[address]
 	state, exist2 := states[address]
 	if !exist1 || !exist2 {
 		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
@@ -203,7 +288,7 @@ func interpretContract(
 	states[address] = state
 
 	// handle operation list
-	transfers, err, gas := handleOpList(oplist, states, gas, slot)
+	transfers, err, gas := handleOpList(oplist, states, contracts_, gas)
 	if err != nil {
 		return nil, nil, gas, err
 	} else {
@@ -214,7 +299,8 @@ func interpretContract(
 func handleOpList(
 	operations []value.Operation,
 	tempStates map[string]contractState,
-	gas, slot uint64,
+	contracts_ map[string]contract,
+	gas uint64,
 ) ([]ContractTransaction, error, uint64) {
 
 	transfers := make([]ContractTransaction, 0)
@@ -223,7 +309,7 @@ func handleOpList(
 		case value.ContractCall:
 			callop := op.(value.ContractCall)
 			tempStates_, trans, remainingGas, callError :=
-				interpretContract(callop.Address, callop.Entry, callop.Params, callop.Amount, gas, tempStates, slot)
+				interpretContract(callop.Address, callop.Entry, callop.Params, callop.Amount, gas, tempStates, contracts_)
 			if callError != nil {
 				return nil, callError, remainingGas
 			} else {

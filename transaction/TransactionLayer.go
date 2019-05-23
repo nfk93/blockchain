@@ -5,6 +5,7 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
+	"log"
 	"sort"
 )
 
@@ -124,8 +125,13 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
+	expiring, err := smart.ResetAndSetNewBlockStartPoint(t.head, blockData.SlotNo)
+	if err != nil {
+		// this should not happen
+		log.Fatal("trying to create a new block which parent doesn't exist")
+	}
 	// Remove expired contracts from ledger in TL and from ConLayer
-	s.CleanExpiredContract(blockData.SlotNo)
+	s.CleanExpiredContract(expiring)
 
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
@@ -155,8 +161,9 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		""}
 
 	b.SignBlock(blockData.Sk)
-	return b
 
+	smart.DoneCreatingNewBlock()
+	return b
 }
 
 // Helpers

@@ -110,8 +110,18 @@ func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount uint64
 
 func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
 	if s.Ledger[contractInit.Owner.Hash()] > contractInit.Prepaid+contractInit.Gas {
-		addr, remainGas, err := smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
-			contractInit.StorageLimit, blockhash, parenthash, slot)
+		var addr string
+		var remainGas uint64
+		var err error
+
+		if blockhash == "" {
+			addr, remainGas, err = smart.InitiateContractOnNewBlock(contractInit.Code, contractInit.Gas,
+				contractInit.Prepaid, contractInit.StorageLimit)
+		} else {
+			addr, remainGas, err = smart.InitiateContract(contractInit.Code, contractInit.Gas, contractInit.Prepaid,
+				contractInit.StorageLimit, blockhash)
+		}
+
 		s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)
 		if err != nil {
 			return contractInit.Gas - remainGas
@@ -130,10 +140,19 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 	if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
 		return 0
 	}
+	var newContractLedger map[string]uint64
+	var transferList []smart.ContractTransaction
+	var remainingGas uint64
+	var callerr error
 
-	// Runs contract at contract layer
-	newContractLedger, transferList, remainingGas, callerr := smart.CallContract(contract.Address,
-		contract.Entry, contract.Params, contract.Amount, contract.Gas, blockhash, parenthash, slot)
+	// Run contracts in smart contract layer
+	if blockhash == "" {
+		newContractLedger, transferList, remainingGas, callerr = smart.CallContractOnNewBlock(contract.Address,
+			contract.Entry, contract.Params, contract.Amount, contract.Gas)
+	} else {
+		newContractLedger, transferList, remainingGas, callerr = smart.CallContract(contract.Address,
+			contract.Entry, contract.Params, contract.Amount, contract.Gas, blockhash)
+	}
 
 	// Calc how much gas used and refund not used gas to caller
 	gasUsed := contract.Gas - remainingGas
