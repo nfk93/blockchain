@@ -1,0 +1,53 @@
+/* Lexical Part */
+
+_hex        : 'a'-'f' | '0'-'9' ;
+_hex32      : _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
+              _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex ;
+key_lit     : 'k' 'n' '1' _hex32 ;
+add_lit     : 'k' 'n' '2' _hex32 ;
+
+_digit      : '0'-'9' ;
+_amount     : _digit { _digit } ;
+koin_lit    : _amount '.' _amount 'k' 'n'
+            | _amount 'k' 'n' ;
+nat_lit     : _amount 'p' ;
+int_lit     : {'-'} _digit { _digit } ;
+
+_idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;
+lident      : ( 'a'-'z' | '_' ) { _idchars } ;
+
+string_lit  : '"' {.} '"' ;
+
+!whitespace : ' ' | '\t' | '\n' | '\r' ;
+
+
+
+/* Syntax Part */
+
+<< import "github.com/nfk93/blockchain/smart/paramparser/valuebuilder" >>
+
+Constant    : key_lit                                      << valuebuilder.NewKeyVal($0) >>
+            | add_lit                                      << valuebuilder.NewAddressVal($0) >>
+            | "true"                                       << valuebuilder.NewBoolVal(true) >>
+            | "false"                                      << valuebuilder.NewBoolVal(false) >>
+            | nat_lit                                      << valuebuilder.NewNatVal($0) >>
+            | koin_lit                                     << valuebuilder.NewKoinVal($0) >>
+            | int_lit                                      << valuebuilder.NewIntVal($0) >>
+            | string_lit                                   << valuebuilder.NewStringVal($0) >>
+            | "()"                                         << valuebuilder.NewUnitVal() >>
+            | Tuple                                        << >>
+            | List                                         << >>
+            | Struct                                       << >> ;
+
+Tuple       : "(" Tuple1 ")"                               << $1, nil >> ;
+Tuple1      : Tuple1 "," Constant                          << valuebuilder.AddTupleEntry($0, $2) >>
+            | Constant "," Constant                        << valuebuilder.NewTupleVal($0, $2) >> ;
+
+List        : "[" List1 "]"                                << $1, nil >>
+            | "[]"                                         << valuebuilder.NewEmptyListVal() >> ;
+List1       : Constant                                     << valuebuilder.NewListVal($0) >>
+            | List1 ";" Constant                           << valuebuilder.ConcatListVal($0, $2) >> ;
+
+Struct      : "{" Struct1 "}"                              << $1, nil >> ;
+Struct1     : lident "=" Constant ";"                      << valuebuilder.NewStructVal($0, $2) >>
+            | Struct1 lident "=" Constant ";"              << valuebuilder.AddStructField($0, $1, $3) >> ;

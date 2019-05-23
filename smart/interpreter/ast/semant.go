@@ -35,25 +35,24 @@ func InitialVarEnv() VarEnv {
 }
 
 func InitialStructEnv() StructEnv {
-	return ps.NewMap() // TODO
+	return ps.NewMap()
 }
 
 func todo(exp Exp, venv VarEnv, tenv TypeEnv, senv StructEnv) (TypedExp, VarEnv, TypeEnv, StructEnv) {
 	return TypedExp{exp, NotImplementedType{}}, venv, tenv, senv
 }
 
-// TODO make it such that return reflects whether or not any error were encountered
-func AddTypes(exp Exp, gas uint64) (texp TypedExp, ok bool, remainingGas uint64) {
+func AddTypes(exp Exp, gas uint64) (texp TypedExp, err_ error, remainingGas uint64) {
 	defer func() {
 		if err := recover(); err != nil {
-			texp = TypedExp{}
-			ok = false
+			texp = TypedExp{ErrorExpression{}, ErrorType{"out of gas!"}}
+			err_ = fmt.Errorf("ran out of gas building AST")
 			remainingGas = 0
 		}
 	}()
 
-	texp, _, _, _, gas = addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv(), gas)
-	return texp, checkForErrorTypes(texp), gas
+	texp, _, _, _, gas, err := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv(), gas)
+	return texp, err, gas
 }
 
 func checkForErrorTypes(texp_ Exp) bool {
@@ -412,7 +411,7 @@ func addTypes(
 	tenv TypeEnv,
 	senv StructEnv,
 	gas uint64,
-) (TypedExp, VarEnv, TypeEnv, StructEnv, uint64) {
+) (TypedExp, VarEnv, TypeEnv, StructEnv, uint64, error) {
 
 	if int64(gas)-1000 < 0 {
 		panic("ran out of gas!")
@@ -429,99 +428,125 @@ func addTypes(
 			switch exp1.(type) {
 			case TypeDecl:
 				typedecl := exp1.(TypeDecl)
-				texp, venv, tenv, senv, gas = addTypes(exp1, venv, tenv, senv, gas)
+				texp_, venv_, tenv_, senv_, gas_, err := addTypes(exp1, venv, tenv, senv, gas)
+				texp, venv, tenv, senv, gas = texp_, venv_, tenv_, senv_, gas_
 				roots = append(roots, texp)
+				if err != nil {
+					return TypedExp{TopLevel{roots}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+				}
 				if typedecl.Id == "storage" {
 					storageDefined = true
 				}
 			case EntryExpression:
 				entryexpression := exp1.(EntryExpression)
-				texp, venv, tenv, senv, gas = addTypes(exp1, venv, tenv, senv, gas)
+				texp_, venv_, tenv_, senv_, gas_, err := addTypes(exp1, venv, tenv, senv, gas)
+				texp, venv, tenv, senv, gas = texp_, venv_, tenv_, senv_, gas_
 				roots = append(roots, texp)
+				if err != nil {
+					return TypedExp{TopLevel{roots}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+				}
 				if entryexpression.Id == "main" {
 					mainEntryDefined = true
 				}
 			case StorageInitExp:
 				storageInitialized = true
-				texp, venv, tenv, senv, gas = addTypes(exp1, venv, tenv, senv, gas)
+				texp_, venv_, tenv_, senv_, gas_, err := addTypes(exp1, venv, tenv, senv, gas)
+				texp, venv, tenv, senv, gas = texp_, venv_, tenv_, senv_, gas_
 				roots = append(roots, texp)
+				if err != nil {
+					return TypedExp{TopLevel{roots}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+				}
 			default:
 				roots = append(roots, TypedExp{ErrorExpression{"can only have entries, typedecls and storageinits in toplevel"}, ErrorType{}})
+				return TypedExp{TopLevel{roots}, ErrorType{}}, venv, tenv, senv, gas, fmt.Errorf("can only have entries, typedecls and storageinits in toplevel")
 			}
 		}
 		if storageDefined && storageInitialized && mainEntryDefined {
-			return TypedExp{TopLevel{roots}, UnitType{}}, venv, tenv, senv, gas // TODO use toplevel type?
+			return TypedExp{TopLevel{roots}, UnitType{}}, venv, tenv, senv, gas, nil // TODO use toplevel type?
 		} else {
-			return TypedExp{TopLevel{roots}, ErrorType{"toplevel error, must define storage, main entry, and initialize storage"}}, venv, tenv, senv, gas
+			return TypedExp{TopLevel{roots}, ErrorType{}}, venv, tenv, senv, gas, fmt.Errorf("toplevel error, must define storage, main entry, and initialize storage")
 		}
 	case BinOpExp:
 		exp := exp.(BinOpExp)
-		leftTyped, _, _, _, gas := addTypes(exp.Left, venv, tenv, senv, gas)
-		rightTyped, _, _, _, gas := addTypes(exp.Right, venv, tenv, senv, gas)
+		leftTyped, _, _, _, gas, err1 := addTypes(exp.Left, venv, tenv, senv, gas)
+		rightTyped, _, _, _, gas, err2 := addTypes(exp.Right, venv, tenv, senv, gas)
 		texp := BinOpExp{leftTyped, exp.Op, rightTyped}
+		if err1 != nil {
+			return TypedExp{texp, ErrorType{err1.Error()}}, venv, tenv, senv, gas, err1
+		} else if err2 != nil {
+			return TypedExp{texp, ErrorType{err2.Error()}}, venv, tenv, senv, gas, err2
+		}
 		switch exp.Op {
 		case EQ, NEQ:
 			switch leftTyped.Type.Type() {
 			case BOOL, INT, KOIN, STRING, KEY, NAT:
 				break
 			default:
+				err := "Can't compare expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't compare expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 			if leftTyped.Type == rightTyped.Type {
-				return TypedExp{texp, NewBoolType()}, venv, tenv, senv, gas
+				return TypedExp{texp, NewBoolType()}, venv, tenv, senv, gas, nil
 			} else {
-				return TypedExp{texp, ErrorType{"ArgTypes of comparison are not equal"}},
-					venv, tenv, senv, gas
+				err := "ArgTypes of comparison are not equal"
+				return TypedExp{texp, ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		case GEQ, LEQ, LT, GT:
 			switch leftTyped.Type.Type() {
 			case INT, KOIN, NAT:
 				break
 			default:
+				err := "Can't compare expressions of type " + leftTyped.Type.String() + "with oper " + binOperToString(exp.Op)
 				return TypedExp{texp,
-						ErrorType{"Can't compare expressions of type " + leftTyped.Type.String() + "with oper " + binOperToString(exp.Op)}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 			if leftTyped.Type == rightTyped.Type {
-				return TypedExp{texp, NewBoolType()}, venv, tenv, senv, gas
+				return TypedExp{texp, NewBoolType()}, venv, tenv, senv, gas, nil
 			} else {
-				return TypedExp{texp, ErrorType{"ArgTypes of comparison are not equal"}},
-					venv, tenv, senv, gas
+				err := "ArgTypes of comparison are not equal"
+				return TypedExp{texp, ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		case PLUS:
 			switch leftTyped.Type.Type() {
 			case NAT:
 				switch rightTyped.Type.Type() {
 				case NAT:
-					return TypedExp{texp, NewNatType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewNatType()}, venv, tenv, senv, gas, nil
 				case INT:
-					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas, nil
 				default:
-					return TypedExp{texp, ErrorType{"Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()}},
-						venv, tenv, senv, gas
+					err := "Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()
+					return TypedExp{texp, ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf("Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String())
 				}
 			case INT:
 				switch rightTyped.Type.Type() {
 				case INT, NAT:
-					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas, nil
 				default:
-					return TypedExp{texp, ErrorType{"Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()}},
-						venv, tenv, senv, gas
+					err := "Can't add " + rightTyped.Type.String() + " to " + leftTyped.Type.String()
+					return TypedExp{texp, ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas, nil
 				default:
-					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
-						venv, tenv, senv, gas
+					err := "Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()
+					return TypedExp{texp, ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			default:
+				err := "Can't subtract expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't subtract expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 
 		case MINUS:
@@ -529,125 +554,140 @@ func addTypes(
 			case INT, NAT:
 				switch rightTyped.Type.Type() {
 				case INT, NAT:
-					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas, nil
 				default:
-					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
-						venv, tenv, senv, gas
+					err := "Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()
+					return TypedExp{texp, ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas, nil
 				default:
-					return TypedExp{texp, ErrorType{"Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()}},
-						venv, tenv, senv, gas
+					err := "Can't subtract " + rightTyped.Type.String() + " from " + leftTyped.Type.String()
+					return TypedExp{texp, ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			default:
+				err := "Can't subtract expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't subtract expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		case TIMES:
 			switch leftTyped.Type.Type() {
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case NAT:
-					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case NAT:
 				switch rightTyped.Type.Type() {
 				case NAT:
-					return TypedExp{texp, NewNatType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewNatType()}, venv, tenv, senv, gas, nil
 				case KOIN:
-					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewKoinType()}, venv, tenv, senv, gas, nil
 				case INT:
-					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case INT:
 				switch rightTyped.Type.Type() {
 				case INT, NAT:
-					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas
+					return TypedExp{texp, NewIntType()}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			default:
+				err := "Can't multiply expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't multiply expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		case DIVIDE:
 			switch leftTyped.Type.Type() {
 			case KOIN:
 				switch rightTyped.Type.Type() {
 				case KOIN:
-					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewKoinType()})}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewKoinType()})}, venv, tenv, senv, gas, nil
 				case NAT:
-					return TypedExp{texp, NewTupleType([]Type{NewKoinType(), NewKoinType()})}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewKoinType(), NewKoinType()})}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case NAT:
 				switch rightTyped.Type.Type() {
 				case INT:
-					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv, gas, nil
 				case NAT:
-					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewNatType()})}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewNatType(), NewNatType()})}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			case INT:
 				switch rightTyped.Type.Type() {
 				case NAT, INT:
-					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv, gas
+					return TypedExp{texp, NewTupleType([]Type{NewIntType(), NewNatType()})}, venv, tenv, senv, gas, nil
 				default:
+					err := "Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()
 					return TypedExp{texp,
-							ErrorType{"Can't divide expressions of type " + leftTyped.Type.String() + "with " + rightTyped.Type.String()}},
-						venv, tenv, senv, gas
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			default:
+				err := "Can't divide expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't divide expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		case OR, AND:
 			switch leftTyped.Type.Type() {
 			case NAT, BOOL:
 				break
 			default:
+				err := "Can't use logical binop on expressions of type " + leftTyped.Type.String()
 				return TypedExp{texp,
-						ErrorType{"Can't use logical binop on expressions of type " + leftTyped.Type.String()}},
-					venv, tenv, senv, gas
+						ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 			if leftTyped.Type == rightTyped.Type {
-				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv, gas
+				return TypedExp{texp, leftTyped.Type}, venv, tenv, senv, gas, nil
 			} else {
-				return TypedExp{texp, ErrorType{"ArgTypes of logical binop are not equal"}},
-					venv, tenv, senv, gas
+				err := "ArgTypes of logical binop are not equal"
+				return TypedExp{texp, ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 		default:
+			err := "Unrecogized Binop, Should not happen!"
 			return TypedExp{texp,
-					ErrorType{"Unrecogized Binop, Should not happen!"}},
-				venv, tenv, senv, gas
+					ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 	case TypeDecl:
 		exp := exp.(TypeDecl)
 		if lookupType(exp.Id, tenv) != nil {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("type %s already declared", exp.Id)}},
-				venv, tenv, senv, gas
+			err := fmt.Sprintf("type %s already declared", exp.Id)
+			return TypedExp{exp, ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		actualType, gas := translateType(exp.Typ, tenv, gas)
 		switch exp.Typ.Type() {
@@ -656,16 +696,17 @@ func addTypes(
 			structfieldstring := getStructFieldString(actualType)
 			_, contains := senv.Lookup(structfieldstring)
 			if contains {
-				return TypedExp{TypeDecl{exp.Id, actualType}, ErrorType{fmt.Sprintf("struct field names already used")}},
-					venv, tenv, senv, gas
+				err := fmt.Sprintf("struct field names already used")
+				return TypedExp{TypeDecl{exp.Id, actualType}, ErrorType{err}},
+					venv, tenv, senv, gas, fmt.Errorf(err)
 			} else {
 				tenv_ := tenv.Set(exp.Id, actualType)
 				senv = senv.Set(structfieldstring, actualType)
-				return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv, gas // TODO perhaps use decl type
+				return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv, gas, nil
 			}
 		default:
 			tenv_ := tenv.Set(exp.Id, actualType)
-			return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv, gas
+			return TypedExp{TypeDecl{exp.Id, actualType}, UnitType{}}, venv, tenv_, senv, gas, nil
 		}
 	case EntryExpression:
 		// TODO make sure params and storage cant use same var id
@@ -675,7 +716,8 @@ func addTypes(
 		paramlist := make([]Param, 0)
 		for _, v := range exp.Params.Params {
 			if v.Anno.Opt != true {
-				return TypedExp{ErrorExpression{}, ErrorType{"unannotated entry parameter type can't be inferred"}}, venv, tenv, senv, gas
+				err := "unannotated entry parameter type can't be inferred"
+				return TypedExp{ErrorExpression{}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 			vartyp, gas_ := translateType(v.Anno.Typ, tenv, gas)
 			gas = gas_
@@ -686,73 +728,92 @@ func addTypes(
 		// check that storage pattern matches storage type
 		storagetype := lookupType("storage", tenv)
 		if storagetype == nil {
-			return TypedExp{ErrorExpression{}, ErrorType{"storage type is undefined - define it before declaring entrypoints"}}, venv, tenv, senv, gas
+			err := "storage type is undefined - define it before declaring entrypoints"
+			return TypedExp{ErrorExpression{}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		storagePattern, venv_, ok, gas := PatternMatch(exp.Storage, storagetype, venv_, tenv, gas)
 		if !ok {
+			err := "storage pattern doesn't match storage type"
 			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern,
-				ErrorExpression{}}, ErrorType{"storage pattern doesn't match storage type"}}, venv, tenv, senv, gas
+				ErrorExpression{}}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		// add types with updated venv
-		body, _, _, _, gas := addTypes(exp.Body, venv_, tenv, senv, gas)
+		body, _, _, _, gas, err := addTypes(exp.Body, venv_, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
 		// check that return type is operation list * storage
 		if !checkTypesEqual(body.Type, TupleType{[]Type{NewListType(OperationType{}), storagetype}}) {
+			err := fmt.Sprintf("return type of entry must be operation list * %s, but was %s", storagetype.String(), body.Type.String())
 			return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body},
-					ErrorType{fmt.Sprintf("return type of entry must be operation list * %s, but was %s", storagetype.String(), body.Type.String())}},
-				venv, tenv, senv, gas
+					ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body}, UnitType{}}, venv, tenv, senv, gas
+		return TypedExp{EntryExpression{exp.Id, paramPattern, storagePattern, body}, UnitType{}}, venv, tenv, senv, gas, nil
 	case KeyLit:
-		return TypedExp{exp, KeyType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, KeyType{}}, venv, tenv, senv, gas, nil
 	case BoolLit:
-		return TypedExp{exp, BoolType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, BoolType{}}, venv, tenv, senv, gas, nil
 	case IntLit:
-		return TypedExp{exp, IntType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, IntType{}}, venv, tenv, senv, gas, nil
 	case KoinLit:
-		return TypedExp{exp, KoinType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, KoinType{}}, venv, tenv, senv, gas, nil
 	case StringLit:
-		return TypedExp{exp, StringType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, StringType{}}, venv, tenv, senv, gas, nil
 	case UnitLit:
-		return TypedExp{exp, UnitType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, UnitType{}}, venv, tenv, senv, gas, nil
 	case NatLit:
-		return TypedExp{exp, NatType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, NatType{}}, venv, tenv, senv, gas, nil
 	case AddressLit:
-		return TypedExp{exp, AddressType{}}, venv, tenv, senv, gas
+		return TypedExp{exp, AddressType{}}, venv, tenv, senv, gas, nil
 	case StructLit:
 		exp := exp.(StructLit)
 		definedStruct := lookupStruct(exp.FieldString(), senv)
 		if definedStruct == nil {
+			err := "No struct type is defined with the given field names " + exp.FieldString()
 			return TypedExp{exp,
-					ErrorType{"No struct type is defined with the given field names " + exp.FieldString()}},
-				venv, tenv, senv, gas
+					ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		} else {
 			definedStruct := definedStruct.(StructType)
 			var texplist []Exp
 			for i, e := range exp.Vals {
-				typedE, _, _, _, gas_ := addTypes(e, venv, tenv, senv, gas)
+				typedE, _, _, _, gas_, err := addTypes(e, venv, tenv, senv, gas)
 				gas = gas_
+				if err != nil {
+					return TypedExp{ErrorExpression{exp.String()},
+							ErrorType{""}},
+						venv, tenv, senv, gas, err
+				}
 				field := definedStruct.Fields[i]
 				if !checkTypesEqual(typedE.Type, field.Typ) {
-					return TypedExp{exp,
-							ErrorType{fmt.Sprintf("Field %s expected %s but received %s", field.Id, field.Typ.String(), typedE.Type.String())}},
-						venv, tenv, senv, gas
+					err := fmt.Sprintf("Field %s expected %s but received %s", field.Id, field.Typ.String(), typedE.Type.String())
+					return TypedExp{ErrorExpression{exp.String()},
+							ErrorType{err}},
+						venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 				texplist = append(texplist, typedE)
 			}
 			texp := StructLit{exp.Ids, texplist}
-			return TypedExp{texp, definedStruct}, venv, tenv, senv, gas
+			return TypedExp{texp, definedStruct}, venv, tenv, senv, gas, nil
 		}
 	case ListLit:
 		exp := exp.(ListLit)
 		var texplist []Exp
 		if len(exp.List) == 0 {
-			return TypedExp{exp, NewListType(UnitType{})}, venv, tenv, senv, gas
+			return TypedExp{exp, NewListType(UnitType{})}, venv, tenv, senv, gas, nil
 		}
 		var listtype Type
 		var typesNotEqual bool
 		for _, e := range exp.List {
-			typedE, _, _, _, gas_ := addTypes(e, venv, tenv, senv, gas)
+			typedE, _, _, _, gas_, err := addTypes(e, venv, tenv, senv, gas)
 			gas = gas_
+			if err != nil {
+				return TypedExp{ErrorExpression{exp.String()},
+						ErrorType{err.Error()}},
+					venv, tenv, senv, gas, err
+			}
 			if listtype == nil {
 				listtype = typedE.Type
 			} else if !checkTypesEqual(listtype, typedE.Type) {
@@ -762,21 +823,30 @@ func addTypes(
 			texplist = append(texplist, typedE)
 		}
 		if typesNotEqual {
+			err := "All elements in list must be of same type"
 			return TypedExp{ListLit{texplist},
-					ErrorType{"All elements in list must be of same type"}},
-				venv, tenv, senv, gas
+					ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{ListLit{texplist}, ListType{listtype}}, venv, tenv, senv, gas
+		return TypedExp{ListLit{texplist}, ListType{listtype}}, venv, tenv, senv, gas, nil
 	case ListConcat:
 		exp := exp.(ListConcat)
-		tconcatexp, _, _, _, gas := addTypes(exp.Exp, venv, tenv, senv, gas)
-		tlistexp, _, _, _, gas := addTypes(exp.List, venv, tenv, senv, gas)
+		tconcatexp, _, _, _, gas, err := addTypes(exp.Exp, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{ListConcat{tconcatexp, TypedExp{ErrorExpression{exp.String()},
+				ErrorType{"error in list head expression"}}}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
+		tlistexp, _, _, _, gas, err := addTypes(exp.List, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{ListConcat{tconcatexp, tlistexp}, ErrorType{err.Error()}},
+				venv, tenv, senv, gas, err
+		}
 		texp := ListConcat{tconcatexp, tlistexp}
 		var listtype Type
 		if tlistexp.Type.Type() != LIST {
+			err := "Cannot concatenate with type " + tlistexp.Type.String() + " . Should be a list. "
 			return TypedExp{texp,
-					ErrorType{"Cannot concatenate with type " + tlistexp.Type.String() + " . Should be a list. "}},
-				venv, tenv, senv, gas
+				ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		} else {
 			listtype = tlistexp.Type.(ListType).Typ
 		}
@@ -784,137 +854,197 @@ func addTypes(
 			listtype = tconcatexp.Type
 		}
 		if !checkTypesEqual(tconcatexp.Type, listtype) {
+			err := "Cannot concatenate type " + tconcatexp.Type.String() + " with list of type " + listtype.String()
 			return TypedExp{texp,
-					ErrorType{"Cannot concatenate type " + tconcatexp.Type.String() + " with list of type " + listtype.String()}},
-				venv, tenv, senv, gas
+					ErrorType{err}},
+				venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{texp, ListType{listtype}}, venv, tenv, senv, gas
+		return TypedExp{texp, ListType{listtype}}, venv, tenv, senv, gas, nil
 
 	case CallExp:
 		exp := exp.(CallExp)
-		lambdafunction, _, _, _, gas := addTypes(exp.ExpList[0], venv, tenv, senv, gas)
+		lambdafunction, _, _, _, gas, err := addTypes(exp.ExpList[0], venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{ErrorExpression{exp.String()}, ErrorType{err.Error()}},
+				venv, tenv, senv, gas, err
+		}
 		if lambdafunction.Type.Type() != LAMBDA {
-			return TypedExp{exp, ErrorType{"expression is not lambda type and can't be called"}}, venv, tenv, senv, gas
+			err := "expression is not lambda type and can't be called"
+			return TypedExp{ErrorExpression{exp.String()}, ErrorType{err}}, venv, tenv, senv,
+				gas, fmt.Errorf(err)
 		}
 		lambdatype := lambdafunction.Type.(LambdaType)
 		texps := []Exp{lambdafunction}
 		if len(exp.ExpList[1:]) != len(lambdatype.ArgTypes) {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("not enough arguments to call function %s", exp.ExpList[0])}}, venv, tenv, senv, gas
+			err := fmt.Sprintf("not enough arguments to call function %s", exp.ExpList[0])
+			return TypedExp{ErrorExpression{exp.String()}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		for i, e := range exp.ExpList[1:] {
-			argument, _, _, _, gas_ := addTypes(e, venv, tenv, senv, gas)
+			argument, _, _, _, gas_, err := addTypes(e, venv, tenv, senv, gas)
 			gas = gas_
+			if err != nil {
+				return TypedExp{ErrorExpression{exp.String()}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+			}
 			if !checkTypesEqual(argument.Type, lambdatype.ArgTypes[i]) {
-				return TypedExp{exp, ErrorType{fmt.Sprintf("argument type of %s doesn't match lambda input type of %s",
-					argument.Type.String(), lambdatype.ArgTypes[i].String())}}, venv, tenv, senv, gas
+				err := fmt.Sprintf("argument type of %s doesn't match lambda input type of %s",
+					argument.Type.String(), lambdatype.ArgTypes[i].String())
+				return TypedExp{ErrorExpression{exp.String()}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 			}
 			texps = append(texps, argument)
 		}
-		return TypedExp{CallExp{texps}, lambdatype.ReturnType}, venv, tenv, senv, gas
+		return TypedExp{CallExp{texps}, lambdatype.ReturnType}, venv, tenv, senv, gas, nil
 	case LetExp:
 		exp := exp.(LetExp)
-		defexp, _, _, _, gas := addTypes(exp.DefExp, venv, tenv, senv, gas)
+		defexp, _, _, _, gas, err := addTypes(exp.DefExp, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{ErrorExpression{exp.String()}, ErrorType{err.Error()}}, venv, tenv,
+				senv, gas, err
+		}
 		pattern, venv_, ok, gas := PatternMatch(exp.Patt, defexp.Type, venv, tenv, gas)
 		if !ok {
-			return TypedExp{ErrorExpression{}, ErrorType{
-				fmt.Sprintf("variable declaration pattern %s can't be matched to type %s", exp.Patt.String(),
-					defexp.Type.String())}}, venv, tenv, senv, gas
+			err := fmt.Sprintf("variable declaration pattern %s can't be matched to type %s", exp.Patt.String(),
+				defexp.Type.String())
+			return TypedExp{ErrorExpression{exp.String()}, ErrorType{err}}, venv, tenv, senv,
+				gas, fmt.Errorf(err)
 		}
-		inexp, _, _, _, gas := addTypes(exp.InExp, venv_, tenv, senv, gas)
-		return TypedExp{LetExp{pattern, defexp, inexp}, inexp.Type}, venv, tenv, senv, gas
+		inexp, _, _, _, gas, err := addTypes(exp.InExp, venv_, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{LetExp{pattern, defexp, inexp}, ErrorType{err.Error()}},
+				venv, tenv, senv, gas, err
+		}
+		return TypedExp{LetExp{pattern, defexp, inexp}, inexp.Type}, venv, tenv, senv, gas, nil
 	case AnnoExp:
 		exp := exp.(AnnoExp)
-		texp, venv, tenv, senv, gas := addTypes(exp.Exp, venv, tenv, senv, gas)
+		texp, venv, tenv, senv, gas, err := addTypes(exp.Exp, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{AnnoExp{texp, exp.Anno}, ErrorType{err.Error()}}, venv, tenv,
+				senv, gas, err
+		}
 		actualAnno, gas := translateType(exp.Anno, tenv, gas)
 		if actualAnno.Type() == LIST {
 			if texp.Type.Type() == LIST && texp.Type.(ListType).Typ.Type() == UNIT {
-				return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv, gas
+				return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv, gas, nil
 			}
 		}
 		typesEqual := checkTypesEqual(texp.Type, actualAnno)
 		if !typesEqual {
-			return TypedExp{ErrorExpression{}, ErrorType{"expression type doesn't match annotated type"}}, venv, tenv, senv, gas
+			err := "expression type doesn't match annotated type"
+			return TypedExp{AnnoExp{texp, actualAnno}, ErrorType{err}}, venv, tenv, senv,
+				gas, fmt.Errorf(err)
 		}
-		return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv, gas
+		return TypedExp{AnnoExp{texp, actualAnno}, actualAnno}, venv, tenv, senv, gas, nil
 	case TupleExp:
 		exp := exp.(TupleExp)
 		var texplist []Exp
 		var typelist []Type
 		for _, e := range exp.Exps {
-			typedE, _, _, _, gas_ := addTypes(e, venv, tenv, senv, gas)
+			typedE, _, _, _, gas_, err := addTypes(e, venv, tenv, senv, gas)
 			gas = gas_
 			texplist = append(texplist, typedE)
 			typelist = append(typelist, typedE.Type)
+			if err != nil {
+				return TypedExp{TupleExp{texplist}, ErrorType{err.Error()}}, venv, tenv, senv, gas,
+					err
+			}
 		}
 		texp := TupleExp{texplist}
-		return TypedExp{texp, NewTupleType(typelist)}, venv, tenv, senv, gas
+		return TypedExp{texp, NewTupleType(typelist)}, venv, tenv, senv, gas, nil
 	case VarExp:
 		exp := exp.(VarExp)
 		vartyp, ok := venv.Lookup(exp.Id)
 		if !ok {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("variable %s used but not defined", exp.Id)}}, venv, tenv, senv, gas
+			err := fmt.Sprintf("variable %s used but not defined", exp.Id)
+			return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{exp, vartyp.(Type)}, venv, tenv, senv, gas
+		return TypedExp{exp, vartyp.(Type)}, venv, tenv, senv, gas, nil
 	case ExpSeq:
 		exp := exp.(ExpSeq)
-		typedLeftExp, _, _, _, gas := addTypes(exp.Left, venv, tenv, senv, gas)
-		typedRightExp, _, _, _, gas := addTypes(exp.Right, venv, tenv, senv, gas)
+		typedLeftExp, _, _, _, gas, err1 := addTypes(exp.Left, venv, tenv, senv, gas)
+		if err1 != nil {
+			return TypedExp{ExpSeq{typedLeftExp, TypedExp{ErrorExpression{
+				exp.Right.String()}, ErrorType{"error earlier in expression sequence"}}},
+				ErrorType{err1.Error()}}, venv, tenv, senv, gas, err1
+		}
+		typedRightExp, _, _, _, gas, err2 := addTypes(exp.Right, venv, tenv, senv, gas)
+		if err2 != nil {
+			return TypedExp{ExpSeq{typedLeftExp, typedRightExp}, ErrorType{err2.Error()}},
+				venv, tenv, senv, gas, err2
+		}
 		texp := ExpSeq{typedLeftExp, typedRightExp}
 		if typedLeftExp.Type.Type() != UNIT {
-			return TypedExp{texp,
-					ErrorType{"All expresssion in expseq_semant, except the last, must be of type UNIT!"}},
-				venv, tenv, senv, gas
+			err := "all expresssion in expseq, except the last, must be of type UNIT"
+			return TypedExp{ExpSeq{typedLeftExp, typedRightExp}, ErrorType{err}}, venv, tenv,
+				senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv, gas
+		return TypedExp{texp, typedRightExp.Type}, venv, tenv, senv, gas, nil
 	case IfThenElseExp:
 		exp := exp.(IfThenElseExp)
-		typedIf, _, _, _, gas := addTypes(exp.If, venv, tenv, senv, gas)
-		typedThen, _, _, _, gas := addTypes(exp.Then, venv, tenv, senv, gas)
-		typedElse, _, _, _, gas := addTypes(exp.Else, venv, tenv, senv, gas)
+		typedIf, _, _, _, gas, err := addTypes(exp.If, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{IfThenElseExp{typedIf,
+				TypedExp{ErrorExpression{exp.Then.String()}, ErrorType{"error in if expression"}},
+				TypedExp{ErrorExpression{exp.Then.String()}, ErrorType{"error in if expression"}}},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
+		typedThen, _, _, _, gas, err := addTypes(exp.Then, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{IfThenElseExp{typedIf, typedThen,
+				TypedExp{ErrorExpression{exp.Then.String()}, ErrorType{"error in then expression"}}},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
+		typedElse, _, _, _, gas, err := addTypes(exp.Else, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{IfThenElseExp{typedIf, typedThen, typedElse},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
 		texp := IfThenElseExp{typedIf, typedThen, typedElse}
 		if typedIf.Type.Type() != BOOL {
+			err := "Condition in If is of type " + typedIf.Type.String() + " should be BOOL"
 			return TypedExp{texp,
-					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
-				venv, tenv, senv, gas
+				ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		if !checkTypesEqual(typedThen.Type, typedElse.Type) {
-			return TypedExp{texp,
-					ErrorType{fmt.Sprintf("Return types of then and else branch must match but were %s and %s", typedThen.Type.String(), typedElse.Type.String())}},
-				venv, tenv, senv, gas
+			err := fmt.Sprintf("Return types of then and else branch must match but were %s and %s", typedThen.Type.String(), typedElse.Type.String())
+			return TypedExp{texp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{texp, typedThen.Type}, venv, tenv, senv, gas
+		return TypedExp{texp, typedThen.Type}, venv, tenv, senv, gas, nil
 	case IfThenExp:
 		exp := exp.(IfThenExp)
-		typedIf, _, _, _, gas := addTypes(exp.If, venv, tenv, senv, gas)
-		typedThen, _, _, _, gas := addTypes(exp.Then, venv, tenv, senv, gas)
+		typedIf, _, _, _, gas, err := addTypes(exp.If, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{IfThenExp{typedIf, TypedExp{ErrorExpression{exp.Then.String()},
+					ErrorType{"error in if expression"}}}, ErrorType{err.Error()}}, venv, tenv, senv,
+				gas, err
+		}
+		typedThen, _, _, _, gas, err := addTypes(exp.Then, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{IfThenExp{typedIf, typedThen},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
 		texp := IfThenExp{typedIf, typedThen}
 		if typedIf.Type.Type() != BOOL {
-			return TypedExp{texp,
-					ErrorType{"Condition in If is of type " + typedIf.Type.String() + " should be BOOL"}},
-				venv, tenv, senv, gas
+			err := "condition in If is of type " + typedIf.Type.String() + " should be BOOL"
+			return TypedExp{texp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		if typedThen.Type.Type() != UNIT {
-			return TypedExp{texp,
-					ErrorType{"'Then' expression in IfThen is of type " + typedThen.Type.String() + " should be UNIT"}},
-				venv, tenv, senv, gas
+			err := "'Then' expression in IfThen is of type " + typedThen.Type.String() + " should be UNIT"
+			return TypedExp{texp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{texp, UnitType{}}, venv, tenv, senv, gas
+		return TypedExp{texp, UnitType{}}, venv, tenv, senv, gas, nil
 	case ModuleLookupExp:
 		exp := exp.(ModuleLookupExp)
 		module := lookupVar(exp.ModId, venv)
 		if module == nil || module.Type() != STRUCT {
-			return TypedExp{exp,
-					ErrorType{fmt.Sprintf("Module with name %s does not exist", exp.ModId)}},
-				venv, tenv, senv, gas
+			err := fmt.Sprintf("Module with name %s does not exist", exp.ModId)
+			return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		} else {
 			module := module.(StructType)
 			fieldType, exists := module.FindFieldType(exp.FieldId)
 			if !exists {
-				return TypedExp{exp,
-						ErrorType{fmt.Sprintf("No field in module %s with name %s", exp.ModId, exp.FieldId)}},
-					venv, tenv, senv, gas
+				err := fmt.Sprintf("No field in module %s with name %s", exp.ModId, exp.FieldId)
+				return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 			}
-			return TypedExp{exp, fieldType}, venv, tenv, senv, gas
+			return TypedExp{exp, fieldType}, venv, tenv, senv, gas, nil
 		}
 	case LookupExp:
 		exp := exp.(LookupExp)
@@ -928,57 +1058,70 @@ func addTypes(
 				if exists {
 					typ = fieldType
 				} else {
-					return TypedExp{exp,
-							ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", id)}},
-						venv, tenv, senv, gas
+					err := fmt.Sprintf("Field %s doesn't exist in struct", id)
+					return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 				}
 			}
 			if typ.Type() != STRUCT {
-				return TypedExp{exp,
-						ErrorType{fmt.Sprintf("lookupexp_semant expected %s to be of type STRUCT but found %s", id, typ.String())}},
-					venv, tenv, senv, gas
+				err := fmt.Sprintf("lookupexp_semant expected %s to be of type STRUCT but found %s", id, typ.String())
+				return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 			} else {
 				currentStruct = typ.(StructType)
 			}
 		}
 		fieldType, exists := currentStruct.FindFieldType(exp.LeafId)
 		if exists {
-			return TypedExp{exp, fieldType}, venv, tenv, senv, gas
+			return TypedExp{exp, fieldType}, venv, tenv, senv, gas, nil
 		} else {
-			return TypedExp{exp,
-					ErrorType{fmt.Sprintf("Field %s doesn't exist in struct", exp.LeafId)}},
-				venv, tenv, senv, gas
+			err := fmt.Sprintf("Field %s doesn't exist in struct", exp.LeafId)
+			return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 	case UpdateStructExp:
 		exp := exp.(UpdateStructExp)
 		roottype := lookupVar(exp.Root, venv)
 		if roottype == nil {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("no variable %s in variable env", exp.Root)}}, venv, tenv, senv, gas
+			err := fmt.Sprintf("no variable %s in variable env", exp.Root)
+			return TypedExp{UpdateStructExp{exp.Root, exp.Path, TypedExp{
+				ErrorExpression{exp.Exp.String()}, ErrorType{"struct to assign doesn't exist"}}},
+				ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
 		leaftype := traverseStruct(roottype, exp.Path)
 		if leaftype == nil {
-			return TypedExp{exp, ErrorType{fmt.Sprintf("variable %s has no matching fields", exp.Root)}}, venv, tenv, senv, gas
+			err := fmt.Sprintf("variable %s has no matching fields", exp.Root)
+			return TypedExp{UpdateStructExp{exp.Root, exp.Path, TypedExp{
+				ErrorExpression{exp.Exp.String()}, ErrorType{"field in struct doens't exist"}}},
+				ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		typedE, _, _, _, gas := addTypes(exp.Exp, venv, tenv, senv, gas)
+		typedE, _, _, _, gas, err := addTypes(exp.Exp, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{UpdateStructExp{exp.Root, exp.Path, typedE},
+				ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
 		if !checkTypesEqual(leaftype, typedE.Type) {
-			return TypedExp{exp,
-					ErrorType{fmt.Sprintf("Cannot update field of type %s to exp of type %s", leaftype.String(), typedE.Type.String())}},
-				venv, tenv, senv, gas
+			err := fmt.Sprintf("Cannot update field of type %s to exp of type %s", leaftype.String(), typedE.Type.String())
+			return TypedExp{exp, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{UpdateStructExp{exp.Root, exp.Path, typedE}, roottype}, venv, tenv, senv, gas
+		return TypedExp{UpdateStructExp{exp.Root, exp.Path, typedE}, roottype}, venv, tenv,
+			senv, gas, nil
 	case StorageInitExp:
 		exp := exp.(StorageInitExp)
-		texp, _, _, _, gas := addTypes(exp.Exp, venv, tenv, senv, gas)
+		texp, _, _, _, gas, err := addTypes(exp.Exp, venv, tenv, senv, gas)
+		if err != nil {
+			return TypedExp{StorageInitExp{texp}, ErrorType{err.Error()}}, venv, tenv, senv, gas, err
+		}
 		storagetype := lookupType("storage", tenv)
 		if storagetype == nil {
-			return TypedExp{exp, ErrorType{"storage type is undefined - define it before initializing it"}}, venv, tenv, senv, gas
+			err := "storage type is undefined - define it before initializing it"
+			return TypedExp{StorageInitExp{texp}, ErrorType{err}}, venv, tenv, senv, gas,
+				fmt.Errorf(err)
 		}
 		if !checkTypesEqual(storagetype, texp.Type) {
-			return TypedExp{exp, ErrorType{"storage initilization doesn't match storage type"}}, venv, tenv, senv, gas
+			err := "storage initilization doesn't match storage type"
+			return TypedExp{StorageInitExp{texp}, ErrorType{err}}, venv, tenv, senv, gas, fmt.Errorf(err)
 		}
-		return TypedExp{StorageInitExp{texp}, UnitType{}}, venv, tenv, senv, gas
+		return TypedExp{StorageInitExp{texp}, UnitType{}}, venv, tenv, senv, gas, nil
 	default:
 		texp, venv, tenv, senv := todo(exp, venv, tenv, senv)
-		return texp, venv, tenv, senv, gas
+		return texp, venv, tenv, senv, gas, fmt.Errorf("unknown expression in semant check, unexpected error")
 	}
 }

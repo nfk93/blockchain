@@ -32,7 +32,7 @@ func TestReceiveAndFinalizeBlock(t *testing.T) {
 	for {
 		state := <-channels.StateFromTrans
 		//we get 100 in block reward -> 999500+100 =999600
-		if state.Ledger[p1.String()] != 999600 || state.Ledger[p2.String()] != 500 {
+		if state.Ledger[p1.Hash()] != 999600 || state.Ledger[p2.Hash()] != 500 {
 			t.Error("Something went wrong! Not the right state..")
 		}
 		return

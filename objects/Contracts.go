@@ -9,7 +9,7 @@ import (
 type ContractCall struct {
 	Call      string
 	Entry     string
-	Params    Parameter
+	Params    string
 	Amount    uint64
 	Gas       uint64
 	Address   string
@@ -19,10 +19,11 @@ type ContractCall struct {
 }
 
 type ContractInitialize struct {
-	Owner   crypto.PublicKey
-	Code    []byte
-	Gas     uint64
-	Prepaid uint64
+	Owner        crypto.PublicKey
+	Code         []byte
+	Gas          uint64
+	Prepaid      uint64
+	StorageLimit uint64
 }
 
 type Operation interface {

@@ -110,19 +110,19 @@ func cliLoop() {
 				}
 			}
 		case "-trans2":
-			currentStake := consensus.GetLastFinalState()[publicKey.String()]
-			for _, p := range p2p.GetPublicKeys() {
+			currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
+			for i, p := range p2p.GetPublicKeys() {
 
 				trans := objects.CreateTransaction(publicKey,
 					p,
 					currentStake/uint64(len(p2p.GetPublicKeys())),
-					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+					strconv.Itoa(i),
 					secretKey)
 				channels.TransClientInput <- trans
 
 			}
 		case "-trans5":
-			currentStake := transaction.GetCurrentLedger()[publicKey.String()]
+			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
 			pkList := p2p.GetPublicKeys()
 
 			if currentStake == 0 {
@@ -135,7 +135,7 @@ func cliLoop() {
 				trans := objects.CreateTransaction(publicKey,
 					receiverPK,
 					amount,
-					publicKey.String()+time.Now().String(), //+strconv.Itoa(i),
+					strconv.Itoa(i),
 					secretKey)
 				channels.TransClientInput <- trans
 			}
@@ -176,7 +176,7 @@ func autoTrans() {
 		if !autoTransStatus {
 			return
 		}
-		currentStake := transaction.GetCurrentLedger()[publicKey.String()]
+		currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
 		if currentStake == 0 {
 			continue
 		}

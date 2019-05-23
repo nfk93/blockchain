@@ -51,10 +51,10 @@ else        : 'e' 'l' 's' 'e' ;
 type        : 't' 'y' 'p' 'e' ;
 koin        : 'k' 'o' 'i' 'n' ;
 
-/* TODO: make sure hashes without capital letters can be distinguished from ids */
-_b58char    :  '0'-'9' | 'A'-'H' | 'J'-'N' | 'P'-'Z' | 'a'-'k' | 'm'-'z' ;
-key_lit     : 'k' 'n' '1' _b58char { _b58char } ;
-address_lit : 'k' 'n' '2' _b58char { _b58char } ;
+/* TODO: swap to hexchars */
+_hexchar    :  '0'-'9' | 'a'-'f' ;
+key_lit     : 'k' 'n' '1' _hexchar { _hexchar } ;
+address_lit : 'k' 'n' '2' _hexchar { _hexchar } ;
 
 /* id's are all minor case in liquidity, starting with a letter */
 _idchars    : 'a'-'z' | 'A'-'Z' | '0'-'9' | '_'  ;

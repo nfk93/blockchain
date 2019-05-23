@@ -11,3 +11,8 @@ Write an install script that builds the lexer and parser code
 
 - Does the blockchain also work on the other peers?
 - Why do they not win?
+
+
+
+Make transactions to non-existing accounts fail. Have new account instead opened by using an 'account opening contract',
+that allows a specific public id to withdraw money from it, if it can prove it holds the corresponding private key.

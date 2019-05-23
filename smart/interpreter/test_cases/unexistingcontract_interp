@@ -3,9 +3,9 @@ type storage = unit
 let%init storage = ()
 
 let%entry main () s =
-    let call = Contract.call kn2Aasa12312 115kn "main" () in
+    let call = Contract.call kn2aaba12312aaba12312aaba12312aaba1 115kn "main" () in
     ([call], s)
 
 let%entry second () s =
-    let call = Contract.call kn2Aasa1231333 115kn "main" kn1aaaAAA in
+    let call = Contract.call kn2aaba1231333aaba1231333aaba123133 115kn "main" kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa in
     ([call], s)

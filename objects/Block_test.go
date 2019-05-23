@@ -67,15 +67,15 @@ func TestBlockNonce(t *testing.T) {
 
 func TestGetType(t *testing.T) {
 	tdTrans := TransData{Transaction: Transaction{Amount: 500}}
-	if tdTrans.getType() != TRANSACTION {
+	if tdTrans.GetType() != TRANSACTION {
 		t.Error("GetType didn't recognize type Transaction")
 	}
 	tdCon := TransData{ContractCall: ContractCall{Amount: 400}}
-	if tdCon.getType() != CONTRACTCALL {
+	if tdCon.GetType() != CONTRACTCALL {
 		t.Error("GetType didn't recognize type ContractCall")
 	}
 	tdConInit := TransData{ContractInit: ContractInitialize{Prepaid: 500}}
-	if tdConInit.getType() != CONTRACTINIT {
+	if tdConInit.GetType() != CONTRACTINIT {
 		t.Error("GetType didn't recognize type ContractInitializer")
 	}
 

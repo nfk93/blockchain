@@ -14,7 +14,7 @@ var testdir = "testcases/"
 func getLexer(filepath string, t *testing.T) *lexer.Lexer {
 	dat, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		t.Error("Error reading testfile:", filepath)
+		t.Error("Error reading testfile_noerror:", filepath)
 	}
 	return lexer.NewLexer(dat)
 }

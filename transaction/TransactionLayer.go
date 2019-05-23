@@ -2,8 +2,10 @@ package transaction
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
+	"log"
 	"sort"
 )
 
@@ -32,6 +34,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
+				smart.StartSmartContractLayer(tree.head)
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
@@ -48,6 +51,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			finalize := <-channels.FinalizeToTrans
 			if finalizedNode, ok := tree.treeMap[finalize]; ok {
 				channels.StateFromTrans <- finalizedNode.state
+				smart.FinalizeBlock(finalize)
 			} else {
 				fmt.Println("Couldn't finalize")
 				channels.StateFromTrans <- State{}
@@ -66,34 +70,34 @@ func StartTransactionLayer(channels ChannelStruct) {
 
 func (t *Tree) processBlock(b Block) {
 
+	blockHash := b.CalculateBlockHash()
 	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
-	s.ConAccounts = copyContMap(t.treeMap[s.ParentHash].state.ConAccounts)
 	s.ConStake = copyMap(t.treeMap[s.ParentHash].state.ConStake)
+	s.ConOwners = copyContMap(t.treeMap[s.ParentHash].state.ConOwners)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 
 	// Remove expired contracts from ledger in TL and from ConLayer
-	expiredContracts := s.CleanContractLedger()
-	for _, v := range expiredContracts {
-		smart.ExpireContract(v)
-	}
+	// Collection storageCosts
+	expiring, reward := smart.NewBlockTreeNode(blockHash, b.ParentPointer, b.Slot)
+	s.CleanExpiredContract(expiring) // TODO: check if correct placement
+	accumulatedRewards += reward
 
 	// Update state
 	if len(b.BlockData.Trans) != 0 {
 		for _, td := range b.BlockData.Trans {
-
-			gasCost := s.HandleTransData(td, transactionGas)
-			accumulatedRewards += gasCost
-
+			switch td.GetType() {
+			case CONTRACTCALL:
+				accumulatedRewards += s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
+			case CONTRACTINIT:
+				accumulatedRewards += s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
+			case TRANSACTION:
+				accumulatedRewards += s.AddTransaction(td.Transaction, transactionGas)
+			}
 		}
 	}
-
-	// Collection storageCosts
-	noOfSlots := b.Slot - t.treeMap[b.ParentPointer].block.Slot
-	collectedStorageCosts := s.CollectStorageCost(noOfSlots)
-	accumulatedRewards += collectedStorageCosts
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if s.VerifyHashedState(b.StateHash, b.BakerID) {
@@ -107,7 +111,7 @@ func (t *Tree) processBlock(b Block) {
 	t.createNewNode(b, s)
 
 	// Update head
-	t.head = b.CalculateBlockHash()
+	t.head = blockHash
 
 }
 
@@ -122,12 +126,26 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
+	expiring, err := smart.ResetAndSetNewBlockStartPoint(t.head, blockData.SlotNo)
+	if err != nil {
+		// this should not happen
+		log.Fatal("trying to create a new block which parent doesn't exist")
+	}
+	// Remove expired contracts from ledger in TL and from ConLayer
+	s.CleanExpiredContract(expiring)
+
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
 
 		if accumulatedGasUse < gasLimit {
-			gasUse := s.HandleTransData(td, transactionGas)
-			accumulatedGasUse += gasUse
+			switch td.GetType() {
+			case CONTRACTCALL:
+				accumulatedGasUse += s.HandleContractCall(td.ContractCall, "", t.head, blockData.SlotNo)
+			case CONTRACTINIT:
+				accumulatedGasUse += s.HandleContractInit(td.ContractInit, "", t.head, blockData.SlotNo)
+			case TRANSACTION:
+				accumulatedGasUse += s.AddTransaction(td.Transaction, transactionGas)
+			}
 			addedTransactions = append(addedTransactions, td)
 		}
 
@@ -144,18 +162,12 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		""}
 
 	b.SignBlock(blockData.Sk)
-	return b
 
+	smart.DoneCreatingNewBlock()
+	return b
 }
 
 // Helpers
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func copyMap(originalMap map[string]uint64) map[string]uint64 {
 	if originalMap == nil {
 		return make(map[string]uint64)
@@ -167,11 +179,11 @@ func copyMap(originalMap map[string]uint64) map[string]uint64 {
 	return newMap
 }
 
-func copyContMap(originalMap map[string]ContractAccount) map[string]ContractAccount {
+func copyContMap(originalMap map[string]crypto.PublicKey) map[string]crypto.PublicKey {
 	if originalMap == nil {
-		return make(map[string]ContractAccount)
+		return make(map[string]crypto.PublicKey)
 	}
-	newMap := make(map[string]ContractAccount)
+	newMap := make(map[string]crypto.PublicKey)
 	for key, value := range originalMap {
 		newMap[key] = value
 	}
@@ -192,6 +204,6 @@ func PrintCurrentLedger() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[4:14])
+		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
 	}
 }

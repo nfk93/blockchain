@@ -6,6 +6,7 @@ import (
 	. "github.com/nfk93/blockchain/smart/interpreter/ast"
 	"github.com/nfk93/blockchain/smart/interpreter/lexer"
 	"github.com/nfk93/blockchain/smart/interpreter/parser"
+	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"strconv"
 )
 
@@ -18,9 +19,9 @@ var currentAmt uint64
 var currentBal uint64
 var spentsofar uint64
 
-func todo(n int, gas uint64) int {
+func todo(n int, gas uint64) value.Value {
 	interpPanic("Hit todo nr. "+strconv.Itoa(n), gas)
-	return 0
+	return value.UnitVal{}
 }
 
 func interpPanic(message string, gas uint64) {
@@ -31,49 +32,49 @@ func NatToKoin(i uint64) uint64 {
 	return i * 100000
 }
 
-func currentBalance() KoinVal {
-	return KoinVal{currentBal}
+func currentBalance() value.KoinVal {
+	return value.KoinVal{currentBal}
 }
 
-func currentAmount() KoinVal {
-	return KoinVal{currentAmt}
+func currentAmount() value.KoinVal {
+	return value.KoinVal{currentAmt}
 }
 
-func currentFailWith(failmessage StringVal, gas uint64) OperationVal {
+func currentFailWith(failmessage value.StringVal, gas uint64) value.OperationVal {
 	interpPanic(failmessage.Value, gas)
-	return OperationVal{FailWith{failmessage.Value}}
+	return value.OperationVal{value.FailWith{failmessage.Value}}
 }
 
-func contractCall(address AddressVal, amount KoinVal, entry StringVal, param Value, gas uint64) OperationVal {
+func contractCall(address value.AddressVal, amount value.KoinVal, entry value.StringVal, param value.Value, gas uint64) value.OperationVal {
 	spentsofar = spentsofar + amount.Value
 	if int64(currentBal+currentAmt)-int64(spentsofar) < 0 {
 		interpPanic("contract spendings exceed contract balance", gas)
 	}
-	return OperationVal{ContractCall{address.Value, amount.Value, entry.Value, param}}
+	return value.OperationVal{value.ContractCall{address.Value, amount.Value, entry.Value, param}}
 }
 
-func accountTransfer(key KeyVal, amount KoinVal, gas uint64) OperationVal {
+func accountTransfer(key value.KeyVal, amount value.KoinVal, gas uint64) value.OperationVal {
 	spentsofar = spentsofar + amount.Value
 	if int64(currentBal+currentAmt)-int64(spentsofar) < 0 {
 		interpPanic("contract spendings exceed contract balance", gas)
 	}
-	return OperationVal{Transfer{key.Value, amount.Value}}
+	return value.OperationVal{value.Transfer{key.Value, amount.Value}}
 }
 
-func accountDefault(key KeyVal) AddressVal {
-	return AddressVal{"dummy address"} //TODO add proper functionality
+func accountDefault(key value.KeyVal) value.AddressVal {
+	return value.AddressVal{"dummy address"} //TODO add proper functionality
 }
 
-func lookupVar(id string, venv VarEnv) Value {
+func lookupVar(id string, venv VarEnv) value.Value {
 	val, contained := venv.Lookup(id)
 	if contained {
-		return val
+		return val.(value.Value)
 	} else {
 		return nil
 	}
 }
 
-func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor Value, remainingGas uint64, returnErr error) {
+func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor value.Value, remainingGas uint64, returnErr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			err := err.(PanicStruct)
@@ -99,21 +100,21 @@ func InitiateContract(contractCode []byte, gas uint64) (texp TypedExp, initstor 
 	p := parser.NewParser()
 	par, err := p.Parse(lex)
 	if err != nil {
-		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
+		return TypedExp{}, value.UnitVal{}, gas, fmt.Errorf("syntax error in contract code: %s", err.Error())
 	}
-	texp, ok, gas := AddTypes(par.(Exp), gas)
+	texp, err, gas = AddTypes(par.(Exp), gas)
 	if gas == 0 {
 		interpPanic("ran out of gas when building typed AST", gas)
 	}
-	if !ok {
-		fmt.Println(texp.String())
-		return TypedExp{}, Value(struct{}{}), gas, fmt.Errorf("semantic error in contract code")
+	if err != nil {
+		fmt.Println(err.Error())
+		return TypedExp{}, value.UnitVal{}, gas, fmt.Errorf("semantic error in contract code: %s", err.Error())
 	}
 	initstorage, gas := interpretStorageInit(texp, gas)
 	return texp, initstorage, gas, nil
 }
 
-func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
+func interpretStorageInit(texp TypedExp, gas uint64) (value.Value, uint64) {
 	exp := texp.Exp.(TopLevel)
 	venv := ps.NewMap()
 	for _, e := range exp.Roots {
@@ -125,18 +126,18 @@ func interpretStorageInit(texp TypedExp, gas uint64) (Value, uint64) {
 			return storageVal, gas
 		}
 	}
-	return -1, gas
+	return todo(-1, gas), gas
 }
 
 func InterpretContractCall(
 	texp TypedExp,
-	params Value,
+	params value.Value,
 	entry string,
-	stor Value,
+	stor value.Value,
 	amount uint64,
 	balance uint64,
 	gas uint64,
-) (oplist []Operation, storage Value, spent uint64, remainingGas uint64) {
+) (oplist []value.Operation, storage value.Value, spent uint64, remainingGas uint64) {
 
 	// initiate module variables
 	currentAmt = amount
@@ -147,7 +148,7 @@ func InterpretContractCall(
 		if err := recover(); err != nil {
 			err := err.(PanicStruct)
 			fmt.Println(err.message)
-			oplist = []Operation{FailWith{err.message}}
+			oplist = []value.Operation{value.FailWith{err.message}}
 			storage = stor
 			spent = 0
 			remainingGas = err.gas
@@ -165,31 +166,31 @@ func InterpretContractCall(
 				// apply params to venv
 				venv, err := applyParams(params, e.Params, venv)
 				if err != nil {
-					return []Operation{failwith(err.Error())}, stor, 0, gas // TODO return original storage
+					return []value.Operation{failwith(err.Error())}, stor, 0, gas
 				}
 				// apply storage to venv
 				venv, err = applyParams(stor, e.Storage, venv)
 				if err != nil {
-					return []Operation{failwith("storage doesn't match storage type definition")}, stor, 0, gas // TODO return original storage
+					return []value.Operation{failwith("storage doesn't match storage type definition")}, stor, 0, gas
 				}
 				bodyTuple_, gas := interpret(e.Body.(TypedExp), venv, gas)
-				bodyTuple := bodyTuple_.(TupleVal)
-				opvallist := bodyTuple.Values[0].(ListVal).Values
-				var oplist []Operation
+				bodyTuple := bodyTuple_.(value.TupleVal)
+				opvallist := bodyTuple.Values[0].(value.ListVal).Values
+				var oplist []value.Operation
 				for _, v := range opvallist {
-					oplist = append(oplist, v.(OperationVal).Value)
+					oplist = append(oplist, v.(value.OperationVal).Value)
 				}
 				return oplist, bodyTuple.Values[1], spentsofar, gas
 			}
 		}
 	}
-	return nil, 1, 0, gas // TODO this is just a dummy return Value
+	return nil, value.UnitVal{}, 0, gas // TODO this is just a dummy return Value. Should never happen
 }
 
-func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
+func applyParams(paramVal value.Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
 	switch paramVal.(type) {
-	case TupleVal:
-		paramVal := paramVal.(TupleVal)
+	case value.TupleVal:
+		paramVal := paramVal.(value.TupleVal)
 		if len(pattern.Params) == 1 {
 			if checkParam(paramVal, pattern.Params[0].Anno.Typ) {
 				return venv.Set(pattern.Params[0].Id, paramVal), nil
@@ -209,12 +210,12 @@ func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
 		} else {
 			return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
 		}
-	case UnitVal:
+	case value.UnitVal:
 		if len(pattern.Params) == 0 {
 			return venv, nil
 		} else if len(pattern.Params) == 1 {
 			if checkParam(paramVal, pattern.Params[0].Anno.Typ) {
-				return venv.Set(pattern.Params[0].Id, UnitVal{}), nil
+				return venv.Set(pattern.Params[0].Id, value.UnitVal{}), nil
 			} else {
 				return venv, fmt.Errorf("parameter mismatch, can't match given parameters to entry")
 			}
@@ -237,34 +238,34 @@ func applyParams(paramVal Value, pattern Pattern, venv VarEnv) (VarEnv, error) {
 func checkParam(param interface{}, typ Type) bool {
 	switch typ.Type() {
 	case STRING:
-		_, ok := param.(StringVal)
+		_, ok := param.(value.StringVal)
 		return ok
 	case KEY:
-		_, ok := param.(KeyVal)
+		_, ok := param.(value.KeyVal)
 		return ok
 	case INT:
-		_, ok := param.(IntVal)
+		_, ok := param.(value.IntVal)
 		return ok
 	case KOIN:
-		_, ok := param.(KoinVal)
+		_, ok := param.(value.KoinVal)
 		return ok
 	case NAT:
-		_, ok := param.(NatVal)
+		_, ok := param.(value.NatVal)
 		return ok
 	case BOOL:
-		_, ok := param.(BoolVal)
+		_, ok := param.(value.BoolVal)
 		return ok
 	case OPERATION:
-		_, ok := param.(OperationVal)
+		_, ok := param.(value.OperationVal)
 		return ok
 	case ADDRESS:
-		_, ok := param.(AddressVal)
+		_, ok := param.(value.AddressVal)
 		return ok
 	case UNIT:
-		_, ok := param.(UnitVal)
+		_, ok := param.(value.UnitVal)
 		return ok
 	case TUPLE:
-		val, ok := param.(TupleVal)
+		val, ok := param.(value.TupleVal)
 		if !ok {
 			return false
 		}
@@ -281,7 +282,7 @@ func checkParam(param interface{}, typ Type) bool {
 		}
 		return ok
 	case LIST:
-		val, ok := param.(ListVal)
+		val, ok := param.(value.ListVal)
 		if !ok {
 			return false
 		}
@@ -295,7 +296,7 @@ func checkParam(param interface{}, typ Type) bool {
 		}
 		return ok
 	case OPTION:
-		val, ok := param.(OptionVal)
+		val, ok := param.(value.OptionVal)
 		if !ok {
 			return false
 		}
@@ -304,7 +305,7 @@ func checkParam(param interface{}, typ Type) bool {
 		}
 		return ok
 	case STRUCT:
-		val, ok := param.(StructVal)
+		val, ok := param.(value.StructVal)
 		structtype := typ.(StructType)
 		if !ok {
 			return false
@@ -332,16 +333,16 @@ func checkParam(param interface{}, typ Type) bool {
 	}
 }
 
-func failwith(str string) FailWith {
-	return FailWith{str}
+func failwith(str string) value.FailWith {
+	return value.FailWith{str}
 }
 
-func createStruct() StructVal {
-	m := make(map[string]Value)
-	return StructVal{m}
+func createStruct() value.StructVal {
+	m := make(map[string]value.Value)
+	return value.StructVal{m}
 }
 
-func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
+func interpret(texp TypedExp, venv VarEnv, gas uint64) (value.Value, uint64) {
 	// pay gas
 	if int64(gas)-1000 < 0 {
 		interpPanic("ran out of gas!", 0)
@@ -357,22 +358,22 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		case PLUS:
 			switch exp.Left.(TypedExp).Type.Type() {
 			case KOIN:
-				return KoinVal{leftval.(KoinVal).Value + rightval.(KoinVal).Value}, gas
+				return value.KoinVal{leftval.(value.KoinVal).Value + rightval.(value.KoinVal).Value}, gas
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case NAT:
-					return NatVal{leftval.(NatVal).Value + rightval.(NatVal).Value}, gas
+					return value.NatVal{leftval.(value.NatVal).Value + rightval.(value.NatVal).Value}, gas
 				case INT:
-					return IntVal{int64(leftval.(NatVal).Value) + rightval.(IntVal).Value}, gas
+					return value.IntVal{int64(leftval.(value.NatVal).Value) + rightval.(value.IntVal).Value}, gas
 				default:
 					return todo(1, gas), gas
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case NAT:
-					return IntVal{leftval.(IntVal).Value + int64(rightval.(NatVal).Value)}, gas
+					return value.IntVal{leftval.(value.IntVal).Value + int64(rightval.(value.NatVal).Value)}, gas
 				case INT:
-					return IntVal{leftval.(IntVal).Value + rightval.(IntVal).Value}, gas
+					return value.IntVal{leftval.(value.IntVal).Value + rightval.(value.IntVal).Value}, gas
 				default:
 					return todo(2, gas), gas
 				}
@@ -384,39 +385,39 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					return IntVal{leftval.(IntVal).Value - rightval.(IntVal).Value}, gas
+					return value.IntVal{leftval.(value.IntVal).Value - rightval.(value.IntVal).Value}, gas
 				case NAT:
-					return IntVal{leftval.(IntVal).Value - int64(rightval.(NatVal).Value)}, gas
+					return value.IntVal{leftval.(value.IntVal).Value - int64(rightval.(value.NatVal).Value)}, gas
 				default:
 					return todo(4, gas), gas
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					return IntVal{int64(leftval.(NatVal).Value) - rightval.(IntVal).Value}, gas
+					return value.IntVal{int64(leftval.(value.NatVal).Value) - rightval.(value.IntVal).Value}, gas
 				case NAT:
-					return IntVal{int64(leftval.(NatVal).Value) - int64(rightval.(NatVal).Value)}, gas
+					return value.IntVal{int64(leftval.(value.NatVal).Value) - int64(rightval.(value.NatVal).Value)}, gas
 				default:
 					return todo(5, gas), gas
 				}
 			case KOIN:
-				left := leftval.(KoinVal).Value
-				right := rightval.(KoinVal).Value
+				left := leftval.(value.KoinVal).Value
+				right := rightval.(value.KoinVal).Value
 				if left < right {
 					interpPanic(fmt.Sprintf("Subtracting %d from %d would result in a negative Koin value", left, right), gas)
 				}
-				return KoinVal{leftval.(KoinVal).Value - rightval.(KoinVal).Value}, gas
+				return value.KoinVal{leftval.(value.KoinVal).Value - rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(6, gas), gas
 			}
 		case TIMES:
 			switch texp.Type.Type() {
 			case INT:
-				return IntVal{leftval.(IntVal).Value * rightval.(IntVal).Value}, gas
+				return value.IntVal{leftval.(value.IntVal).Value * rightval.(value.IntVal).Value}, gas
 			case NAT:
-				return NatVal{leftval.(NatVal).Value * rightval.(NatVal).Value}, gas
+				return value.NatVal{leftval.(value.NatVal).Value * rightval.(value.NatVal).Value}, gas
 			case KOIN:
-				return KoinVal{leftval.(KoinVal).Value * rightval.(KoinVal).Value}, gas
+				return value.KoinVal{leftval.(value.KoinVal).Value * rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(7, gas), gas
 			}
@@ -425,71 +426,71 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 			case KOIN:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case KOIN:
-					if rightval.(KoinVal).Value == 0 {
-						return OptionVal{Opt: false}, gas
+					if rightval.(value.KoinVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
+						return value.OptionVal{Opt: false}, gas
 					}
-					left := leftval.(KoinVal).Value
-					right := rightval.(KoinVal).Value
+					left := leftval.(value.KoinVal).Value
+					right := rightval.(value.KoinVal).Value
 					quotient, remainder := left/right, left%right
-					values := []Value{NatVal{quotient}, KoinVal{remainder}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.NatVal{quotient}, value.KoinVal{remainder}}
+					return value.TupleVal{values}, gas
 				case NAT:
-					if rightval.(NatVal).Value == 0 {
+					if rightval.(value.NatVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
 					}
-					left := leftval.(KoinVal).Value
-					right := rightval.(NatVal).Value
+					left := leftval.(value.KoinVal).Value
+					right := rightval.(value.NatVal).Value
 					quotient := uint64(left / right)
 					remainder := ((left / right) - quotient) * right
-					values := []Value{KoinVal{quotient}, KoinVal{remainder}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.KoinVal{quotient}, value.KoinVal{remainder}}
+					return value.TupleVal{values}, gas
 				default:
 					return todo(8, gas), gas
 				}
 			case NAT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					if rightval.(IntVal).Value == 0 {
+					if rightval.(value.IntVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
 					}
-					left := int64(leftval.(NatVal).Value)
-					right := rightval.(IntVal).Value
+					left := int64(leftval.(value.NatVal).Value)
+					right := rightval.(value.IntVal).Value
 					quotient, remainder := left/right, left%right
-					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.IntVal{quotient}, value.NatVal{uint64(remainder)}}
+					return value.TupleVal{values}, gas
 				case NAT:
-					if rightval.(NatVal).Value == 0 {
+					if rightval.(value.NatVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
 					}
-					left := leftval.(NatVal).Value
-					right := rightval.(NatVal).Value
+					left := leftval.(value.NatVal).Value
+					right := rightval.(value.NatVal).Value
 					quotient, remainder := left/right, left%right
-					values := []Value{NatVal{quotient}, NatVal{remainder}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.NatVal{quotient}, value.NatVal{remainder}}
+					return value.TupleVal{values}, gas
 				default:
 					return todo(9, gas), gas
 				}
 			case INT:
 				switch exp.Right.(TypedExp).Type.Type() {
 				case INT:
-					if rightval.(IntVal).Value == 0 {
+					if rightval.(value.IntVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
 					}
-					left := leftval.(IntVal).Value
-					right := rightval.(IntVal).Value
+					left := leftval.(value.IntVal).Value
+					right := rightval.(value.IntVal).Value
 					quotient, remainder := left/right, left%right
-					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.IntVal{quotient}, value.NatVal{uint64(remainder)}}
+					return value.TupleVal{values}, gas
 				case NAT:
-					if rightval.(NatVal).Value == 0 {
+					if rightval.(value.NatVal).Value == 0 {
 						interpPanic("Can't divide by zero!", gas)
 					}
-					left := leftval.(IntVal).Value
-					right := int64(rightval.(NatVal).Value)
+					left := leftval.(value.IntVal).Value
+					right := int64(rightval.(value.NatVal).Value)
 					quotient, remainder := left/right, left%right
-					values := []Value{IntVal{quotient}, NatVal{uint64(remainder)}}
-					return TupleVal{values}, gas
+					values := []value.Value{value.IntVal{quotient}, value.NatVal{uint64(remainder)}}
+					return value.TupleVal{values}, gas
 				default:
 					return todo(10, gas), gas
 				}
@@ -497,68 +498,68 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 				return todo(11, gas), gas
 			}
 		case EQ:
-			return BoolVal{leftval == rightval}, gas
+			return value.BoolVal{leftval == rightval}, gas
 		case NEQ:
-			return BoolVal{leftval != rightval}, gas
+			return value.BoolVal{leftval != rightval}, gas
 		case GEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value >= rightval.(NatVal).Value}, gas
+				return value.BoolVal{leftval.(value.NatVal).Value >= rightval.(value.NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value >= rightval.(IntVal).Value}, gas
+				return value.BoolVal{leftval.(value.IntVal).Value >= rightval.(value.IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value >= rightval.(KoinVal).Value}, gas
+				return value.BoolVal{leftval.(value.KoinVal).Value >= rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(12, gas), gas
 			}
 		case LEQ:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value <= rightval.(NatVal).Value}, gas
+				return value.BoolVal{leftval.(value.NatVal).Value <= rightval.(value.NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value <= rightval.(IntVal).Value}, gas
+				return value.BoolVal{leftval.(value.IntVal).Value <= rightval.(value.IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value <= rightval.(KoinVal).Value}, gas
+				return value.BoolVal{leftval.(value.KoinVal).Value <= rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(13, gas), gas
 			}
 		case LT:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value < rightval.(NatVal).Value}, gas
+				return value.BoolVal{leftval.(value.NatVal).Value < rightval.(value.NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value < rightval.(IntVal).Value}, gas
+				return value.BoolVal{leftval.(value.IntVal).Value < rightval.(value.IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value < rightval.(KoinVal).Value}, gas
+				return value.BoolVal{leftval.(value.KoinVal).Value < rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(14, gas), gas
 			}
 		case GT:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return BoolVal{leftval.(NatVal).Value > rightval.(NatVal).Value}, gas
+				return value.BoolVal{leftval.(value.NatVal).Value > rightval.(value.NatVal).Value}, gas
 			case INT:
-				return BoolVal{leftval.(IntVal).Value > rightval.(IntVal).Value}, gas
+				return value.BoolVal{leftval.(value.IntVal).Value > rightval.(value.IntVal).Value}, gas
 			case KOIN:
-				return BoolVal{leftval.(KoinVal).Value > rightval.(KoinVal).Value}, gas
+				return value.BoolVal{leftval.(value.KoinVal).Value > rightval.(value.KoinVal).Value}, gas
 			default:
 				return todo(15, gas), gas
 			}
 		case AND:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return NatVal{leftval.(NatVal).Value & rightval.(NatVal).Value}, gas
+				return value.NatVal{leftval.(value.NatVal).Value & rightval.(value.NatVal).Value}, gas
 			case BOOL:
-				return BoolVal{leftval.(BoolVal).Value && rightval.(BoolVal).Value}, gas
+				return value.BoolVal{leftval.(value.BoolVal).Value && rightval.(value.BoolVal).Value}, gas
 			default:
 				return todo(16, gas), gas
 			}
 		case OR:
 			switch exp.Right.(TypedExp).Type.Type() {
 			case NAT:
-				return NatVal{leftval.(NatVal).Value | rightval.(NatVal).Value}, gas
+				return value.NatVal{leftval.(value.NatVal).Value | rightval.(value.NatVal).Value}, gas
 			case BOOL:
-				return BoolVal{leftval.(BoolVal).Value || rightval.(BoolVal).Value}, gas
+				return value.BoolVal{leftval.(value.BoolVal).Value || rightval.(value.BoolVal).Value}, gas
 			default:
 				return todo(17, gas), gas
 			}
@@ -569,27 +570,27 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		return todo(19, gas), gas
 	case KeyLit:
 		exp := exp.(KeyLit)
-		return KeyVal{exp.Key}, gas
+		return value.KeyVal{exp.Key}, gas
 	case BoolLit:
 		exp := exp.(BoolLit)
-		return BoolVal{exp.Val}, gas
+		return value.BoolVal{exp.Val}, gas
 	case IntLit:
 		exp := exp.(IntLit)
-		return IntVal{exp.Val}, gas
+		return value.IntVal{exp.Val}, gas
 	case KoinLit:
 		exp := exp.(KoinLit)
-		return KoinVal{exp.Val}, gas
+		return value.KoinVal{exp.Val}, gas
 	case StringLit:
 		exp := exp.(StringLit)
-		return StringVal{exp.Val}, gas
+		return value.StringVal{exp.Val}, gas
 	case NatLit:
 		exp := exp.(NatLit)
-		return NatVal{exp.Val}, gas
+		return value.NatVal{exp.Val}, gas
 	case UnitLit:
-		return UnitVal{}, gas
+		return value.UnitVal{}, gas
 	case AddressLit:
 		exp := exp.(AddressLit)
-		return AddressVal{exp.Val}, gas
+		return value.AddressVal{exp.Val}, gas
 	case StructLit:
 		exp := exp.(StructLit)
 		newStruct := createStruct()
@@ -600,54 +601,54 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 	case ListLit:
 		exp := exp.(ListLit)
 		if len(exp.List) == 0 {
-			return ListVal{make([]Value, 0)}, gas
+			return value.ListVal{make([]value.Value, 0)}, gas
 		}
-		var returnlist []Value
+		var returnlist []value.Value
 		for _, e := range exp.List {
 			val, gas_ := interpret(e.(TypedExp), venv, gas)
 			gas = gas_
 			returnlist = append(returnlist, val)
 		}
-		return ListVal{returnlist}, gas
+		return value.ListVal{returnlist}, gas
 	case ListConcat:
 		exp := exp.(ListConcat)
 		e, gas := interpret(exp.Exp.(TypedExp), venv, gas)
 		list_, gas := interpret(exp.Exp.(TypedExp), venv, gas)
-		list := list_.(ListVal)
-		return ListVal{append(list.Values, e)}, gas
+		list := list_.(value.ListVal)
+		return value.ListVal{append(list.Values, e)}, gas
 	case CallExp:
 		exp := exp.(CallExp)
 		name_, gas := interpret(exp.ExpList[0].(TypedExp), venv, gas)
-		name := name_.(LambdaVal)
+		name := name_.(value.LambdaVal)
 		switch name.Value {
-		case CURRENT_BALANCE:
+		case value.CURRENT_BALANCE:
 			return currentBalance(), gas
-		case CURRENT_AMOUNT:
+		case value.CURRENT_AMOUNT:
 			return currentAmount(), gas
-		case CURRENT_GAS:
-			return KoinVal{gas}, gas
-		case CURRENT_FAILWITH:
+		case value.CURRENT_GAS:
+			return value.KoinVal{gas}, gas
+		case value.CURRENT_FAILWITH:
 			failmessage_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
-			failmessage := failmessage_.(StringVal)
+			failmessage := failmessage_.(value.StringVal)
 			return currentFailWith(failmessage, gas), gas
-		case CONTRACT_CALL:
+		case value.CONTRACT_CALL:
 			address_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
-			address := address_.(AddressVal)
+			address := address_.(value.AddressVal)
 			amount_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
-			amount := amount_.(KoinVal)
+			amount := amount_.(value.KoinVal)
 			entry_, gas := interpret(exp.ExpList[3].(TypedExp), venv, gas)
-			entry := entry_.(StringVal)
+			entry := entry_.(value.StringVal)
 			param, gas := interpret(exp.ExpList[4].(TypedExp), venv, gas)
 			return contractCall(address, amount, entry, param, gas), gas
-		case ACCOUNT_TRANSFER:
+		case value.ACCOUNT_TRANSFER:
 			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
-			key := key_.(KeyVal)
+			key := key_.(value.KeyVal)
 			amount_, gas := interpret(exp.ExpList[2].(TypedExp), venv, gas)
-			amount := amount_.(KoinVal)
+			amount := amount_.(value.KoinVal)
 			return accountTransfer(key, amount, gas), gas
-		case ACCOUNT_DEFAULT:
+		case value.ACCOUNT_DEFAULT:
 			key_, gas := interpret(exp.ExpList[1].(TypedExp), venv, gas)
-			key := key_.(KeyVal)
+			key := key_.(value.KeyVal)
 			return accountDefault(key), gas
 		default:
 			return todo(20, gas), gas
@@ -662,13 +663,13 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		return interpret(exp.Exp.(TypedExp), venv, gas)
 	case TupleExp:
 		exp := exp.(TupleExp)
-		var tupleValues []Value
+		var tupleValues []value.Value
 		for _, e := range exp.Exps {
 			interE, gas_ := interpret(e.(TypedExp), venv, gas)
 			gas = gas_
 			tupleValues = append(tupleValues, interE)
 		}
-		return TupleVal{tupleValues}, gas
+		return value.TupleVal{tupleValues}, gas
 	case VarExp:
 		exp := exp.(VarExp)
 		return lookupVar(exp.Id, venv), gas
@@ -680,7 +681,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 	case IfThenElseExp:
 		exp := exp.(IfThenElseExp)
 		condition_, gas := interpret(exp.If.(TypedExp), venv, gas)
-		condition := condition_.(BoolVal).Value
+		condition := condition_.(value.BoolVal).Value
 		if condition {
 			return interpret(exp.Then.(TypedExp), venv, gas)
 		} else {
@@ -689,40 +690,40 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 	case IfThenExp:
 		exp := exp.(IfThenExp)
 		condition_, gas := interpret(exp.If.(TypedExp), venv, gas)
-		condition := condition_.(BoolVal).Value
+		condition := condition_.(value.BoolVal).Value
 		if condition {
 			return interpret(exp.Then.(TypedExp), venv, gas)
 		}
-		return UnitVal{}, gas
+		return value.UnitVal{}, gas
 	case ModuleLookupExp:
 		exp := exp.(ModuleLookupExp)
 		switch exp.ModId {
 		case "Current":
 			switch exp.FieldId {
 			case "balance":
-				return LambdaVal{CURRENT_BALANCE}, gas
+				return value.LambdaVal{value.CURRENT_BALANCE}, gas
 			case "amount":
-				return LambdaVal{CURRENT_AMOUNT}, gas
+				return value.LambdaVal{value.CURRENT_AMOUNT}, gas
 			case "gas":
-				return LambdaVal{CURRENT_GAS}, gas
+				return value.LambdaVal{value.CURRENT_GAS}, gas
 			case "failwith":
-				return LambdaVal{CURRENT_FAILWITH}, gas
+				return value.LambdaVal{value.CURRENT_FAILWITH}, gas
 			default:
 				return todo(22, gas), gas
 			}
 		case "Contract":
 			switch exp.FieldId {
 			case "call":
-				return LambdaVal{CONTRACT_CALL}, gas
+				return value.LambdaVal{value.CONTRACT_CALL}, gas
 			default:
 				return todo(23, gas), gas
 			}
 		case "Account":
 			switch exp.FieldId {
 			case "transfer":
-				return LambdaVal{ACCOUNT_TRANSFER}, gas
+				return value.LambdaVal{value.ACCOUNT_TRANSFER}, gas
 			case "default":
-				return LambdaVal{ACCOUNT_DEFAULT}, gas
+				return value.LambdaVal{value.ACCOUNT_DEFAULT}, gas
 			default:
 				return todo(24, gas), gas
 			}
@@ -732,12 +733,12 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 
 	case LookupExp:
 		exp := exp.(LookupExp)
-		var structVal StructVal
+		var structVal value.StructVal
 		for i, id := range exp.PathIds {
 			if i == 0 {
-				structVal = lookupVar(id, venv).(StructVal)
+				structVal = lookupVar(id, venv).(value.StructVal)
 			} else {
-				structVal = structVal.Field[id].(StructVal)
+				structVal = structVal.Field[id].(value.StructVal)
 			}
 		}
 		return structVal.Field[exp.LeafId], gas
@@ -747,11 +748,11 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (interface{}, uint64) {
 		innerStruct := struc
 		path := exp.Path
 		for len(path) > 1 {
-			innerStruct = innerStruct.(StructVal).Field[path[0]]
+			innerStruct = innerStruct.(value.StructVal).Field[path[0]]
 			path = path[1:]
 		}
 		newval, gas := interpret(exp.Exp.(TypedExp), venv, gas)
-		innerStruct.(StructVal).Field[path[0]] = newval
+		innerStruct.(value.StructVal).Field[path[0]] = newval
 		return struc, gas
 	case StorageInitExp:
 		return todo(26, gas), gas

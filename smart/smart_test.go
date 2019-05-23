@@ -2,6 +2,7 @@ package smart
 
 import (
 	"github.com/nfk93/blockchain/smart/interpreter"
+	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -11,37 +12,34 @@ func TestCallContract(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	contracts["A"] = Contract{string(dat), texp, stor}
+	contracts["A"] = contract{string(dat), texp, stor}
 
 	address := "A"
 	entry := "main"
-	params := interpreter.KeyVal{"asdasda"}
+	params := value.KeyVal{"asdasda"}
 	amount := uint64(500000)
 	gas := uint64(100000)
 
 	_, transfers, _, err := CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(interpreter.StructVal).Field["amount_raised"].(interpreter.KoinVal).Value != 500000 {
+	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 500000 {
 		t.Errorf("contract A storage has wrong value in amount_raised")
 	}
 	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
 	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(interpreter.StructVal).Field["amount_raised"].(interpreter.KoinVal).Value != 1100000 {
+	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 1100000 {
 		t.Errorf("contract A storage has wrong value in amount_raised")
 	}
 	if len(transfers) != 1 {
 		t.Errorf("transferlist not long enough")
 	} else {
 		trans := transfers[0]
-		if trans.From != "A" {
-			t.Errorf("Wrong from in transaction: %s", trans.From)
-		}
 		if trans.To != "asdasda" {
 			t.Errorf("wrong to in transaction: %s", trans.To)
 		}
@@ -56,29 +54,29 @@ func TestCallContract2(t *testing.T) {
 	// testing chain of calls
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	contracts["contract1"] = Contract{string(dat), texp, stor}
+	contracts["contract1"] = contract{string(dat), texp, stor}
 
 	dat, err = ioutil.ReadFile("testcases/contract2")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	texp, stor, _, err = interpreter.InitiateContract(dat, 999999999)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	contracts["contract2"] = Contract{string(dat), texp, stor}
+	contracts["contract2"] = contract{string(dat), texp, stor}
 
 	address := "contract1"
 	entry := "main"
-	params := interpreter.UnitVal{}
+	params := value.UnitVal{}
 	amount := uint64(500000)
 	gas := uint64(100000)
 	ledger, transfers, remainingGas, err := CallContract(address, entry, params, amount, gas)
@@ -95,10 +93,10 @@ func TestCallContract2(t *testing.T) {
 	} else {
 		trans1 := transfers[0]
 		trans2 := transfers[1]
-		if trans1.Amount != 500000/19 || trans1.To != "key1" || trans1.From != "contract1" {
+		if trans1.Amount != 500000/19 || trans1.To != "key1" {
 			t.Errorf("transaction 1 is wrong: %v", trans1)
 		}
-		if trans2.Amount != 10 || trans2.To != "key2" || trans2.From != "contract2" {
+		if trans2.Amount != 10 || trans2.To != "key2" {
 			t.Errorf("transaction 2 is wrong: %v", trans2)
 		}
 	}
@@ -114,13 +112,13 @@ func TestInitiateContract(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile("testcases/contract1")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
-	_, _, err = InitiateContract(dat, 1000000)
+	_, _, _, err = InitiateContract(dat, 1000000)
 	if err != nil {
 		t.Fail()
 	}
-	if contract, exists := contracts[getAddress(dat)]; !exists || contract.storage.(interpreter.IntVal).Value != 0 {
+	if contract, exists := contracts[getAddress(dat)]; !exists || contract.storage.(value.IntVal).Value != 0 {
 		t.Fail()
 	}
 }
@@ -129,23 +127,23 @@ func TestExpireContract(t *testing.T) {
 	resetMaps()
 	dat1, err := ioutil.ReadFile("testcases/contract1_altaddress")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 	dat2, err := ioutil.ReadFile("testcases/contract2")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
 
-	add1, _, err := InitiateContract(dat1, 99999999999999)
+	add1, _, _, err := InitiateContract(dat1, 99999999999999)
 	if err != nil {
 		t.Errorf("error initiating contract1: %s", err.Error())
 	}
-	add2, _, err := InitiateContract(dat2, 99999999999999999)
+	add2, _, _, err := InitiateContract(dat2, 99999999999999999)
 	if err != nil {
 		t.Errorf("error initiating contract2: %s", err.Error())
 	}
 
-	ledger, transfers, remainingGas, err := CallContract(add1, "main", interpreter.UnitVal{}, 10000, 100000)
+	ledger, transfers, remainingGas, err := CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
 	if ledger[add1] != uint64(10000-(2*(int(10000/19)))) {
 		t.Errorf("contract1 has wrong balance: %d, expected %d", ledger[add1], 10000-(2*(int(500000/19))))
 	}
@@ -158,10 +156,10 @@ func TestExpireContract(t *testing.T) {
 	} else {
 		trans1 := transfers[0]
 		trans2 := transfers[1]
-		if trans1.Amount != 10000/19 || trans1.To != "key1" || trans1.From != add1 {
+		if trans1.Amount != 10000/19 || trans1.To != "key1" {
 			t.Errorf("transaction 1 is wrong: %v", trans1)
 		}
-		if trans2.Amount != 10 || trans2.To != "key2" || trans2.From != add2 {
+		if trans2.Amount != 10 || trans2.To != "key2" {
 			t.Errorf("transaction 2 is wrong: %v", trans2)
 		}
 	}
@@ -173,7 +171,7 @@ func TestExpireContract(t *testing.T) {
 	}
 
 	ExpireContract(add2)
-	ledger, transfers, remainingGas, err = CallContract(add1, "main", interpreter.UnitVal{}, 10000, 100000)
+	ledger, transfers, remainingGas, err = CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
 	if ledger[add2] != 0 {
 		t.Errorf("contract 2 balance not empty")
 	}
@@ -195,10 +193,10 @@ func TestOutOfGas(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
-	addr, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", interpreter.KeyVal{""}, 100, 1000)
+	addr, _, _, _ := InitiateContract(dat, 999999999)
+	_, _, _, err = CallContract(addr, "main", value.KeyVal{""}, 100, 1000)
 	if err == nil {
 		t.Errorf("this should return an error from running out of gas")
 	}
@@ -208,16 +206,16 @@ func TestInsufficientFunds(t *testing.T) {
 	resetMaps()
 	dat, err := ioutil.ReadFile("testcases/expensive")
 	if err != nil {
-		t.Error("Error reading testfile")
+		t.Error("Error reading testfile_noerror")
 	}
-	addr, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", interpreter.UnitVal{}, 100, 100000000000)
+	addr, _, _, _ := InitiateContract(dat, 999999999)
+	_, _, _, err = CallContract(addr, "main", value.UnitVal{}, 100, 100000000000)
 	if err == nil {
 		t.Errorf("this should return an error from having insufficient funds")
 	}
 }
 
 func resetMaps() {
-	contracts = make(map[string]Contract)
+	contracts = make(map[string]contract)
 	contractBalances = make(map[string]uint64)
 }
