@@ -126,6 +126,19 @@ func (t TransData) GetType() int {
 	return ERROR
 }
 
+func (t TransData) GetNonce() string {
+	if t.Transaction != (Transaction{}) {
+		return t.Transaction.ID
+	}
+	if t.ContractCall != (ContractCall{}) {
+		return t.ContractCall.Nonce
+	}
+	if t.ContractInit.Owner != (PublicKey{}) {
+		return t.ContractInit.Nonce
+	}
+	return ""
+}
+
 type transtype int
 
 const (
