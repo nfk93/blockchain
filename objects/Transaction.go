@@ -21,16 +21,26 @@ func (t Transaction) toString() string {
 	buf.WriteString(t.To.String())
 	buf.WriteString(strconv.Itoa(int(t.Amount)))
 	buf.WriteString(t.ID)
+	buf.WriteString(t.Signature)
+	return buf.String()
+}
+
+func (t Transaction) stringToSign() string {
+	var buf bytes.Buffer
+	buf.WriteString(t.From.String())
+	buf.WriteString(t.To.String())
+	buf.WriteString(strconv.Itoa(int(t.Amount)))
+	buf.WriteString(t.ID)
 	return buf.String()
 }
 
 func (t *Transaction) SignTransaction(sk SecretKey) {
-	m := t.toString()
+	m := t.stringToSign()
 	t.Signature = Sign(m, sk)
 }
 
 func (t *Transaction) VerifyTransaction() bool {
-	return Verify(t.toString(), t.Signature, t.From)
+	return Verify(t.stringToSign(), t.Signature, t.From)
 }
 
 func CreateTransaction(from PublicKey, to PublicKey, amount uint64, id string, sk SecretKey) Transaction {

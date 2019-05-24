@@ -126,6 +126,22 @@ func (t TransData) GetType() int {
 	return ERROR
 }
 
+func (t TransData) GetID() string {
+	if t.Transaction != (Transaction{}) {
+		return t.Transaction.ID
+	}
+	if t.ContractCall != (ContractCall{}) {
+		return t.ContractCall.Nonce
+	}
+	if t.ContractInit.Owner != (PublicKey{}) ||
+		t.ContractInit.Prepaid != 0 ||
+		t.ContractInit.Gas != 0 ||
+		string(t.ContractInit.Code) != "" {
+		return CONTRACTINIT
+	}
+	return ERROR
+}
+
 type transtype int
 
 const (
