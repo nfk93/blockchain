@@ -1,5 +1,0 @@
-type storage = unit
-let%init storage = ()
-let%entry main () storage =
-    let transfer = Account.transfer kn1keyval 100kn in
-    ([transfer], storage)

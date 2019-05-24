@@ -7,12 +7,8 @@ import (
 
 func TestBoolLit(t *testing.T) {
 	exp := BoolLit{true}
-	texp, ok, _ := AddTypes(exp, 999999999999999)
-	if !ok {
-		t.Fail()
-		return
-	}
-	if !ok {
+	texp, err, _ := AddTypes(exp, 999999999999999)
+	if err != nil {
 		t.Fail()
 		return
 	}
@@ -23,7 +19,7 @@ func TestBoolLit(t *testing.T) {
 func TestKeyLit(t *testing.T) {
 	exp := KeyLit{"2aAad314"}
 	texp, ok, _ := AddTypes(exp, 9999999999999999)
-	if !ok {
+	if ok != nil {
 		t.Fail()
 		return
 	}
@@ -34,7 +30,7 @@ func TestKeyLit(t *testing.T) {
 func TestIntLit(t *testing.T) {
 	exp := IntLit{123}
 	texp, ok, _ := AddTypes(exp, 99999999999999)
-	if !ok {
+	if ok != nil {
 		t.Fail()
 		return
 	}
@@ -45,7 +41,7 @@ func TestIntLit(t *testing.T) {
 func TestKoinLit(t *testing.T) {
 	exp := KoinLit{123}
 	texp, ok, _ := AddTypes(exp, 99999999999999999)
-	if !ok {
+	if ok != nil {
 		t.Fail()
 		return
 	}
@@ -56,7 +52,7 @@ func TestKoinLit(t *testing.T) {
 func TestStringLit(t *testing.T) {
 	exp := StringLit{"ey"}
 	texp, ok, _ := AddTypes(exp, 999999999999999)
-	if !ok {
+	if ok != nil {
 		t.Fail()
 		return
 	}
@@ -67,7 +63,7 @@ func TestStringLit(t *testing.T) {
 func TestUnitLit(t *testing.T) {
 	exp := UnitLit{}
 	texp, ok, _ := AddTypes(exp, 999999999999999)
-	if !ok {
+	if ok != nil {
 		t.Fail()
 		return
 	}
@@ -78,7 +74,7 @@ func TestUnitLit(t *testing.T) {
 func TestBinOp(t *testing.T) {
 	exp := BinOpExp{IntLit{123}, EQ, IntLit{11}}
 	texp, ok, _ := AddTypes(exp, 99999999999)
-	if !ok {
+	if ok != nil {
 		t.Errorf("semant err")
 		return
 	}
@@ -89,7 +85,7 @@ func TestBinOp(t *testing.T) {
 	checkTypeEquality(t, texp, expected)
 	exp = BinOpExp{IntLit{123}, EQ, StringLit{"tis"}}
 	texp, ok, _ = AddTypes(exp, 99999999999)
-	if ok {
+	if ok == nil {
 		t.Errorf("should have error")
 		return
 	}
@@ -98,7 +94,11 @@ func TestBinOp(t *testing.T) {
 
 func TestTypeDecl(t *testing.T) {
 	exp := TypeDecl{"test", NewIntType()}
-	texp, _, tenv, _, _ := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv(), 999999999999999)
+	texp, _, tenv, _, _, err := addTypes(exp, InitialVarEnv(), InitialTypeEnv(), InitialStructEnv(), 999999999999999)
+	if err != nil {
+		t.Errorf("")
+		return
+	}
 	expected := TypedExp{exp, UnitType{}}
 	checkTypeEquality(t, texp, expected)
 	switch lookupType("test", tenv).(type) {

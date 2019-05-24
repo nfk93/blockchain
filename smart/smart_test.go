@@ -377,7 +377,7 @@ func TestFinalizeBlock2(t *testing.T) {
 func TestNewBlock(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
-	_, _ = ResetAndSetNewBlockStartPoint("1", 11)
+	_, _ = SetStartingPointForNewBlock("1", 11)
 	fundme := getFundMeCode(t)
 	addr, _, _ := InitiateContractOnNewBlock(fundme, 400000, 100000, 10000)
 	_, _, _, err := CallContractOnNewBlock(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -415,8 +415,6 @@ func TestNewBlock(t *testing.T) {
 		t.Errorf("")
 	}
 }
-
-// finally expiring contract reinitiated on later branch
 
 func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(filepath)

@@ -126,7 +126,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	var addedTransactions []TransData
 
-	expiring, err := smart.ResetAndSetNewBlockStartPoint(t.head, blockData.SlotNo)
+	expiring, err := smart.SetStartingPointForNewBlock(t.head, blockData.SlotNo)
 	if err != nil {
 		// this should not happen
 		log.Fatal("trying to create a new block which parent doesn't exist")
