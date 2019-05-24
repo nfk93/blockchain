@@ -1,5 +1,5 @@
 type storage = address
 
-let%init storage = kn22131abdc22131abdc22131abdc22131a
+let%init storage = kn22131abdc22131abdc22131abdc22131a2131abdc22131abdc22131abdc22131a
 
-let%entry main () s = (([] : operation list), kn23132141abba3132141abba3132141abb)
+let%entry main () s = (([] : operation list), kn23132141abba3132141abba3132141abb3132141abba3132141abba3132141abb)

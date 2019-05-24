@@ -99,7 +99,7 @@ type ListVal struct {
 
 func (v ListVal) Size() uint64 {
 	cost := 64 * bitcost
-	if len(v.Values) > 1 {
+	if len(v.Values) > 0 {
 		itemcost := v.Values[0].Size()
 		cost += uint64(len(v.Values) * int(itemcost))
 	}

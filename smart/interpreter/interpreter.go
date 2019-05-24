@@ -613,7 +613,7 @@ func interpret(texp TypedExp, venv VarEnv, gas uint64) (value.Value, uint64) {
 	case ListConcat:
 		exp := exp.(ListConcat)
 		e, gas := interpret(exp.Exp.(TypedExp), venv, gas)
-		list_, gas := interpret(exp.Exp.(TypedExp), venv, gas)
+		list_, gas := interpret(exp.List.(TypedExp), venv, gas)
 		list := list_.(value.ListVal)
 		return value.ListVal{append(list.Values, e)}, gas
 	case CallExp:

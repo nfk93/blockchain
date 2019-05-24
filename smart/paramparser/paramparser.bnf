@@ -1,10 +1,12 @@
 /* Lexical Part */
 
 _hex        : 'a'-'f' | '0'-'9' ;
-_hex32      : _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
-              _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex ;
-key_lit     : 'k' 'n' '1' _hex32 ;
-add_lit     : 'k' 'n' '2' _hex32 ;
+_hex64      : _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
+              _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
+              _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex _hex
+              _hex ;
+key_lit     : 'k' 'n' '1' _hex64 ;
+add_lit     : 'k' 'n' '2' _hex64 ;
 
 _digit      : '0'-'9' ;
 _amount     : _digit { _digit } ;

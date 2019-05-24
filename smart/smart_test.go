@@ -57,7 +57,7 @@ func TestInitiateContract(t *testing.T) {
 		if contstate.storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(contstate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef", 1100000, 0)) {
+		if !value.Equals(contstate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 0)) {
 			t.Errorf("storage has wrong value of %s", contstate.storage)
 		}
 	}
@@ -113,32 +113,214 @@ func TestCallContract(t *testing.T) {
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
 	addr, _, _ := InitiateContract(fundme, 400000, 100000, 10000, "1")
-	ledger, trans, remainingGas, err := CallContract(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		100000, 10000, "1")
+	ledger, trans, remainingGas, err := CallContract(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		100000, 40000, "1")
 
 	if err != nil {
 		t.Errorf("error in contractcall: %s", err.Error())
 		return
 	}
-	fmt.Println(ledger)
-	fmt.Println(trans)
-	fmt.Println(remainingGas)
+
+	fundmestate, exists := stateTree["1"].contractStates[addr]
+	if !exists {
+		t.Errorf("contract state doesn't exist1")
+	} else {
+		if fundmestate.storagecap != 10000 {
+			t.Errorf("")
+		}
+		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		}
+		if fundmestate.balance != 100000 {
+			t.Errorf("")
+		}
+	}
+
+	params := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"
+	ledger, trans, remainingGas, err = CallContract(addr, "main", "kn1"+params,
+		1100000, 40000, "1")
+	fundmestate, exists = stateTree["1"].contractStates[addr]
+	if !exists {
+		t.Errorf("contract state doesn't exist2")
+	} else {
+		if fundmestate.storagecap != 10000 {
+			t.Errorf("")
+		}
+		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		}
+		if fundmestate.balance != 1100000 {
+			t.Errorf("")
+		}
+	}
+	if remainingGas >= 40000 {
+		t.Errorf("")
+	}
+	if len(trans) != 1 {
+		t.Errorf("")
+	} else {
+		transaction := trans[0]
+		if transaction.Amount != 100000 || transaction.To != params {
+			t.Errorf("")
+		}
+	}
+	if v, exists := ledger[addr]; !exists || v != 1100000 {
+		t.Errorf("")
+	}
+
+	ledger, trans, remainingGas, err = CallContract(addr, "main", "kn1"+params,
+		0, 40000, "1")
+	fundmestate, exists = stateTree["1"].contractStates[addr]
+	if !exists {
+		t.Errorf("contract state doesn't exist2")
+	} else {
+		if fundmestate.storagecap != 10000 {
+			t.Errorf("")
+		}
+		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		}
+		if fundmestate.balance != 0 {
+			t.Errorf("")
+		}
+	}
+	if remainingGas >= 40000 {
+		t.Errorf("")
+	}
+	if len(trans) != 1 {
+		t.Errorf("")
+	} else {
+		transaction := trans[0]
+		if transaction.Amount != 1100000 || transaction.To != "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" {
+			t.Errorf("")
+		}
+	}
+	if v, exists := ledger[addr]; !exists || v != 0 {
+		t.Errorf("")
+	}
 }
 
-// updating contractstate 1 and 2
-// branching contracts
+func TestBranching(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code := getSimpleIntStorage(t)
+	addr, _, err := InitiateContract(code, 130000, 10000, 64, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, _, _, err = CallContract(addr, "main", "1", 0, 20000, "1")
+	_, _ = NewBlockTreeNode("2", "1", 8)
+	_, _, _, err = CallContract(addr, "main", "1", 0, 20000, "2")
+	_, _ = NewBlockTreeNode("3", "1", 9)
+	_, _, _, err = CallContract(addr, "main", "4", 1, 20000, "3")
+
+	block1state := stateTree["1"].contractStates[addr]
+	if !value.Equals(block1state.storage, value.IntVal{1}) {
+		t.Errorf("")
+	}
+	if block1state.balance != 0 {
+		t.Errorf("")
+	}
+
+	block2state := stateTree["2"].contractStates[addr]
+	if !value.Equals(block2state.storage, value.IntVal{2}) {
+		t.Errorf("")
+	}
+	if block2state.prepaidStorage != 10000-3*64 {
+		t.Errorf("")
+	}
+	if block2state.balance != 0 {
+		t.Errorf("")
+	}
+
+	block3state := stateTree["3"].contractStates[addr]
+	if !value.Equals(block3state.storage, value.IntVal{5}) {
+		t.Errorf("")
+	}
+	if block3state.prepaidStorage != 10000-4*64 {
+		t.Errorf("")
+	}
+	if block3state.balance != 1 {
+		t.Errorf("")
+	}
+}
+
+func TestStorageSizeIncrease(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code := getIntListStorage(t)
+	addr, _, err := InitiateContract(code, 150000, 10000, 64, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, _, _, err = CallContract(addr, "main", "1", 0, 20000, "1")
+	if err == nil || err.Error() != "storage cap exceeded" {
+		t.Errorf("")
+	}
+}
+
+func TestChainCalls(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code1 := getContract1(t)
+	code2 := getContract2(t)
+	addr1, _, err := InitiateContract(code1, 200000, 10000, 64, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	addr2, _, err := InitiateContract(code2, 200000, 10000, 64, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, transfers, _, err := CallContract(addr1, "main", fmt.Sprintf("kn2%s", addr2), 33, 100000, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	blockstate := stateTree["1"]
+	fmt.Println(blockstate)
+	fmt.Println(transfers)
+	//contractstate1 := blockstate.contractStates[addr1]
+	//contractstate2 := blockstate.contractStates[addr2]
+
+}
+
 // chain of calls
 // previous state not mutated
 // expiring contract
 // storage reward
 
-func getFundMeCode(t *testing.T) []byte {
-	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
+func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {
+	dat, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		t.Error("Error reading testfile_noerror")
-		log.Fatal("can't read file")
-		return nil
+		t.Errorf("Error reading testfile %s", filepath)
+		log.Fatalf("can't read testfile %s", filepath)
+		return nil, err
 	}
+	return dat, nil
+}
+
+func getFundMeCode(t *testing.T) []byte {
+	dat, _ := getCodeBytes(t, os.Getenv("GOPATH")+"/src/github.com/nfk93/blockchain/usecases/fundme")
+	return dat
+}
+
+func getSimpleIntStorage(t *testing.T) []byte {
+	dat, _ := getCodeBytes(t, "testcases/simple_int_storage")
+	return dat
+}
+
+func getIntListStorage(t *testing.T) []byte {
+	dat, _ := getCodeBytes(t, "testcases/intlist_storage")
+	return dat
+}
+
+func getContract1(t *testing.T) []byte {
+	dat, _ := getCodeBytes(t, "testcases/contract1")
+	return dat
+}
+
+func getContract2(t *testing.T) []byte {
+	dat, _ := getCodeBytes(t, "testcases/contract2")
 	return dat
 }
 

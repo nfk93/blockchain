@@ -159,7 +159,7 @@ func TestAddressConstant(t *testing.T) {
 		0, 9999999999)
 	switch sto.(type) {
 	case value.AddressVal:
-		if sto.(value.AddressVal).Value != "3132141abba3132141abba3132141abb" {
+		if sto.(value.AddressVal).Value != "3132141abba3132141abba3132141abb3132141abba3132141abba3132141abb" {
 			t.Errorf("storage has unexpected value of %s", sto.(value.AddressVal).Value)
 		}
 	default:
@@ -237,7 +237,7 @@ func TestKeyConstant(t *testing.T) {
 		0, 999999999)
 	switch sto.(type) {
 	case value.KeyVal:
-		if sto.(value.KeyVal).Value != "aaffaafaaffaafaaffaafaaffaafaaff" {
+		if sto.(value.KeyVal).Value != "aaffaafaaffaafaaffaafaaffaafaaffaaffaafaaffaafaaffaafaaffaafaaff" {
 			t.Errorf("storage has unexpected value of %s", sto.(value.KeyVal).Value)
 		}
 	default:
@@ -753,7 +753,7 @@ func TestInitStorage(t *testing.T) {
 	case value.StructVal:
 		init := init.(value.StructVal)
 		owner, ok := init.Field["owner"].(value.KeyVal)
-		if !ok || owner.Value != "1234567890abcdef1234567890abcdef" {
+		if !ok || owner.Value != "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" {
 			t.Errorf("init storage has wrong value in field %s", "owner")
 		}
 		funding_goal, ok := init.Field["funding_goal"].(value.KoinVal)
@@ -798,7 +798,7 @@ func TestRunFundme(t *testing.T) {
 		}
 	}
 
-	ownerkey := "1234567890abcdef1234567890abcdef"
+	ownerkey := "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 	otherkey := "asdasdasd"
 	param1 := value.KeyVal{otherkey}
 	oplist, stor, _, _ := InterpretContractCall(texp, param1, "main", stor, 900000,
@@ -931,14 +931,14 @@ func TestCallContract(t *testing.T) {
 		if call.Entry != "main" {
 			t.Errorf("entry has wrong value of %s", call.Entry)
 		}
-		if call.Address != "aaba1231333aaba1231333aaba123133" {
+		if call.Address != "aaba1231333aaba1231333aaba123133aaba1231333aaba1231333aaba123133" {
 			t.Errorf("address has wrong value of %s", call.Address)
 		}
 		if call.Amount != 11500000 {
 			t.Errorf("amount has wrong value of %d", call.Amount)
 		}
 
-		if params, ok := call.Params.(value.KeyVal); !ok || params.Value != "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
+		if params, ok := call.Params.(value.KeyVal); !ok || params.Value != "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
 			t.Errorf("params has wrong value of %s and type %s", params, reflect.TypeOf(params).String())
 		}
 	}

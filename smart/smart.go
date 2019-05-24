@@ -332,7 +332,6 @@ func handleOpList(
 				transfers = append(transfers, trans...)
 			}
 		case value.FailWith:
-			fmt.Println("hit here")
 			return nil, fmt.Errorf(op.(value.FailWith).Msg), gas
 		case value.Transfer:
 			transferop := op.(value.Transfer)

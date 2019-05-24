@@ -2,10 +2,11 @@ type storage = int
 
 let%init storage = 0
 
-let%entry main (a: int) storage =
+let%entry main () storage =
     let amount = Current.amount() in
-        if amount > 0.00010kn then
-            let transfer = Account.transfer kn1key2 0.00010kn in
-            ([transfer], storage + a)
+        if amount > 0kn then
+            let (half, rest) = (Current.amount ()) / 2p in
+            let transfer = Account.transfer kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa half in
+            ([transfer], storage + 1)
         else
-            (([]:operation list), storage + a)
+            (([]:operation list), storage + 1)

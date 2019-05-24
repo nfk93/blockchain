@@ -141,8 +141,8 @@ func ParseAddress(add interface{}) (string, error) {
 
 func removePrefixAndCheckLen(str interface{}) (string, error) {
 	str = string(str.(*token.Token).Lit)[3:]
-	if utf8.RuneCountInString(str.(string)) != 32 {
-		return "", fmt.Errorf("keys and addresses must have length 32")
+	if utf8.RuneCountInString(str.(string)) != 64 {
+		return "", fmt.Errorf("keys and addresses must have length 64")
 	} else {
 		return str.(string), nil
 	}

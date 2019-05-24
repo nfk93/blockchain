@@ -1,0 +1,5 @@
+type storage = int list
+
+let%init storage = ([]: int list)
+
+let%entry main (a: int) s = (([]: operation list), a :: s)

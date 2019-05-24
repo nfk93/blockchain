@@ -11,7 +11,7 @@ type storage = {
 }
 
 let%init storage = {
-  owner = kn11234567890abcdef1234567890abcdef;
+  owner = kn11234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef;
   funding_goal = 11kn;
   amount_raised = 0kn;
 }
