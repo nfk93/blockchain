@@ -134,7 +134,7 @@ func FinalizeBlock(blockHash string) {
 /*
  * Precondition: parenthash points to an existing state, i.e. _, exists := stateTree[parenthash] is always true
  */
-func ResetAndSetNewBlockStartPoint(parenthash string, slot uint64) (expiring []string, err error) {
+func SetStartingPointForNewBlock(parenthash string, slot uint64) (expiring []string, err error) {
 	newBlockContracts = make(map[string]contract)
 	expires, newstate, _ := getNewState(parenthash, slot)
 	newBlockState = newstate
