@@ -20,17 +20,6 @@ func TestNewBlockTreeNode(t *testing.T) {
 	}
 }
 
-func TestNewBlockTreeNode1(t *testing.T) {
-	reset()
-	expiring, reward := NewBlockTreeNode("newblock", "genesis", 5)
-	if len(expiring) != 0 {
-		t.Errorf("")
-	}
-	if reward != 0 {
-		t.Errorf("")
-	}
-}
-
 func TestInitiateContract(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
@@ -276,18 +265,158 @@ func TestChainCalls(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	blockstate := stateTree["1"]
-	fmt.Println(blockstate)
-	fmt.Println(transfers)
-	//contractstate1 := blockstate.contractStates[addr1]
-	//contractstate2 := blockstate.contractStates[addr2]
+	if len(transfers) != 2 {
+		t.Errorf("")
+	} else {
+		trans1 := transfers[0]
+		if trans1.To != "11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff" || trans1.Amount != 11 {
+			t.Errorf("%s, %d", trans1.To, trans1.Amount)
+		}
+		trans2 := transfers[1]
+		if trans2.To != "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" || trans2.Amount != 5 {
+			t.Errorf("%s, %d", trans2.To, trans2.Amount)
+		}
+	}
 
+	blockstate := stateTree["1"]
+	contractstate1 := blockstate.contractStates[addr1]
+	contractstate2 := blockstate.contractStates[addr2]
+	if contractstate1.balance != 11 {
+		t.Errorf("")
+	}
+	if contractstate2.balance != 6 {
+		t.Errorf("")
+	}
 }
 
-// chain of calls
-// previous state not mutated
-// expiring contract
-// storage reward
+func TestExpiringContract(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code := getIntListStorage(t)
+	addr1, _, err := InitiateContract(code, 150000, 1500, 150, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	code = getSimpleIntStorage(t)
+	addr2, _, err := InitiateContract(code, 150000, 1100, 100, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	expiring, reward := NewBlockTreeNode("2", "1", 14)
+	if len(expiring) != 0 {
+		t.Errorf("")
+	}
+	if reward != (14-5)*(100+150) {
+		t.Errorf("")
+	}
+
+	expiring, reward = NewBlockTreeNode("3", "1", 30)
+	if len(expiring) != 2 {
+		t.Errorf("")
+	}
+	if reward != 1100+1500 {
+		t.Errorf("")
+	}
+
+	expiring, reward = NewBlockTreeNode("4", "2", 16)
+	if len(expiring) != 1 {
+		t.Errorf("")
+	}
+	if reward != 200+150 {
+		t.Errorf("")
+	}
+
+	_, _, _, err = CallContract(addr1, "main", "1", 0, 100000, "4")
+	if err == nil {
+		t.Errorf("")
+	}
+	_, _, _, err = CallContract(addr2, "main", "1", 0, 100000, "4")
+	if err != nil {
+		t.Errorf("")
+	}
+}
+
+func TestFinalizeBlock1(t *testing.T) {
+	// check that contracts that are expired in all branches descending branches from a finalization node is deleted
+	// from the contract map
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code := getIntListStorage(t)
+	addr, _, err := InitiateContract(code, 150000, 1000, 100, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, _ = NewBlockTreeNode("2", "1", 16)
+	_, _ = NewBlockTreeNode("3", "2", 20)
+	FinalizeBlock("2")
+	if _, exists := contracts[addr]; exists {
+		t.Errorf("")
+	}
+}
+
+func TestFinalizeBlock2(t *testing.T) {
+	// check that contracts that have expired in a finalizing block but the later reinitiated is not deleted on
+	// finalizing said block
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	code := getIntListStorage(t)
+	_, _, err := InitiateContract(code, 150000, 1000, 100, "1")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	_, _ = NewBlockTreeNode("2", "1", 16)
+	_, _ = NewBlockTreeNode("3", "2", 20)
+	addr, _, err := InitiateContract(code, 150000, 1000, 64*2, "3")
+	FinalizeBlock("2")
+	_, _, _, err = CallContract(addr, "main", "1", 0, 100000, "3")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+}
+
+func TestNewBlock(t *testing.T) {
+	reset()
+	_, _ = NewBlockTreeNode("1", "genesis", 5)
+	_, _ = ResetAndSetNewBlockStartPoint("1", 11)
+	fundme := getFundMeCode(t)
+	addr, _, _ := InitiateContractOnNewBlock(fundme, 400000, 100000, 10000)
+	_, _, _, err := CallContractOnNewBlock(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		100000, 40000)
+	if err != nil {
+		t.Errorf("error in contractcall: %s", err.Error())
+		return
+	}
+	fundmestate, exists := newBlockState.contractStates[addr]
+	if !exists {
+		t.Errorf("contract state doesn't exist1")
+	} else {
+		if fundmestate.storagecap != 10000 {
+			t.Errorf("")
+		}
+		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		}
+		if fundmestate.balance != 100000 {
+			t.Errorf("")
+		}
+	}
+
+	// check that real tree is not mutated
+	if len(stateTree) != 2 {
+		t.Errorf("")
+	}
+
+	// check that finishing creating new block deletes the data
+	DoneCreatingNewBlock()
+	if newBlockContracts != nil {
+		t.Errorf("")
+	}
+	if newBlockState.contractStates != nil || newBlockState.slot != 0 || newBlockState.parenthash != "" {
+		t.Errorf("")
+	}
+}
+
+// finally expiring contract reinitiated on later branch
 
 func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(filepath)
@@ -330,211 +459,6 @@ func getFundmeStorage(owner string, fundgoal uint64, amountrsd uint64) value.Val
 		"funding_goal":  value.KoinVal{fundgoal},
 		"amount_raised": value.KoinVal{amountrsd}}}
 }
-
-/*
-func TestCallContract(t *testing.T) {
-	reset()
-	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-
-
-	address := "A"
-	entry := "main"
-	params := value.KeyVal{"asdasda"}
-	amount := uint64(500000)
-	gas := uint64(100000)
-
-	_, transfers, _, err := CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 500000 {
-		t.Errorf("contract A storage has wrong value in amount_raised")
-	}
-	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
-	_, transfers, _, err = CallContract(address, entry, params, amount, gas)
-	if contracts["A"].storage.(value.StructVal).Field["amount_raised"].(value.KoinVal).Value != 1100000 {
-		t.Errorf("contract A storage has wrong value in amount_raised")
-	}
-	if len(transfers) != 1 {
-		t.Errorf("transferlist not long enough")
-	} else {
-		trans := transfers[0]
-		if trans.To != "asdasda" {
-			t.Errorf("wrong to in transaction: %s", trans.To)
-		}
-		if trans.Amount != 400000 {
-			t.Errorf("wrong amount in transaction: %d", trans.Amount)
-		}
-	}
-}
-*/
-/*
-func TestCallContract2(t *testing.T) {
-	reset()
-	// testing chain of calls
-	dat, err := ioutil.ReadFile("testcases/contract1")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	texp, stor, _, err := interpreter.InitiateContract(dat, 999999999)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	contracts["contract1"] = contract{string(dat), texp, stor}
-
-	dat, err = ioutil.ReadFile("testcases/contract2")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	texp, stor, _, err = interpreter.InitiateContract(dat, 999999999)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	contracts["contract2"] = contract{string(dat), texp, stor}
-
-	address := "contract1"
-	entry := "main"
-	params := value.UnitVal{}
-	amount := uint64(500000)
-	gas := uint64(100000)
-	ledger, transfers, remainingGas, err := CallContract(address, entry, params, amount, gas)
-
-	if ledger["contract1"] != uint64(500000-(2*(int(500000/19)))) {
-		t.Errorf("contract1 has wrong balance: %d, expected %d", ledger["contract1"], 500000-(2*(int(500000/19))))
-	}
-	contract2balance := ledger["contract2"]
-	if contract2balance != 500000/19-10 {
-		t.Errorf("contract2 has wrong balance: %d", contract2balance)
-	}
-	if len(transfers) != 2 {
-		t.Errorf("transfers list has wrong list: %d", len(transfers))
-	} else {
-		trans1 := transfers[0]
-		trans2 := transfers[1]
-		if trans1.Amount != 500000/19 || trans1.To != "key1" {
-			t.Errorf("transaction 1 is wrong: %v", trans1)
-		}
-		if trans2.Amount != 10 || trans2.To != "key2" {
-			t.Errorf("transaction 2 is wrong: %v", trans2)
-		}
-	}
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if remainingGas > 100000 {
-		t.Errorf("too much gas remaining")
-	}
-}
-
-func TestInitiateContract(t *testing.T) {
-	reset()
-	dat, err := ioutil.ReadFile("testcases/contract1")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	_, _, _, err = InitiateContract(dat, 1000000)
-	if err != nil {
-		t.Fail()
-	}
-	if contract, exists := contracts[getAddress(dat)]; !exists || contract.storage.(value.IntVal).Value != 0 {
-		t.Fail()
-	}
-}
-
-func TestExpireContract(t *testing.T) {
-	reset()
-	dat1, err := ioutil.ReadFile("testcases/contract1_altaddress")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	dat2, err := ioutil.ReadFile("testcases/contract2")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-
-	add1, _, _, err := InitiateContract(dat1, 99999999999999)
-	if err != nil {
-		t.Errorf("error initiating contract1: %s", err.Error())
-	}
-	add2, _, _, err := InitiateContract(dat2, 99999999999999999)
-	if err != nil {
-		t.Errorf("error initiating contract2: %s", err.Error())
-	}
-
-	ledger, transfers, remainingGas, err := CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
-	if ledger[add1] != uint64(10000-(2*(int(10000/19)))) {
-		t.Errorf("contract1 has wrong balance: %d, expected %d", ledger[add1], 10000-(2*(int(500000/19))))
-	}
-	contract2balance := ledger[add2]
-	if contract2balance != 10000/19-10 {
-		t.Errorf("contract2 has wrong balance: %d", contract2balance)
-	}
-	if len(transfers) != 2 {
-		t.Errorf("transfers list has wrong list: %d", len(transfers))
-	} else {
-		trans1 := transfers[0]
-		trans2 := transfers[1]
-		if trans1.Amount != 10000/19 || trans1.To != "key1" {
-			t.Errorf("transaction 1 is wrong: %v", trans1)
-		}
-		if trans2.Amount != 10 || trans2.To != "key2" {
-			t.Errorf("transaction 2 is wrong: %v", trans2)
-		}
-	}
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if remainingGas > 100000 {
-		t.Errorf("too much gas remaining")
-	}
-
-	ExpireContract(add2)
-	ledger, transfers, remainingGas, err = CallContract(add1, "main", value.UnitVal{}, 10000, 100000)
-	if ledger[add2] != 0 {
-		t.Errorf("contract 2 balance not empty")
-	}
-	if _, exists := contracts[add2]; exists {
-		t.Errorf("contract 2 still exists2")
-	}
-	if len(transfers) != 0 {
-		t.Errorf("transferlist should be empty")
-	}
-	if remainingGas >= 100000 {
-		t.Errorf("no gas was used")
-	}
-	if err == nil {
-		t.Errorf("no error resulted from call")
-	}
-}
-
-func TestOutOfGas(t *testing.T) {
-	reset()
-	dat, err := ioutil.ReadFile(os.Getenv("GOPATH") + "/src/github.com/nfk93/blockchain/usecases/fundme")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	addr, _, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", value.KeyVal{""}, 100, 1000)
-	if err == nil {
-		t.Errorf("this should return an error from running out of gas")
-	}
-}
-
-func TestInsufficientFunds(t *testing.T) {
-	reset()
-	dat, err := ioutil.ReadFile("testcases/expensive")
-	if err != nil {
-		t.Error("Error reading testfile_noerror")
-	}
-	addr, _, _, _ := InitiateContract(dat, 999999999)
-	_, _, _, err = CallContract(addr, "main", value.UnitVal{}, 100, 100000000000)
-	if err == nil {
-		t.Errorf("this should return an error from having insufficient funds")
-	}
-}
-*/
 
 func reset() {
 	contracts = make(map[string]contract)
