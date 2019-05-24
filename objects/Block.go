@@ -139,6 +139,19 @@ func (t TransData) GetNonce() string {
 	return ""
 }
 
+func (t TransData) Verify() bool {
+	switch t.GetType() {
+	case TRANSACTION:
+		return t.Transaction.VerifyTransaction()
+	case CONTRACTCALL:
+		return t.ContractCall.Verify()
+	case CONTRACTINIT:
+		return t.ContractInit.Verify()
+	default:
+		return false
+	}
+}
+
 type transtype int
 
 const (

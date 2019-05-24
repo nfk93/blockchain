@@ -8,7 +8,7 @@ import (
 )
 
 var unusedTransactions map[string]bool
-var transactions map[string]o.Transaction
+var transactions map[string]o.TransData
 var tLock sync.RWMutex
 var finalLock sync.RWMutex
 var blocks skov
@@ -27,7 +27,7 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	isVerbose = verbose
 	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
-	transactions = make(map[string]o.Transaction)
+	transactions = make(map[string]o.TransData)
 	badBlocks = make(map[string]bool)
 	pendingBlocks = make(map[string]bool)
 	blocks.m = make(map[string]o.Block)
@@ -45,9 +45,17 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 		for {
 			trans := <-channels.TransFromP2P
 			if isVerbose {
-				fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Amount, trans.From.N.String()[0:10], trans.To.N.String()[0:10])
+				if trans.GetType() == o.TRANSACTION {
+					fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Transaction.Amount, trans.Transaction.From.N.String()[0:10], trans.Transaction.To.N.String()[0:10])
+				}
+				if trans.GetType() == o.CONTRACTCALL {
+					fmt.Printf("ContractCall %s received", trans.ContractCall.Nonce)
+				}
+				if trans.GetType() == o.CONTRACTINIT {
+					fmt.Printf("ContractInit %s received", trans.ContractInit.Nonce)
+				}
 			}
-			go handleTransaction(trans)
+			go handleTransData(trans)
 		}
 	}()
 }
@@ -63,16 +71,16 @@ func processPendingBlocks() {
 }
 
 //Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
-func handleTransaction(t o.Transaction) {
+func handleTransData(t o.TransData) {
 	tLock.Lock()
 	defer tLock.Unlock()
-	if t.VerifyTransaction() != true {
+	if t.Verify() != true {
 		return
 	}
-	_, alreadyReceived := transactions[t.ID]
+	_, alreadyReceived := transactions[t.GetNonce()]
 	if !alreadyReceived {
-		transactions[t.ID] = t
-		unusedTransactions[t.ID] = true
+		transactions[t.GetNonce()] = t
+		unusedTransactions[t.GetNonce()] = true
 	}
 }
 
@@ -189,12 +197,11 @@ func rollback(newHead o.Block) bool {
 func transactionsUnused(b o.Block) {
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		t := t.Transaction
-		unusedTransactions[t.ID] = true
+		unusedTransactions[t.GetNonce()] = true
 	}
 }
 
-//Removes the transactions used in a block from unusedTransactions, and saves transactions that we have not already saved.
+//Removes the transdata used in a block from unusedTransactions, and saves transdata that we have not already saved.
 //It returns false if the block reuses any transactions already spent on the chain and marks the block as bad. It returns true otherwise.
 func transactionsUsed(b o.Block) bool {
 	oldUnusedTransmap := make(map[string]bool)
@@ -203,19 +210,19 @@ func transactionsUsed(b o.Block) bool {
 	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		t := t.Transaction
-		_, alreadyStored := transactions[t.ID]
+		tNonce := t.GetNonce()
+		_, alreadyStored := transactions[tNonce]
 		if !alreadyStored {
-			transactions[t.ID] = t
-			unusedTransactions[t.ID] = true
+			transactions[tNonce] = t
+			unusedTransactions[tNonce] = true
 		}
-		_, unused := unusedTransactions[t.ID]
+		_, unused := unusedTransactions[tNonce]
 		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
 			unusedTransactions = oldUnusedTransmap
 			return false
 		}
-		delete(unusedTransactions, t.ID)
+		delete(unusedTransactions, tNonce)
 	}
 	return true
 }
@@ -286,7 +293,7 @@ func getUnusedTransactions() []o.TransData {
 	trans := make([]o.TransData, len(unusedTransactions))
 	i := 0
 	for k := range unusedTransactions {
-		td := o.TransData{Transaction: transactions[k]}
+		td := transactions[k]
 		trans[i] = td
 		i++
 	}

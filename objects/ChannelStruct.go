@@ -2,7 +2,7 @@ package objects
 
 type ChannelStruct struct {
 	TransClientInput chan Transaction
-	TransFromP2P     chan Transaction
+	TransFromP2P     chan TransData
 	BlockFromP2P     chan Block
 	BlockToP2P       chan Block
 	BlockToTrans     chan Block
@@ -18,7 +18,7 @@ func CreateChannelStruct() ChannelStruct {
 	blockChannel2 := make(chan Block)
 	blockChannel3 := make(chan Block)
 	blockChannel4 := make(chan Block)
-	transChannel := make(chan Transaction)
+	transChannel := make(chan TransData)
 	blockDataChannel := make(chan CreateBlockData)
 	stringChannel := make(chan string)
 	stateChannel := make(chan State)
