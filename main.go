@@ -106,7 +106,8 @@ func cliLoop() {
 						1000,
 						publicKey.String()+time.Now().String(),
 						secretKey)
-					channels.TransClientInput <- trans
+
+					channels.TransClientInput <- objects.TransData{Transaction: trans}
 				}
 			}
 		case "-trans2":
@@ -118,7 +119,7 @@ func cliLoop() {
 					currentStake/uint64(len(p2p.GetPublicKeys())),
 					strconv.Itoa(i),
 					secretKey)
-				channels.TransClientInput <- trans
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
 
 			}
 		case "-trans5":
@@ -137,7 +138,7 @@ func cliLoop() {
 					amount,
 					strconv.Itoa(i),
 					secretKey)
-				channels.TransClientInput <- trans
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
 			}
 
 			// starts Go routine that randomly keeps making transactions to others
@@ -189,7 +190,7 @@ func autoTrans() {
 				uint64(rand.Intn(int(currentStake)/50)),
 				strconv.Itoa(i),
 				secretKey)
-			channels.TransClientInput <- trans
+			channels.TransClientInput <- objects.TransData{Transaction: trans}
 		}
 		time.Sleep(time.Second * 5)
 	}

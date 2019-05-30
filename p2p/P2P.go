@@ -17,7 +17,7 @@ const (
 	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
-	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
+	RPC_SEND_TRANSDATA       string = "RPCHandler.SendTransData"
 
 	NUMBER_OF_PEERS int = 5
 )
@@ -339,7 +339,7 @@ func broadcastTrans(trans objects.TransData) {
 			} else {
 				defer client.Close()
 				void := struct{}{}
-				err := client.Call(RPC_SEND_TRANSACTION, trans, &void)
+				err := client.Call(RPC_SEND_TRANSDATA, trans, &void)
 				if err != nil {
 					fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
 				}
