@@ -42,6 +42,7 @@ func (cc ContractCall) toString() string {
 	var buf bytes.Buffer
 	buf.WriteString(cc.Call)
 	buf.WriteString(cc.Entry)
+	buf.WriteString(cc.Params)
 	buf.WriteString(strconv.Itoa(int(cc.Amount)))
 	buf.WriteString(strconv.Itoa(int(cc.Gas)))
 	buf.WriteString(cc.Address)
@@ -55,6 +56,7 @@ func (cc ContractCall) stringToSign() string {
 	var buf bytes.Buffer
 	buf.WriteString(cc.Call)
 	buf.WriteString(cc.Entry)
+	buf.WriteString(cc.Params)
 	buf.WriteString(strconv.Itoa(int(cc.Amount)))
 	buf.WriteString(strconv.Itoa(int(cc.Gas)))
 	buf.WriteString(cc.Address)
@@ -69,6 +71,7 @@ func (ci ContractInitialize) toString() string {
 	buf.Write(ci.Code)
 	buf.WriteString(strconv.Itoa(int(ci.Gas)))
 	buf.WriteString(strconv.Itoa(int(ci.Prepaid)))
+	buf.WriteString(strconv.Itoa(int(ci.StorageLimit)))
 	buf.WriteString(ci.Nonce)
 	buf.WriteString(ci.Signature)
 	return buf.String()
@@ -80,6 +83,7 @@ func (ci ContractInitialize) stringToSign() string {
 	buf.Write(ci.Code)
 	buf.WriteString(strconv.Itoa(int(ci.Gas)))
 	buf.WriteString(strconv.Itoa(int(ci.Prepaid)))
+	buf.WriteString(strconv.Itoa(int(ci.StorageLimit)))
 	buf.WriteString(ci.Nonce)
 	return buf.String()
 }

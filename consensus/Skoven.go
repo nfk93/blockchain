@@ -77,10 +77,11 @@ func handleTransData(t o.TransData) {
 	if t.Verify() != true {
 		return
 	}
-	_, alreadyReceived := transactions[t.GetNonce()]
+	transhash := t.Hash()
+	_, alreadyReceived := transactions[transhash] // TODO: this is NOT good enough. Different users must be able to use same nonce
 	if !alreadyReceived {
-		transactions[t.GetNonce()] = t
-		unusedTransactions[t.GetNonce()] = true
+		transactions[transhash] = t
+		unusedTransactions[transhash] = true
 	}
 }
 
@@ -197,7 +198,8 @@ func rollback(newHead o.Block) bool {
 func transactionsUnused(b o.Block) {
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		unusedTransactions[t.GetNonce()] = true
+		transhash := t.Hash()
+		unusedTransactions[transhash] = true
 	}
 }
 
@@ -210,19 +212,19 @@ func transactionsUsed(b o.Block) bool {
 	}
 	trans := b.BlockData.Trans
 	for _, t := range trans {
-		tNonce := t.GetNonce()
-		_, alreadyStored := transactions[tNonce]
+		thash := t.Hash()
+		_, alreadyStored := transactions[thash]
 		if !alreadyStored {
-			transactions[tNonce] = t
-			unusedTransactions[tNonce] = true
+			transactions[thash] = t
+			unusedTransactions[thash] = true
 		}
-		_, unused := unusedTransactions[tNonce]
+		_, unused := unusedTransactions[thash]
 		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
 			unusedTransactions = oldUnusedTransmap
 			return false
 		}
-		delete(unusedTransactions, tNonce)
+		delete(unusedTransactions, thash)
 	}
 	return true
 }

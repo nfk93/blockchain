@@ -1,7 +1,9 @@
 package objects
 
 import (
+	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
+	"math/big"
 	"testing"
 )
 
@@ -79,6 +81,20 @@ func TestGetType(t *testing.T) {
 		t.Error("GetType didn't recognize type ContractInitializer")
 	}
 
+}
+
+func TestTransDataHash(t *testing.T) {
+	publicKey := PublicKey{big.NewInt(5), big.NewInt(3)}
+	trans := Transaction{publicKey, publicKey, 5, "id1", "sign1"}
+	contractCall := ContractCall{"call", "entry", "params", 15, 12, "addr", publicKey, "nonce", "sign2"}
+	contractInit := ContractInitialize{publicKey, []byte("some code!"), 14, 12, 155, "somenonce", "sign3"}
+	data1 := TransData{Transaction: trans}
+	data2 := TransData{ContractCall: contractCall}
+	data3 := TransData{ContractInit: contractInit}
+
+	fmt.Println(data1.Hash())
+	fmt.Println(data2.Hash())
+	fmt.Println(data3.Hash())
 }
 
 //func TestCreateAndVerifyNonce(t *testing.T) {

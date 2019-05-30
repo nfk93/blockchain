@@ -44,6 +44,10 @@ type TransData struct {
 	ContractInit ContractInitialize
 }
 
+func (t TransData) Hash() string {
+	return t.Transaction.toString() + t.ContractCall.toString() + t.ContractInit.toString()
+}
+
 // Block Functions
 func (b *Block) SignBlock(sk SecretKey) {
 	m := b.toString()

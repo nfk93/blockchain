@@ -18,6 +18,8 @@ const (
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
 	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
+
+	NUMBER_OF_PEERS int = 5
 )
 
 // TODO use stringSet for networklist aswell
@@ -30,9 +32,9 @@ var transSeen stringSet
 var myHostPort string
 var myIp string
 var deliverBlock chan objects.Block
-var deliverTrans chan objects.Transaction
+var deliverTrans chan objects.TransData
 var inputBlock chan objects.Block
-var inputTrans chan objects.Transaction
+var inputTrans chan objects.TransData
 var myKey crypto.PublicKey
 var publicKeys map[crypto.PublicKey]bool
 var pkLock sync.RWMutex
@@ -106,7 +108,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 	go func() {
 		for {
 			trans := <-inputTrans
-			go handleTransaction(trans)
+			go handleTransData(trans)
 		}
 	}()
 	// Send blocks coming from the Consensus layer via p2p
@@ -296,37 +298,37 @@ func broadcastBlock(block objects.Block) {
 	}
 }
 
-func (r *RPCHandler) SendTransaction(trans objects.Transaction, _ *struct{}) error {
+func (r *RPCHandler) SendTransData(trans objects.TransData, _ *struct{}) error {
 	// Check if we know the peer, and exit early if we do.
 	alreadyKnown := false
 	func() {
 		transSeen.rlock()
 		defer transSeen.runlock()
-		alreadyKnown = transSeen.contains(transHash(trans))
+		alreadyKnown = transSeen.contains(trans.Hash())
 	}()
 	if alreadyKnown {
 		// Early exit
 		return nil
 	}
 
-	handleTransaction(trans)
+	handleTransData(trans)
 	return nil
 }
 
-func handleTransaction(trans objects.Transaction) {
+func handleTransData(trans objects.TransData) {
 	transSeen.lock()
 	defer transSeen.unlock()
 	// We must check list again, because we can't upgrade locks (in GOs default rwlock implementation)
-	if transSeen.contains(transHash(trans)) != true {
-		transSeen.add(transHash(trans))
+	transHash := trans.Hash()
+	if transSeen.contains(transHash) != true {
+		transSeen.add(transHash)
 
-		// TODO: handle the trans more?
 		go func() { deliverTrans <- trans }()
 		go broadcastTrans(trans)
 	}
 }
 
-func broadcastTrans(trans objects.Transaction) {
+func broadcastTrans(trans objects.TransData) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
@@ -346,15 +348,10 @@ func broadcastTrans(trans objects.Transaction) {
 	}
 }
 
-func transHash(t objects.Transaction) string {
-	return t.From.String() + t.ID
-}
-
 func connectToNetwork(addr string) {
 	client, err := rpc.DialHTTP("tcp", addr)
 
 	if err != nil {
-		// TODO: handle error
 		log.Fatal(err)
 	} else {
 		var reply RequestNetworkListReply
@@ -379,10 +376,9 @@ func determinePeers() {
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
-	peersSize := min(networkSize, 10) //TODO use dynamic parameter rather than 10
+	peersSize := min(networkSize, NUMBER_OF_PEERS) //TODO use dynamic parameter rather than 10
 	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
-		// TODO: handle gracefully
 		log.Fatal("FATAL ERROR, determinePeers: ", err)
 	}
 	peers = make([]string, peersSize)

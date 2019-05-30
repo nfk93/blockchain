@@ -1,7 +1,7 @@
 package objects
 
 type ChannelStruct struct {
-	TransClientInput chan Transaction
+	TransClientInput chan TransData
 	TransFromP2P     chan TransData
 	BlockFromP2P     chan Block
 	BlockToP2P       chan Block
@@ -13,8 +13,8 @@ type ChannelStruct struct {
 }
 
 func CreateChannelStruct() ChannelStruct {
-	tci := make(chan Transaction)
-	blockChannel1 := make(chan Block)
+	tci := make(chan TransData)
+	blockChannel1 := make(chan Block) // TODO: these variable names are bad
 	blockChannel2 := make(chan Block)
 	blockChannel3 := make(chan Block)
 	blockChannel4 := make(chan Block)

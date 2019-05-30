@@ -125,27 +125,30 @@ func TestRPC(t *testing.T) {
 	resetMockVars()
 	fmt.Println("Running TransactionsReceivedOnce_1")
 	t.Run("TransactionsReceivedOnce_1", func(t *testing.T) {
-		rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		mocktransdata1 := objects.TransData{Transaction: mockTrans_1}
+		rpcObj.SendTransData(mocktransdata1, &struct{}{})
 		trans := <-deliverTrans
-		if trans != mockTrans_1 {
+		if trans.Transaction != mockTrans_1 {
 			t.Errorf("First transaction seen isn't mockTrans_1")
 		}
 	})
 	fmt.Println("Printing TransactionsReceivedOnce_2")
 	t.Run("TransactionsReceivedOnce_2", func(t *testing.T) {
-		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_2, &struct{}{})
-		go rpcObj.SendTransaction(mockTrans_1, &struct{}{})
+		mocktransdata1 := objects.TransData{Transaction: mockTrans_1}
+		mocktransdata2 := objects.TransData{Transaction: mockTrans_2}
+		go rpcObj.SendTransData(mocktransdata2, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata1, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata2, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata1, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata2, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata1, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata2, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata1, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata2, &struct{}{})
+		go rpcObj.SendTransData(mocktransdata1, &struct{}{})
 		trans := <-deliverTrans
-		if trans != mockTrans_2 {
-			t.Error("Second transaction seen isn't mockTrans_2")
+		if trans.Transaction != mockTrans_2 {
+			t.Error("Second transaction seen isn't mocktransdata2")
 		}
 	})
 	fmt.Println("Running TransactionReceivedOnce_3")
@@ -161,7 +164,7 @@ func TestRPC(t *testing.T) {
 
 func resetMockVars() {
 	deliverBlock = make(chan objects.Block)
-	deliverTrans = make(chan objects.Transaction)
+	deliverTrans = make(chan objects.TransData)
 
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
