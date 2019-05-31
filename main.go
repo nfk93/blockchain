@@ -26,7 +26,7 @@ var newNetwork *bool
 var saveLogFile *bool
 var addr *string
 var port *string
-var autoTransStatus = false
+var autoTransStatus = true
 
 func main() {
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
@@ -60,7 +60,7 @@ func cliLoop() {
 		case "-h":
 			prettyPrintHelpMessage("-q", "Exit this program")
 			prettyPrintHelpMessage("-start", "Begins the blockchain protocol")
-			prettyPrintHelpMessage("-verbose", "Switches verbose mode between on and off")
+			prettyPrintHelpMessage("-verbose", "Initially active. Switches verbose mode between on and off")
 			prettyPrintHelpMessage("-id", "Show your public key in short and which port you are listening on")
 			prettyPrintHelpMessage("-n", "Print out the network list of who you are connected to")
 			prettyPrintHelpMessage("-trans", "Print list of seen transactions")
@@ -71,7 +71,7 @@ func cliLoop() {
 			prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
 			prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
 			prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
-			prettyPrintHelpMessage("-autotrans", "Starts or stops automatic transfers to random accounts every 5 second")
+			prettyPrintHelpMessage("-autotrans", "Initially active. Starts or stops automatic transfers to random accounts every 5 second")
 		case "-q":
 			return
 		case "-n":
@@ -107,8 +107,6 @@ func cliLoop() {
 						channels.TransClientInput <- objects.TransData{Transaction: trans}
 					}
 				}
-				autoTransStatus = !autoTransStatus // TODO DELETE
-				go autoTrans()                     // TODO DELETE
 			} else {
 				fmt.Println("Only the network founder can start the network!")
 			}
