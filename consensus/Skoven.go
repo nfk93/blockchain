@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"io/ioutil"
 	"sync"
 )
 
@@ -19,12 +20,14 @@ var lastFinalized string
 var lastFinalizedSlot uint64
 var channels o.ChannelStruct
 var isVerbose bool
+var saveGraphFiles bool
 var pendingBlocks map[string]bool
 
-func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose bool) {
+func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
 	sk = skey
 	isVerbose = verbose
+	saveGraphFiles = saveGraphsToFile
 	channels = channelStruct
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.TransData)
@@ -46,7 +49,7 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 			trans := <-channels.TransFromP2P
 			if isVerbose {
 				if trans.GetType() == o.TRANSACTION {
-					fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Transaction.Amount, trans.Transaction.From.N.String()[0:10], trans.Transaction.To.N.String()[0:10])
+					fmt.Printf("Transaction of %v K from %v to %v.\n", trans.Transaction.Amount, trans.Transaction.From.Hash()[0:10], trans.Transaction.To.Hash()[0:10])
 				}
 				if trans.GetType() == o.CONTRACTCALL {
 					fmt.Printf("ContractCall %s received", trans.ContractCall.Nonce)
@@ -339,4 +342,64 @@ func (s *skov) runlock() {
 
 func SwitchVerbose() {
 	isVerbose = !isVerbose
+}
+
+func printBlockTreeGraphToFile(filename string, blocks map[string]o.Block) error {
+	bytes := getDotString(blocks)
+	return ioutil.WriteFile("out/"+filename, bytes, 0644)
+}
+
+func getDotString1(blocks map[string]o.Block) []byte {
+	// write blockdata
+	logstring := "digraph G {\n"
+	for k, v := range blocks {
+		str := fmt.Sprintf("subgraph %s { node [style=filled,color=white]; style=filled; color=lightgrey; %s; label=\"blockhash: %s\\nslot: %s\\nbakerid: %s\"; }\n",
+			"cluster"+k, "block"+k, k, v.Slot, v.BakerID.Hash())
+		logstring += str
+	}
+	for k, v := range blocks {
+		blockdatastr := fmt.Sprintf("%s [shape=record, label=\" {", "block"+k)
+		if len(v.BlockData.Trans) == 0 {
+			blockdatastr += "empty } \" ];\n"
+		} else {
+			for i, data := range v.BlockData.Trans {
+				switch data.GetType() {
+				case o.TRANSACTION:
+					blockdatastr += fmt.Sprintf("| %d: TRANSACTION(from: %s, to: %s, amount: %d, id: %s) ", i,
+						data.Transaction.From.Hash(), data.Transaction.To.Hash(), data.Transaction.Amount, data.Transaction.ID)
+				case o.CONTRACTINIT:
+					ci := data.ContractInit
+					blockdatastr += fmt.Sprintf("| %d: CONTRACTINIT(owner: %s, code: [...], gas: %d, prepaid: %d, "+
+						"storagelimit: %d) ", i, ci.Owner, ci.Gas, ci.Prepaid, ci.StorageLimit)
+				case o.CONTRACTCALL:
+					cc := data.ContractCall
+					blockdatastr += fmt.Sprintf("| %d: CONTRACTCALL(caller: %s, address: %s, entry: %s, params: %s, "+
+						"amount: %d, gas: %d", i, cc.Caller, cc.Address, cc.Entry, cc.Params, cc.Amount, cc.Gas)
+				}
+			}
+			blockdatastr += "} \" ];\n"
+		}
+		logstring += blockdatastr
+	}
+	for k, v := range blocks {
+		logstring += fmt.Sprintf("%s -> %s;\n", "block"+v.ParentPointer, "block"+k)
+		logstring += fmt.Sprintf("%s -> %s [style=dotted,color=lightblue];\n", "block"+k, "block"+v.LastFinalized)
+	}
+	logstring += "\n}"
+	return []byte(logstring)
+}
+
+func getDotString(blocks map[string]o.Block) []byte {
+	// write blockdata
+	logstring := "digraph G {\n"
+	for k, v := range blocks {
+		blockdatastr := fmt.Sprintf("%s [shape=record, label=\"hash: %s\\nslot: %d\\nbaker: %s\"];\n", "block"+k,
+			k[:6], v.Slot, v.BakerID.Hash()[:6])
+		logstring += blockdatastr
+	}
+	for k, v := range blocks {
+		logstring += fmt.Sprintf("%s -> %s;\n", "block"+v.ParentPointer, "block"+k)
+	}
+	logstring += "\n}"
+	return []byte(logstring)
 }

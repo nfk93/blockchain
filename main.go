@@ -23,6 +23,7 @@ var pk2 crypto.PublicKey
 var slotduration *int
 var hardness *float64
 var newNetwork *bool
+var saveLogFile *bool
 var addr *string
 var port *string
 var autoTransStatus = false
@@ -30,15 +31,16 @@ var autoTransStatus = false
 func main() {
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
-	slotduration = flag.Int("slot_duration", int(time.Second*1), "Specify the slot length (default=10sec)")
+	slotduration = flag.Int("slot_duration", 1, "Specify the slot length (default=1sec)")
 	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
+	saveLogFile = flag.Bool("log", false, "will save logs of all transactions and blocks if true (default=false)")
 	flag.Parse()
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, publicKey, channels)
-	consensus.StartConsensus(channels, publicKey, secretKey, true)
+	consensus.StartConsensus(channels, publicKey, secretKey, true, *saveLogFile)
 	if *addr == "" {
 		fmt.Println("When all other clients are ready, use -start to begin the Blockchain protocol or -h for help with further commands!")
 	} else {
@@ -49,7 +51,7 @@ func main() {
 
 func cliLoop() {
 	for {
-		// TODO use a variable to track latest printed cmdline entry, to always have '>' as the latest line printed
+		// TODO: make cli pretty
 		var commandline string
 		fmt.Print(">")
 
@@ -86,12 +88,25 @@ func cliLoop() {
 			consensus.PrintFinalizedLedger()
 		case "-start": //"-start_network":
 			if *newNetwork {
-				genesisdata, err := objects.NewGenesisData(publicKey, time.Duration(*slotduration), *hardness)
+				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness)
 				if err != nil {
 					log.Fatal(err)
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
+				publicKeys := p2p.GetPublicKeys()
+				for i, v := range publicKeys {
+					if i > 4 {
+						break
+					} else {
+						trans := objects.CreateTransaction(publicKey,
+							v,
+							uint64(10000000000000),
+							strconv.Itoa(i),
+							secretKey)
+						channels.TransClientInput <- objects.TransData{Transaction: trans}
+					}
+				}
 				autoTransStatus = !autoTransStatus // TODO DELETE
 				go autoTrans()                     // TODO DELETE
 			} else {
@@ -106,7 +121,7 @@ func cliLoop() {
 						1000,
 						publicKey.String()+time.Now().String(),
 						secretKey)
-					channels.TransClientInput <- trans
+					channels.TransClientInput <- objects.TransData{Transaction: trans}
 				}
 			}
 		case "-trans2":
@@ -118,7 +133,7 @@ func cliLoop() {
 					currentStake/uint64(len(p2p.GetPublicKeys())),
 					strconv.Itoa(i),
 					secretKey)
-				channels.TransClientInput <- trans
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
 
 			}
 		case "-trans5":
@@ -137,7 +152,7 @@ func cliLoop() {
 					amount,
 					strconv.Itoa(i),
 					secretKey)
-				channels.TransClientInput <- trans
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
 			}
 
 			// starts Go routine that randomly keeps making transactions to others
@@ -189,7 +204,7 @@ func autoTrans() {
 				uint64(rand.Intn(int(currentStake)/50)),
 				strconv.Itoa(i),
 				secretKey)
-			channels.TransClientInput <- trans
+			channels.TransClientInput <- objects.TransData{Transaction: trans}
 		}
 		time.Sleep(time.Second * 5)
 	}

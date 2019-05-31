@@ -20,13 +20,15 @@ type Tree struct {
 }
 
 var tree Tree
+var logToFile bool
 
 const transactionGas = uint64(1)
 const blockReward = uint64(100)
 const gasLimit = uint64(1000) //(Gas limit for blocks) TODO What is good numbers?
 
-func StartTransactionLayer(channels ChannelStruct) {
+func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	tree = Tree{make(map[string]TreeNode), ""}
+	logToFile = log_
 	// Process a Block coming from the consensus layer
 	go func() {
 		for {
@@ -34,7 +36,7 @@ func StartTransactionLayer(channels ChannelStruct) {
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
 				tree.head = b.CalculateBlockHash()
-				smart.StartSmartContractLayer(tree.head)
+				smart.StartSmartContractLayer(tree.head, log_)
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
 					tree.processBlock(b)
@@ -112,6 +114,9 @@ func (t *Tree) processBlock(b Block) {
 
 	// Update head
 	t.head = blockHash
+	if logToFile {
+		// TODO: logToFile the ledger state to filepath out/slotno_blockhash[:6]
+	}
 
 }
 

@@ -17,7 +17,7 @@ const (
 	RPC_REQUEST_NETWORK_LIST string = "RPCHandler.RequestNetworkList"
 	RPC_NEW_CONNECTION       string = "RPCHandler.NewConnection"
 	RPC_SEND_BLOCK           string = "RPCHandler.SendBlock"
-	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransaction"
+	RPC_SEND_TRANSACTION     string = "RPCHandler.SendTransData"
 
 	NUMBER_OF_PEERS int = 5
 )
@@ -73,8 +73,6 @@ func (b *stringSet) runlock() {
 func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
-
-// TODO: The current public key list is not forwarded to new peers.
 
 func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
 	networkList = make(map[string]bool)

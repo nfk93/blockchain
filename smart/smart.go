@@ -7,7 +7,6 @@ import (
 	"github.com/nfk93/blockchain/smart/interpreter/ast"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"github.com/nfk93/blockchain/smart/paramparser"
-	"log"
 )
 
 type state struct {
@@ -27,8 +26,10 @@ var contracts = make(map[string]contract)
 var stateTree = make(map[string]state)
 var newBlockState state
 var newBlockContracts = make(map[string]contract)
+var log bool
 
-func StartSmartContractLayer(genesishash string) {
+func StartSmartContractLayer(genesishash string, log_ bool) {
+	log = log_
 	contractStates := make(map[string]contractState)
 	stateTree[genesishash] = state{contractStates, 0, ""}
 }
@@ -39,6 +40,9 @@ func StartSmartContractLayer(genesishash string) {
 func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContracts []string, storagereward uint64) {
 	expiring, newstate, reward := getNewState(parenthash, slot)
 	stateTree[blockhash] = newstate
+	if log {
+		// TODO log contracts and contractstates to file
+	}
 	return expiring, reward
 }
 
@@ -77,11 +81,13 @@ func CallContract(
 	if !exists {
 		// should never happen, because of precondition
 		errstring := fmt.Sprintf("blockhash node does not exist for hash: %s", blockhash)
-		log.Fatal(errstring)
-		return nil, nil, 0, nil
+		return nil, nil, 0, fmt.Errorf(errstring)
 	}
 
 	newstate, transfers, remainingGas, err := handleContractCall(blockstate, contracts, amount, gas_, address, entry, params)
+	if log {
+		// TODO log contracts and contractstates to file
+	}
 	if err != nil {
 		return nil, nil, remainingGas, err
 	} else {
@@ -105,12 +111,14 @@ func InitiateContract(
 	if !exists {
 		// should never happen, because of precondition
 		errstring := fmt.Sprintf("blockhash node does not exist for hash: %s", blockhash)
-		log.Fatal(errstring)
-		return "", 0, nil
+		return "", 0, fmt.Errorf(errstring)
 	}
 
 	address := getAddress(contractCode)
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, blockstate)
+	if log {
+		// TODO log contracts and contractstates to file
+	}
 	if err != nil {
 		return "", remainingGas, err
 	} else {

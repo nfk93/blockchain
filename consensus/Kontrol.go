@@ -34,6 +34,20 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 		}
 		go drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime)
+		if saveGraphFiles {
+			go func() {
+				blocks.l.Lock()
+				defer blocks.l.Unlock()
+				copy := make(map[string]o.Block)
+				for k, v := range blocks.m {
+					copy[k] = v
+				}
+				err := printBlockTreeGraphToFile(fmt.Sprintf("slot%d", currentSlot), copy)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("error saving tree: %s", err.Error()))
+				}
+			}()
+		}
 		sleepyTime := time.Duration(currentSlot)*slotLength - timeSinceGenesis
 		if sleepyTime > 0 {
 			time.Sleep(sleepyTime)
@@ -60,7 +74,7 @@ func processGenesisData(genesisData o.GenesisData) {
 	systemStake = genesisData.InitialState.TotalStake
 	genesisTime = genesisData.GenesisTime
 	go runSlot()
-	go transaction.StartTransactionLayer(channels)
+	go transaction.StartTransactionLayer(channels, saveGraphFiles)
 }
 
 func finalize(slot uint64) { //TODO add generation of new leadershipNonce (when doing so also change all places using it)
