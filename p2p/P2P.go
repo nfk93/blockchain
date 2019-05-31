@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -400,12 +401,16 @@ func determinePeers() {
 
 // This is a slightly hacky way to obtain your own IPv4 IP address
 func getIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	url := "https://api.ipify.org?format=text"
+	resp, err := http.Get(url)
 	if err != nil {
-		log.Println(err.Error())
-		return nil
+		panic(err)
 	}
-	defer conn.Close()
-	addr := conn.LocalAddr().(*net.UDPAddr).IP
-	return addr
+	defer resp.Body.Close()
+	ip, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("my ip is:", string(ip))
+	return net.ParseIP(string(ip))
 }
