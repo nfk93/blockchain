@@ -7,6 +7,7 @@ import (
 	"github.com/nfk93/blockchain/smart"
 	"log"
 	"sort"
+	"sync"
 )
 
 type TreeNode struct {
@@ -20,6 +21,7 @@ type Tree struct {
 }
 
 var tree Tree
+var tLock sync.RWMutex
 var logToFile bool
 
 const transactionGas = uint64(1)
@@ -35,7 +37,6 @@ func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 			b := <-channels.BlockToTrans
 			if len(tree.treeMap) == 0 && b.Slot == 0 && b.ParentPointer == "" {
 				tree.createNewNode(b, b.BlockData.GenesisData.InitialState)
-				tree.head = b.CalculateBlockHash()
 				smart.StartSmartContractLayer(tree.head, log_)
 			} else if len(tree.treeMap) > 0 {
 				if _, exist := tree.treeMap[b.CalculateBlockHash()]; !exist {
@@ -50,23 +51,15 @@ func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	// Consensus layer asks for the state of a finalized block
 	go func() {
 		for {
-			finalize := <-channels.FinalizeToTrans
-			if finalizedNode, ok := tree.treeMap[finalize]; ok {
-				channels.StateFromTrans <- finalizedNode.state
-				smart.FinalizeBlock(finalize)
-			} else {
-				fmt.Println("Couldn't finalize")
-				channels.StateFromTrans <- State{}
-			}
-
+			blockHash := <-channels.FinalizeToTrans
+			channels.StateFromTrans <- tree.finalize(blockHash)
 		}
 	}()
 
 	// A new NodeBlock should be created from the transactions in transList
 	for {
 		newBlockData := <-channels.TransToTrans
-		newBlock := tree.createNewBlock(newBlockData)
-		channels.BlockFromTrans <- newBlock
+		channels.BlockFromTrans <- tree.createNewBlock(newBlockData)
 	}
 }
 
@@ -76,10 +69,13 @@ func (t *Tree) processBlock(b Block) {
 	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
+
+	tLock.RLock()
 	s.Ledger = copyMap(t.treeMap[s.ParentHash].state.Ledger)
 	s.ConStake = copyMap(t.treeMap[s.ParentHash].state.ConStake)
 	s.ConOwners = copyContMap(t.treeMap[s.ParentHash].state.ConOwners)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
+	tLock.RUnlock()
 
 	// Remove expired contracts from ledger in TL and from ConLayer
 	// Collection storageCosts
@@ -112,23 +108,43 @@ func (t *Tree) processBlock(b Block) {
 	// Create new node in the tree
 	t.createNewNode(b, s)
 
-	// Update head
-	t.head = blockHash
 	if logToFile {
 		// TODO: logToFile the ledger state to filepath out/slotno_blockhash[:6]
 	}
 
 }
 
+func (t *Tree) finalize(blockHash string) State {
+	tLock.RLock()
+	defer tLock.RUnlock()
+	if finalizedNode, ok := tree.treeMap[blockHash]; ok {
+		smart.FinalizeBlock(blockHash)
+		return finalizedNode.state
+	} else {
+		fmt.Println("Couldn't finalize")
+		return State{}
+	}
+}
+
 func (t *Tree) createNewNode(b Block, s State) {
-	t.treeMap[b.CalculateBlockHash()] = TreeNode{b, s}
+	tLock.Lock()
+	defer tLock.Unlock()
+	blockHash := b.CalculateBlockHash()
+	t.treeMap[blockHash] = TreeNode{b, s}
+
+	// Update head
+	t.head = blockHash
 }
 
 func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
+
+	tLock.RLock()
 	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
 	s.ParentHash = t.head
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
+	tLock.RUnlock()
+
 	var addedTransactions []TransData
 
 	expiring, err := smart.SetStartingPointForNewBlock(t.head, blockData.SlotNo)
@@ -196,11 +212,15 @@ func copyContMap(originalMap map[string]crypto.PublicKey) map[string]crypto.Publ
 }
 
 func GetCurrentLedger() map[string]uint64 {
+	tLock.RLock()
+	defer tLock.RUnlock()
 	return tree.treeMap[tree.head].state.Ledger
 }
 
 func PrintCurrentLedger() {
+	tLock.RLock()
 	ledger := tree.treeMap[tree.head].state.Ledger
+	tLock.RUnlock()
 
 	var keyList []string
 	for k := range ledger {
