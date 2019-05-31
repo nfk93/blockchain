@@ -25,7 +25,7 @@ const (
 // TODO use stringSet for networklist aswell
 var networkList map[string]bool
 var nLock sync.RWMutex
-var peers []string
+var peers []rpc.Client
 var peersLock sync.RWMutex
 var blocksSeen stringSet
 var transSeen stringSet
@@ -157,19 +157,25 @@ func PrintPublicKeys() {
 }
 
 func PrintPeers() {
+	peersLock.RLock()
+	defer peersLock.RUnlock()
 	for _, v := range peers {
 		fmt.Println(v)
 	}
 }
 
 func listenForRPC(port string) {
-	ln, _ := net.Listen("tcp", ":"+port)
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		fmt.Println("error starting network listener: ", err.Error())
+		log.Fatal("error starting network listener: ", err.Error())
+	}
 	rpcObj := new(RPCHandler)
-	err := rpc.Register(rpcObj)
+	rpc.HandleHTTP()
+	err = rpc.Register(rpcObj)
 	if err != nil {
 		log.Fatal("RPCHandler can't be registered, ", err)
 	}
-	rpc.HandleHTTP()
 	er := http.Serve(ln, nil)
 	if er != nil {
 		log.Fatal("Error serving: ", err)
@@ -232,19 +238,14 @@ func broadcastNewConnection(data NewConnectionData) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		func() {
-			client, err := rpc.DialHTTP("tcp", peer)
-			if err != nil {
-				fmt.Println("ERROR broadcastNewConnection: can't broadcast new connection to "+peer+"\n\tError: ", err)
-			} else {
-				defer client.Close()
-				void := struct{}{}
-				err := client.Call(RPC_NEW_CONNECTION, data, &void)
-				if err != nil {
-					fmt.Printf("error broadcasting new connection: %s", err.Error())
-				}
-			}
-		}()
+		void := struct{}{}
+		err := peer.Call(RPC_NEW_CONNECTION, data, &void)
+		if err != nil {
+			peersLock.RUnlock()
+			determinePeers()
+			broadcastNewConnection(data)
+			break
+		}
 	}
 }
 
@@ -273,7 +274,6 @@ func handleBlock(block objects.Block) {
 	if blocksSeen.contains(block.CalculateBlockHash()) != true {
 		blocksSeen.add(block.CalculateBlockHash())
 
-		// TODO: handle the block more?
 		go func() { deliverBlock <- block }()
 		go broadcastBlock(block)
 	}
@@ -283,16 +283,14 @@ func broadcastBlock(block objects.Block) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		func() {
-			client, err := rpc.DialHTTP("tcp", peer)
-			if err != nil {
-				fmt.Println("ERROR broadcastBlock: can't broadcast block to "+peer+"\n\tError: ", err)
-			} else {
-				defer client.Close()
-				void := struct{}{}
-				client.Call(RPC_SEND_BLOCK, block, &void)
-			}
-		}()
+		void := struct{}{}
+		err := peer.Call(RPC_SEND_BLOCK, block, &void)
+		if err != nil {
+			peersLock.RUnlock()
+			determinePeers()
+			broadcastBlock(block)
+			break
+		}
 	}
 }
 
@@ -330,30 +328,29 @@ func broadcastTrans(trans objects.TransData) {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, peer := range peers {
-		func() {
-			client, err := rpc.DialHTTP("tcp", peer)
-			if err != nil {
-				fmt.Println("ERROR broadcastTrans: can't broadcast transaction to "+peer+"\n\tError: ", err)
-			} else {
-				defer client.Close()
-				void := struct{}{}
-				err := client.Call(RPC_SEND_TRANSDATA, trans, &void)
-				if err != nil {
-					fmt.Println("Could not broadcast to "+peer+". Something went wrong: ", err)
-				}
-			}
-		}()
+		void := struct{}{}
+		err := peer.Call(RPC_SEND_TRANSDATA, trans, &void)
+		if err != nil {
+			peersLock.RUnlock()
+			determinePeers()
+			broadcastTrans(trans)
+			break
+		}
 	}
 }
 
 func connectToNetwork(addr string) {
 	client, err := rpc.DialHTTP("tcp", addr)
+	defer client.Close()
 
 	if err != nil {
 		log.Fatal(err)
 	} else {
 		var reply RequestNetworkListReply
-		client.Call(RPC_REQUEST_NETWORK_LIST, struct{}{}, &reply)
+		e := client.Call(RPC_REQUEST_NETWORK_LIST, struct{}{}, &reply)
+		if e != nil {
+			log.Fatal(e)
+		}
 		networkList = reply.NetworkList
 		publicKeys = reply.PublicKeys
 		networkList[myIp+":"+myHostPort] = true
@@ -374,14 +371,30 @@ func determinePeers() {
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
-	peersSize := min(networkSize, NUMBER_OF_PEERS) //TODO use dynamic parameter rather than 10
+	peersSize := min(networkSize-1, NUMBER_OF_PEERS)
 	myIndex, err := indexOf(myIp+":"+myHostPort, connections)
 	if err != nil {
 		log.Fatal("FATAL ERROR, determinePeers: ", err)
 	}
-	peers = make([]string, peersSize)
+	peers = make([]rpc.Client, peersSize)
+	j := 0
 	for i := 0; i < peersSize; i++ {
-		peers[i] = connections[(myIndex+i)%networkSize]
+		indexToDo := (myIndex + i + j + 1) % networkSize
+		notConnected := true
+		for notConnected && j < 20 {
+			peerClient, err := rpc.DialHTTP("tcp", connections[indexToDo])
+			if err != nil {
+				j++
+				fmt.Println(fmt.Sprintf("Cant connect to peer %s, trying next peer... Failed attempts: %d",
+					connections[indexToDo], j))
+			} else {
+				peers[i] = *peerClient
+				notConnected = false
+			}
+		}
+		if j >= 20 {
+			log.Fatal("Too many failed peer connection attempts, exiting")
+		}
 	}
 }
 

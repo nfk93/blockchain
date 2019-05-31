@@ -2,7 +2,6 @@ package objects
 
 import (
 	"bytes"
-	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/smart"
 	"sort"
@@ -32,13 +31,13 @@ func (s *State) AddTransaction(t Transaction, gasCost uint64) uint64 {
 	amountWithFees := t.Amount + gasCost
 
 	if !t.VerifyTransaction() {
-		fmt.Println("The transactions didn't verify", t)
+		// fmt.Println("The transactions didn't verify", t)
 		return 0
 	}
 
 	// Sender has to be able to pay both the amount and the fee
 	if s.Ledger[t.From.Hash()] < amountWithFees {
-		fmt.Println("Not enough money on senders account")
+		// fmt.Println("Not enough money on senders account")
 		return 0
 	}
 

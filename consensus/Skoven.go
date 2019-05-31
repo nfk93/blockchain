@@ -21,7 +21,8 @@ var lastFinalizedSlot uint64
 var channels o.ChannelStruct
 var isVerbose bool
 var saveGraphFiles bool
-var pendingBlocks map[string]bool
+var pendingBlocks []o.Block
+var pendingBlocksLock sync.Mutex
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
@@ -32,14 +33,13 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	unusedTransactions = make(map[string]bool)
 	transactions = make(map[string]o.TransData)
 	badBlocks = make(map[string]bool)
-	pendingBlocks = make(map[string]bool)
+	pendingBlocks = make([]o.Block, 0)
 	blocks.m = make(map[string]o.Block)
 
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
-			processPendingBlocks()
 			handleBlock(block)
 		}
 	}()
@@ -63,13 +63,22 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	}()
 }
 
-func processPendingBlocks() {
-	for k := range pendingBlocks {
-		b := blocks.get(k)
-		if b.Slot <= getCurrentSlot() && blocks.contains(b.ParentPointer) {
-			delete(pendingBlocks, b.CalculateBlockHash())
-			handleBlock(b)
+func checkPendingBlocks() {
+	foundBlockToAdd := false
+	func() {
+		pendingBlocksLock.Lock()
+		defer pendingBlocksLock.Unlock()
+		for i, block := range pendingBlocks {
+			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) {
+				foundBlockToAdd = true
+				addBlock(block)
+				pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
+				break
+			}
 		}
+	}()
+	if foundBlockToAdd {
+		checkPendingBlocks()
 	}
 }
 
@@ -81,7 +90,7 @@ func handleTransData(t o.TransData) {
 		return
 	}
 	transhash := t.Hash()
-	_, alreadyReceived := transactions[transhash] // TODO: this is NOT good enough. Different users must be able to use same nonce
+	_, alreadyReceived := transactions[transhash]
 	if !alreadyReceived {
 		transactions[transhash] = t
 		unusedTransactions[transhash] = true
@@ -90,17 +99,27 @@ func handleTransData(t o.TransData) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	if b.Slot == 0 { //*TODO Should probably add some security measures so you can't fake a genesis block
+	if b.Slot == 0 { //*TODO Should add some security measures so you can't fake a genesis block
+		fmt.Println("Genesis received! Starting blockchain protocol")
 		handleGenesisBlock(b)
 		return
 	}
-
 	if !b.ValidateBlock() {
-		fmt.Println("CL REJECTED! Block didn't validate...")
+		if isVerbose {
+			fmt.Println("Consensus could not validate block:", b.CalculateBlockHash())
+		}
 		return
 	}
 	if !ValidateDraw(b, leadershipNonce, hardness) {
-		fmt.Println("CL REJECTED! DRAW didn't validate...")
+		fmt.Println("Consensus could not validate draw of block:", b.CalculateBlockHash())
+		return
+	}
+	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
 		return
 	}
 	addBlock(b)
@@ -269,10 +288,6 @@ func isLegalExtension(b o.Block) bool {
 	}
 	if blocks.contains(b.ParentPointer) && blocks.get(b.ParentPointer).Slot >= b.Slot { //Check that slot of parent is smaller
 		badBlocks[b.CalculateBlockHash()] = true
-		return false
-	}
-	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) { //We do not immediately process blocks that are early or where the parent is missing.
-		pendingBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
 	return true

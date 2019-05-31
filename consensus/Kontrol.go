@@ -55,6 +55,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
+		go checkPendingBlocks()
 	}
 }
 

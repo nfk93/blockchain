@@ -40,7 +40,7 @@ func main() {
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
 	p2p.StartP2P(*addr, *port, publicKey, channels)
-	consensus.StartConsensus(channels, publicKey, secretKey, true, *saveLogFile)
+	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
 	if *addr == "" {
 		fmt.Println("When all other clients are ready, use -start to begin the Blockchain protocol or -h for help with further commands!")
 	} else {
@@ -163,7 +163,6 @@ func cliLoop() {
 			fmt.Printf("Your ID is: \n    Public Key short: %v\n    Port: %v\n", publicKey.N.String()[:10], *port)
 		case "-verbose":
 			consensus.SwitchVerbose()
-
 		default:
 			fmt.Println(commandline, "is not a known command. Type -h for help")
 		}
