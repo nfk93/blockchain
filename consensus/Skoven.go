@@ -23,8 +23,8 @@ var isVerbose bool
 var saveGraphFiles bool
 var pendingBlocks []o.Block
 var pendingBlocksLock sync.Mutex
-var genesisReceived bool = false
-var handlingBlock sync.Mutex
+var handlingBlocks sync.Mutex
+var genesisReceived = false
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
@@ -42,10 +42,11 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			func() {
-				handlingBlock.Lock()
-				defer handlingBlock.Unlock()
+				handlingBlocks.Lock()
+				defer handlingBlocks.Unlock()
 				block := <-channels.BlockFromP2P
 				handleBlock(block)
+				checkPendingBlocks()
 			}()
 		}
 	}()
@@ -72,10 +73,6 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 func checkPendingBlocks() {
 	foundBlockToAdd := false
 	func() {
-		handlingBlock.Lock()
-		defer handlingBlock.Unlock()
-		pendingBlocksLock.Lock()
-		defer pendingBlocksLock.Unlock()
 		for i, block := range pendingBlocks {
 			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) {
 				foundBlockToAdd = true
