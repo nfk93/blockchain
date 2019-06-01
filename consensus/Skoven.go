@@ -15,6 +15,7 @@ var finalLock sync.RWMutex
 var blocks skov
 var badBlocks map[string]bool
 var currentHead string
+var currentHeadLock sync.RWMutex
 var currentLength int
 var lastFinalized string
 var lastFinalizedSlot uint64
@@ -155,7 +156,7 @@ func handleGenesisBlock(b o.Block) {
 	blocks.add(b)
 	processGenesisData(b.BlockData.GenesisData)
 	sendBlockToTL(b)
-	currentHead = b.CalculateBlockHash()
+	setCurrentHead(b.CalculateBlockHash())
 	lastFinalized = b.CalculateBlockHash()
 	lastFinalizedSlot = 0
 }
@@ -185,7 +186,7 @@ func comparePathWeight(b o.Block) {
 
 	if l > currentLength || compareDrawVal(b) {
 		if rollback(b) {
-			currentHead = b.CalculateBlockHash()
+			setCurrentHead(b.CalculateBlockHash())
 			currentLength = l
 		}
 	}
@@ -193,7 +194,7 @@ func comparePathWeight(b o.Block) {
 
 //Compares the draw value of a block with the current head
 func compareDrawVal(b o.Block) bool {
-	headDraw := CalculateDrawValue(blocks.get(currentHead), getLeadershipNonce(b.Slot))
+	headDraw := CalculateDrawValue(blocks.get(getCurrentHead()), getLeadershipNonce(b.Slot))
 	blockDraw := CalculateDrawValue(b, getLeadershipNonce(b.Slot))
 	if headDraw.Cmp(blockDraw) == -1 {
 		return true
@@ -209,7 +210,7 @@ func rollback(newHead o.Block) bool {
 	for k, v := range unusedTransactions {
 		oldUnusedTransmap[k] = v
 	}
-	head := blocks.get(currentHead)
+	head := blocks.get(getCurrentHead())
 	for {
 		transactionsUnused(head)
 		head = blocks.get(head.ParentPointer)
@@ -293,11 +294,11 @@ func sendBlockToTL(block o.Block) {
 
 //Updates the head if the block extends our current head, and otherwise calls comparePathWeight
 func updateHead(b o.Block) {
-	if b.ParentPointer == currentHead {
+	if b.ParentPointer == getCurrentHead() {
 		tLock.Lock()
 		defer tLock.Unlock()
 		if transactionsUsed(b) {
-			currentHead = b.CalculateBlockHash()
+			setCurrentHead(b.CalculateBlockHash())
 			currentLength += 1
 			sendBlockToTL(b)
 		}
@@ -333,7 +334,7 @@ func addBlock(b o.Block) {
 
 func log() {
 	if isVerbose {
-		fmt.Println(blocks.get(currentHead).Slot)
+		fmt.Println(blocks.get(getCurrentHead()).Slot)
 	}
 }
 
@@ -392,6 +393,18 @@ func SwitchVerbose() {
 func printBlockTreeGraphToFile(filename string, blocks map[string]o.Block) error {
 	bytes := getDotString(blocks)
 	return ioutil.WriteFile("out/"+filename, bytes, 0644)
+}
+
+func getCurrentHead() string {
+	currentHeadLock.RLock()
+	defer currentHeadLock.RUnlock()
+	return currentHead
+}
+
+func setCurrentHead(headHash string) {
+	currentHeadLock.Lock()
+	defer currentHeadLock.Unlock()
+	currentHead = headHash
 }
 
 func getDotString1(blocks map[string]o.Block) []byte {

@@ -28,6 +28,8 @@ var leadershipNonce string
 var oldLeadershipNonce string
 var leadershipLock sync.RWMutex
 var currentEpochSlot uint64 // The slot the current epoch began
+var createBlockHead string
+var createBlockTransData []o.TransData
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
@@ -59,6 +61,8 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 			time.Sleep(sleepyTime)
 		}
 		slotLock.Lock()
+		createBlockHead = getCurrentHead()
+		createBlockTransData = getUnusedTransactions()
 		currentSlot++
 		slotLock.Unlock()
 	}
@@ -92,7 +96,7 @@ func processGenesisData(genesisData o.GenesisData) {
 func finalize(slot uint64) {
 	finalLock.Lock()
 	defer finalLock.Unlock()
-	head := blocks.get(currentHead)
+	head := blocks.get(getCurrentHead())
 	for {
 		if head.Slot <= slot {
 			newLeadershipNonce(head)
@@ -156,13 +160,14 @@ func generateBlock(draw string, slot uint64) {
 		checkPendingBlocks()
 	}()
 	blockData := o.CreateBlockData{
-		getUnusedTransactions(),
+		createBlockTransData,
 		sk,
 		pk,
 		slot,
 		draw,
 		o.CreateNewBlockNonce(getLeadershipNonce(slot), sk, slot),
-		lastFinalized}
+		lastFinalized,
+		createBlockHead}
 	channels.TransToTrans <- blockData
 	go sendBlock()
 }

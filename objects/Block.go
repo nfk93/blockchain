@@ -26,6 +26,7 @@ type CreateBlockData struct {
 	Draw          string
 	BlockNonce    BlockNonce
 	LastFinalized string
+	ParentHash    string
 }
 
 type BlockNonce struct {

@@ -140,14 +140,14 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 
 	tLock.RLock()
-	s.Ledger = copyMap(t.treeMap[t.head].state.Ledger)
-	s.ParentHash = t.head
+	s.Ledger = copyMap(t.treeMap[blockData.ParentHash].state.Ledger)
+	s.ParentHash = blockData.ParentHash
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	tLock.RUnlock()
 
 	var addedTransactions []TransData
 
-	expiring, err := smart.SetStartingPointForNewBlock(t.head, blockData.SlotNo)
+	expiring, err := smart.SetStartingPointForNewBlock(blockData.ParentHash, blockData.SlotNo)
 	if err != nil {
 		// this should not happen
 		log.Fatal("trying to create a new block which parent doesn't exist")
@@ -163,7 +163,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		switch td.GetType() {
 		case CONTRACTCALL:
 			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
-			gasUsed := s.HandleContractCall(td.ContractCall, "", t.head, blockData.SlotNo)
+			gasUsed := s.HandleContractCall(td.ContractCall, "", blockData.ParentHash, blockData.SlotNo)
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
 			} else {
@@ -172,7 +172,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 			}
 		case CONTRACTINIT:
 			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
-			gasUsed := s.HandleContractInit(td.ContractInit, "", t.head, blockData.SlotNo)
+			gasUsed := s.HandleContractInit(td.ContractInit, "", blockData.ParentHash, blockData.SlotNo)
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
 			} else {
@@ -187,7 +187,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	}
 
 	b := Block{blockData.SlotNo,
-		t.head,
+		blockData.ParentHash,
 		blockData.Pk,
 		blockData.Draw,
 		BlockNonce{},
