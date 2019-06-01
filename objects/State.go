@@ -176,9 +176,7 @@ func (s *State) CleanExpiredContract(expiring []string) {
 	for _, conAddr := range expiring {
 		owner := s.ConOwners[conAddr]
 		s.Ledger[owner.Hash()] += s.ConStake[conAddr]
-		delete(s.ConStake, conAddr)
-		// TODO Is this needed? Does anyway get a new state from scl...
-		// not sure what you mean, but I think it is very important, because of the resulting change in state -Niko
+		delete(s.ConOwners, conAddr)
 	}
 
 }

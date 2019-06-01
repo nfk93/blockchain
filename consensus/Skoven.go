@@ -23,7 +23,8 @@ var isVerbose bool
 var saveGraphFiles bool
 var pendingBlocks []o.Block
 var pendingBlocksLock sync.Mutex
-var genesisReceived bool = false
+var handlingBlocks sync.Mutex
+var genesisReceived = false
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
@@ -41,7 +42,12 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	go func() {
 		for {
 			block := <-channels.BlockFromP2P
-			handleBlock(block)
+			func() {
+				handlingBlocks.Lock()
+				defer handlingBlocks.Unlock()
+				handleBlock(block)
+				checkPendingBlocks()
+			}()
 		}
 	}()
 	// Start processing transactions on one thread, concurrently
@@ -71,8 +77,18 @@ func checkPendingBlocks() {
 		defer pendingBlocksLock.Unlock()
 		for i, block := range pendingBlocks {
 			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) {
-				foundBlockToAdd = true
+				if !block.ValidateBlock() {
+					fmt.Println("Consensus could not validate block:", block.CalculateBlockHash())
+					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
+					return
+				}
+				if !ValidateDraw(block, leadershipNonce, hardness) {
+					fmt.Println("Consensus could not validate draw of block:", block.CalculateBlockHash())
+					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
+					return
+				}
 				addBlock(block)
+				foundBlockToAdd = true
 				pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 				break
 			}
@@ -100,19 +116,26 @@ func handleTransData(t o.TransData) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	f := func() {
-		pendingBlocksLock.Lock()
-		defer pendingBlocksLock.Unlock()
-		pendingBlocks = append(pendingBlocks, b)
-	}
-	if !genesisReceived {
-		f()
-		return
-	}
 	if b.Slot == 0 && !genesisReceived {
 		fmt.Println("Genesis received! Starting blockchain protocol")
 		genesisReceived = true
 		handleGenesisBlock(b)
+		return
+	}
+	if !genesisReceived {
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
+		return
+	}
+	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
 		return
 	}
 	if !b.ValidateBlock() {
@@ -123,10 +146,6 @@ func handleBlock(b o.Block) {
 	}
 	if !ValidateDraw(b, getLeadershipNonce(b.Slot), hardness) {
 		fmt.Println("Consensus could not validate draw of block:", b.CalculateBlockHash())
-		return
-	}
-	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
-		f()
 		return
 	}
 	addBlock(b)

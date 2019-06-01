@@ -236,17 +236,23 @@ func (r *RPCHandler) NewConnection(data NewConnectionData, _ *struct{}) error {
 }
 
 func broadcastNewConnection(data NewConnectionData) {
-	peersLock.RLock()
-	defer peersLock.RUnlock()
-	for _, peer := range peers {
-		void := struct{}{}
-		err := peer.Call(RPC_NEW_CONNECTION, data, &void)
-		if err != nil {
-			peersLock.RUnlock()
-			determinePeers()
-			broadcastNewConnection(data)
-			break
+	failed := false
+	func() {
+		peersLock.RLock()
+		defer peersLock.RUnlock()
+		for _, peer := range peers {
+			void := struct{}{}
+			err := peer.Call(RPC_NEW_CONNECTION, data, &void)
+			if err != nil {
+				fmt.Println("error broadcasting newConnection: ", err.Error())
+				failed = true
+				return
+			}
 		}
+	}()
+	if failed {
+		determinePeers()
+		broadcastNewConnection(data)
 	}
 }
 
@@ -281,17 +287,23 @@ func handleBlock(block objects.Block) {
 }
 
 func broadcastBlock(block objects.Block) {
-	peersLock.RLock()
-	defer peersLock.RUnlock()
-	for _, peer := range peers {
-		void := struct{}{}
-		err := peer.Call(RPC_SEND_BLOCK, block, &void)
-		if err != nil {
-			peersLock.RUnlock()
-			determinePeers()
-			broadcastBlock(block)
-			break
+	failed := false
+	func() {
+		peersLock.RLock()
+		defer peersLock.RUnlock()
+		for _, peer := range peers {
+			void := struct{}{}
+			err := peer.Call(RPC_SEND_BLOCK, block, &void)
+			if err != nil {
+				fmt.Println("error broadcasting block: ", err.Error())
+				failed = true
+				return
+			}
 		}
+	}()
+	if failed {
+		determinePeers()
+		broadcastBlock(block)
 	}
 }
 
@@ -326,17 +338,23 @@ func handleTransData(trans objects.TransData) {
 }
 
 func broadcastTrans(trans objects.TransData) {
-	peersLock.RLock()
-	defer peersLock.RUnlock()
-	for _, peer := range peers {
-		void := struct{}{}
-		err := peer.Call(RPC_SEND_TRANSDATA, trans, &void)
-		if err != nil {
-			peersLock.RUnlock()
-			determinePeers()
-			broadcastTrans(trans)
-			break
+	failed := false
+	func() {
+		peersLock.RLock()
+		defer peersLock.RUnlock()
+		for _, peer := range peers {
+			void := struct{}{}
+			err := peer.Call(RPC_SEND_TRANSDATA, trans, &void)
+			if err != nil {
+				fmt.Println("error broadcasting transaction: ", err.Error())
+				failed = true
+				return
+			}
 		}
+	}()
+	if failed {
+		determinePeers()
+		broadcastTrans(trans)
 	}
 }
 

@@ -32,22 +32,23 @@ var currentEpochSlot uint64 // The slot the current epoch began
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	finalizeInterval := uint64(50)
+	offset := time.Since(genesisTime)
 	for {
 		if (currentSlot)%finalizeInterval == 0 {
 			finalize(currentSlot - (finalizeInterval / 2))
 			currentEpochSlot = currentSlot
 		}
 		go drawLottery(currentSlot)
-		timeSinceGenesis := time.Since(genesisTime)
+		timeSinceGenesis := time.Since(genesisTime) - offset
 		if saveGraphFiles {
 			go func() {
 				blocks.l.Lock()
 				defer blocks.l.Unlock()
-				copy := make(map[string]o.Block)
+				copy_ := make(map[string]o.Block)
 				for k, v := range blocks.m {
-					copy[k] = v
+					copy_[k] = v
 				}
-				err := printBlockTreeGraphToFile(fmt.Sprintf("slot%d", currentSlot), copy)
+				err := printBlockTreeGraphToFile(fmt.Sprintf("slot%d", currentSlot), copy_)
 				if err != nil {
 					fmt.Println(fmt.Sprintf("error saving tree: %s", err.Error()))
 				}
@@ -60,7 +61,6 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 		slotLock.Lock()
 		currentSlot++
 		slotLock.Unlock()
-		go checkPendingBlocks()
 	}
 }
 
@@ -149,6 +149,11 @@ func drawLottery(slot uint64) {
 
 //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
 func generateBlock(draw string, slot uint64) {
+	func() {
+		handlingBlocks.Lock()
+		defer handlingBlocks.Unlock()
+		checkPendingBlocks()
+	}()
 	blockData := o.CreateBlockData{
 		getUnusedTransactions(),
 		sk,

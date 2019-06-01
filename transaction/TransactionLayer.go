@@ -66,7 +66,6 @@ func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 func (t *Tree) processBlock(b Block) {
 
 	blockHash := b.CalculateBlockHash()
-	accumulatedRewards := blockReward
 	s := State{}
 	s.ParentHash = b.ParentPointer
 
@@ -79,28 +78,29 @@ func (t *Tree) processBlock(b Block) {
 
 	// Remove expired contracts from ledger in TL and from ConLayer
 	// Collection storageCosts
-	expiring, reward := smart.NewBlockTreeNode(blockHash, b.ParentPointer, b.Slot)
-	s.CleanExpiredContract(expiring) // TODO: check if correct placement
-	accumulatedRewards += reward
+	expiring, storageReward := smart.NewBlockTreeNode(blockHash, b.ParentPointer, b.Slot)
+	s.CleanExpiredContract(expiring)
 
 	// Update state
+	accumulatedGas := uint64(0)
 	if len(b.BlockData.Trans) != 0 {
 		for _, td := range b.BlockData.Trans {
 			switch td.GetType() {
 			case CONTRACTCALL:
-				accumulatedRewards += s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
+				accumulatedGas += s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
 			case CONTRACTINIT:
-				accumulatedRewards += s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
+				accumulatedGas += s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
 			case TRANSACTION:
-				accumulatedRewards += s.AddTransaction(td.Transaction, transactionGas)
+				accumulatedGas += s.AddTransaction(td.Transaction, transactionGas)
 			}
 		}
 	}
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
-	if s.VerifyHashedState(b.StateHash, b.BakerID) {
+	if s.VerifyHashedState(b.StateHash, b.BakerID) && accumulatedGas < gasLimit {
 		// Pay the block creator
-		s.PayBlockRewardOrRemainGas(b.BakerID, accumulatedRewards)
+		totalReward := accumulatedGas + storageReward + blockReward
+		s.PayBlockRewardOrRemainGas(b.BakerID, totalReward)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
@@ -157,7 +157,6 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
-
 		if accumulatedGasUse < gasLimit {
 			switch td.GetType() {
 			case CONTRACTCALL:
@@ -167,6 +166,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 			case TRANSACTION:
 				accumulatedGasUse += s.AddTransaction(td.Transaction, transactionGas)
 			}
+
 			addedTransactions = append(addedTransactions, td)
 		}
 
