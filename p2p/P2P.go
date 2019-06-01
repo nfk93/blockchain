@@ -79,7 +79,7 @@ func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
-	myIp = getIP().String()
+	myIp = getIP()
 	myHostPort = hostPort
 	deliverBlock = channels.BlockFromP2P
 	deliverTrans = channels.TransFromP2P
@@ -380,14 +380,14 @@ func determinePeers() {
 	peers = make([]rpc.Client, peersSize)
 	j := 0
 	for i := 0; i < peersSize; i++ {
-		indexToDo := (myIndex + i + j + 1) % networkSize
+		nextIndex := (myIndex + i + j + 1) % networkSize
 		notConnected := true
 		for notConnected && j < 20 {
-			peerClient, err := rpc.DialHTTP("tcp", connections[indexToDo])
+			peerClient, err := rpc.DialHTTP("tcp", connections[nextIndex])
 			if err != nil {
 				j++
-				fmt.Println(fmt.Sprintf("Cant connect to peer %s, trying next peer... Failed attempts: %d",
-					connections[indexToDo], j))
+				fmt.Println(fmt.Sprintf("Cant connect to peer %s, error: %s\nTrying next peer... Failed attempts: %d",
+					connections[nextIndex], err.Error(), j))
 			} else {
 				peers[i] = *peerClient
 				notConnected = false
@@ -400,7 +400,7 @@ func determinePeers() {
 }
 
 // This is a slightly hacky way to obtain your own IPv4 IP address
-func getIP() net.IP {
+func getIP() string {
 	url := "https://api.ipify.org?format=text"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -412,5 +412,5 @@ func getIP() net.IP {
 		panic(err)
 	}
 	fmt.Println("my ip is:", string(ip))
-	return net.ParseIP(string(ip))
+	return string("192.168.87.120")
 }

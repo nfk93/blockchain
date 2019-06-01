@@ -23,6 +23,7 @@ var isVerbose bool
 var saveGraphFiles bool
 var pendingBlocks []o.Block
 var pendingBlocksLock sync.Mutex
+var genesisReceived bool = false
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
@@ -99,8 +100,18 @@ func handleTransData(t o.TransData) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	if b.Slot == 0 { //*TODO Should add some security measures so you can't fake a genesis block
+	f := func() {
+		pendingBlocksLock.Lock()
+		defer pendingBlocksLock.Unlock()
+		pendingBlocks = append(pendingBlocks, b)
+	}
+	if !genesisReceived {
+		f()
+		return
+	}
+	if b.Slot == 0 && !genesisReceived {
 		fmt.Println("Genesis received! Starting blockchain protocol")
+		genesisReceived = true
 		handleGenesisBlock(b)
 		return
 	}
@@ -115,11 +126,7 @@ func handleBlock(b o.Block) {
 		return
 	}
 	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
-		func() {
-			pendingBlocksLock.Lock()
-			defer pendingBlocksLock.Unlock()
-			pendingBlocks = append(pendingBlocks, b)
-		}()
+		f()
 		return
 	}
 	addBlock(b)
