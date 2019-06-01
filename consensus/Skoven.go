@@ -144,7 +144,7 @@ func handleBlock(b o.Block) {
 		}
 		return
 	}
-	if !ValidateDraw(b, leadershipNonce, hardness) {
+	if !ValidateDraw(b, getLeadershipNonce(b.Slot), hardness) {
 		fmt.Println("Consensus could not validate draw of block:", b.CalculateBlockHash())
 		return
 	}
@@ -193,8 +193,8 @@ func comparePathWeight(b o.Block) {
 
 //Compares the draw value of a block with the current head
 func compareDrawVal(b o.Block) bool {
-	headDraw := CalculateDrawValue(blocks.get(currentHead), leadershipNonce)
-	blockDraw := CalculateDrawValue(b, leadershipNonce)
+	headDraw := CalculateDrawValue(blocks.get(currentHead), getLeadershipNonce(b.Slot))
+	blockDraw := CalculateDrawValue(b, getLeadershipNonce(b.Slot))
 	if headDraw.Cmp(blockDraw) == -1 {
 		return true
 	}

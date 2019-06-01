@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"bytes"
 	"fmt"
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
@@ -14,16 +15,19 @@ import (
 var slotLength time.Duration
 var currentSlot uint64
 var slotLock sync.RWMutex
-var currentStake uint64
+var oldSystemStake uint64
 var systemStake uint64
 var hardness float64
 var genesisTime time.Time
 var sk SecretKey
 var pk PublicKey
 var lastFinalizedLedger map[string]uint64
+var oldFinalizedLedger map[string]uint64
 var ledgerLock sync.RWMutex
 var leadershipNonce string
+var oldLeadershipNonce string
 var leadershipLock sync.RWMutex
+var currentEpochSlot uint64 // The slot the current epoch began
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
@@ -32,6 +36,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 	for {
 		if (currentSlot)%finalizeInterval == 0 {
 			finalize(currentSlot - (finalizeInterval / 2))
+			currentEpochSlot = currentSlot
 		}
 		go drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime) - offset
@@ -65,25 +70,32 @@ func getCurrentSlot() uint64 {
 	return currentSlot
 }
 
+func getCurrentEpochSlot() uint64 {
+	slotLock.RLock()
+	defer slotLock.RUnlock()
+	return currentEpochSlot
+}
+
 func processGenesisData(genesisData o.GenesisData) {
 	// TODO  -  Use GenesisTime when going away from two-phase implementation
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
 	lastFinalizedLedger = genesisData.InitialState.Ledger
 	leadershipNonce = genesisData.Nonce
-	currentStake = lastFinalizedLedger[pk.Hash()]
 	systemStake = genesisData.InitialState.TotalStake
 	genesisTime = genesisData.GenesisTime
+	currentEpochSlot = 0
 	go runSlot()
 	go transaction.StartTransactionLayer(channels, saveGraphFiles)
 }
 
-func finalize(slot uint64) { //TODO add generation of new leadershipNonce (when doing so also change all places using it)
+func finalize(slot uint64) {
 	finalLock.Lock()
 	defer finalLock.Unlock()
 	head := blocks.get(currentHead)
 	for {
 		if head.Slot <= slot {
+			newLeadershipNonce(head)
 			finalHash := head.CalculateBlockHash()
 			lastFinalized = finalHash
 			lastFinalizedSlot = head.Slot
@@ -95,11 +107,30 @@ func finalize(slot uint64) { //TODO add generation of new leadershipNonce (when 
 	}
 }
 
+func newLeadershipNonce(finalBlock o.Block) {
+	var buf bytes.Buffer
+	head := finalBlock
+	for {
+		if head.Slot == lastFinalizedSlot {
+			break
+		}
+		buf.WriteString(head.BlockNonce.Nonce)
+		head = blocks.get(head.ParentPointer)
+	}
+	leadershipLock.Lock()
+	defer leadershipLock.Unlock()
+	oldLeadershipNonce = leadershipNonce
+	leadershipNonce = HashSHA(buf.String())
+}
+
 func updateStake() {
 	state := <-channels.StateFromTrans
 	ledgerLock.Lock()
 	defer ledgerLock.Unlock()
+	oldFinalizedLedger = lastFinalizedLedger
 	lastFinalizedLedger = state.Ledger
+	oldSystemStake = systemStake
+	systemStake = state.TotalStake
 	if isVerbose {
 		fmt.Println("Finalized Successfully")
 		PrintFinalizedLedger()
@@ -129,7 +160,7 @@ func generateBlock(draw string, slot uint64) {
 		pk,
 		slot,
 		draw,
-		o.CreateNewBlockNonce(leadershipNonce, sk, slot),
+		o.CreateNewBlockNonce(getLeadershipNonce(slot), sk, slot),
 		lastFinalized}
 	channels.TransToTrans <- blockData
 	go sendBlock()
@@ -141,10 +172,24 @@ func sendBlock() {
 	channels.BlockToP2P <- block
 }
 
-func getLotteryPower(pk PublicKey) float64 {
+func getLotteryPower(pk PublicKey, slot uint64) float64 {
 	ledgerLock.RLock()
 	defer ledgerLock.RUnlock()
-	return float64(lastFinalizedLedger[pk.Hash()]) / float64(systemStake)
+	if slot >= getCurrentEpochSlot() {
+		return float64(lastFinalizedLedger[pk.Hash()]) / float64(systemStake)
+	} else {
+		return float64(oldFinalizedLedger[pk.Hash()]) / float64(oldSystemStake)
+	}
+}
+
+func getLeadershipNonce(slot uint64) string {
+	leadershipLock.RLock()
+	defer leadershipLock.RUnlock()
+	if slot >= getCurrentEpochSlot() {
+		return leadershipNonce
+	} else {
+		return oldLeadershipNonce
+	}
 }
 
 func GetLastFinalState() map[string]uint64 {
