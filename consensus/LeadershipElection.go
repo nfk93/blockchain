@@ -51,7 +51,7 @@ func ValidateDraw(b Block, leadershipNonce string, hardness float64) bool {
 	}
 
 	// Calculates the threshold
-	phiFunc := float64(1) - math.Pow(float64(1)-hardness, getLotteryPower(b.BakerID))
+	phiFunc := float64(1) - math.Pow(float64(1)-hardness, getLotteryPower(b.BakerID, b.Slot))
 	multFactor := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(256)), nil)
 	threshold := new(big.Int)
 	new(big.Float).Mul(big.NewFloat(float64(phiFunc)), new(big.Float).SetInt(multFactor)).Int(threshold)
