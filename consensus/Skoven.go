@@ -24,6 +24,7 @@ var saveGraphFiles bool
 var pendingBlocks []o.Block
 var pendingBlocksLock sync.Mutex
 var genesisReceived bool = false
+var handlingBlock sync.Mutex
 
 func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey crypto.SecretKey, verbose, saveGraphsToFile bool) {
 	pk = pkey
@@ -40,8 +41,12 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
-			block := <-channels.BlockFromP2P
-			handleBlock(block)
+			func() {
+				handlingBlock.Lock()
+				defer handlingBlock.Unlock()
+				block := <-channels.BlockFromP2P
+				handleBlock(block)
+			}()
 		}
 	}()
 	// Start processing transactions on one thread, concurrently
@@ -67,6 +72,8 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 func checkPendingBlocks() {
 	foundBlockToAdd := false
 	func() {
+		handlingBlock.Lock()
+		defer handlingBlock.Unlock()
 		pendingBlocksLock.Lock()
 		defer pendingBlocksLock.Unlock()
 		for i, block := range pendingBlocks {
@@ -100,11 +107,6 @@ func handleTransData(t o.TransData) {
 
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
-	f := func() {
-		pendingBlocksLock.Lock()
-		defer pendingBlocksLock.Unlock()
-		pendingBlocks = append(pendingBlocks, b)
-	}
 	if b.Slot == 0 && !genesisReceived {
 		fmt.Println("Genesis received! Starting blockchain protocol")
 		genesisReceived = true
@@ -112,7 +114,11 @@ func handleBlock(b o.Block) {
 		return
 	}
 	if !genesisReceived {
-		f()
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
 		return
 	}
 	if !b.ValidateBlock() {
@@ -126,7 +132,11 @@ func handleBlock(b o.Block) {
 		return
 	}
 	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
-		f()
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
 		return
 	}
 	addBlock(b)
