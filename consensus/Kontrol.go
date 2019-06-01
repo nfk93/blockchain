@@ -28,12 +28,13 @@ var leadershipLock sync.RWMutex
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
 	finalizeInterval := uint64(50)
+	offset := time.Since(genesisTime)
 	for {
 		if (currentSlot)%finalizeInterval == 0 {
 			finalize(currentSlot - (finalizeInterval / 2))
 		}
 		go drawLottery(currentSlot)
-		timeSinceGenesis := time.Since(genesisTime)
+		timeSinceGenesis := time.Since(genesisTime) - offset
 		if saveGraphFiles {
 			go func() {
 				blocks.l.Lock()
