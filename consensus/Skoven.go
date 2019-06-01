@@ -105,14 +105,14 @@ func handleBlock(b o.Block) {
 		defer pendingBlocksLock.Unlock()
 		pendingBlocks = append(pendingBlocks, b)
 	}
-	if !genesisReceived {
-		f()
-		return
-	}
 	if b.Slot == 0 && !genesisReceived {
 		fmt.Println("Genesis received! Starting blockchain protocol")
 		genesisReceived = true
 		handleGenesisBlock(b)
+		return
+	}
+	if !genesisReceived {
+		f()
 		return
 	}
 	if !b.ValidateBlock() {
