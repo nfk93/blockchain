@@ -41,7 +41,7 @@ func main() {
 	channels = objects.CreateChannelStruct()
 	autoTransStatus = false
 	p2p.StartP2P(*addr, *port, publicKey, channels)
-	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
+	consensus.StartConsensus(channels, publicKey, secretKey, true, *saveLogFile)
 	if *addr == "" {
 		fmt.Println("When all other clients are ready, use -start to begin the Blockchain protocol or -h for help with further commands!")
 	} else {

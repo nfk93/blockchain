@@ -231,6 +231,7 @@ func rollback(newHead o.Block) bool {
 		if noBadBlocks {
 			noBadBlocks = transactionsUsed(newBranch[i])
 		} else {
+			fmt.Println("Bad block! chain contains block that reuses transactions ", newHead.CalculateBlockHash())
 			badBlocks[newBranch[i].CalculateBlockHash()] = true
 		}
 	}
@@ -270,6 +271,7 @@ func transactionsUsed(b o.Block) bool {
 		if !unused {
 			badBlocks[b.CalculateBlockHash()] = true
 			unusedTransactions = oldUnusedTransmap
+			fmt.Println("Bad block! ReusesTransactions ", b.CalculateBlockHash())
 			return false
 		}
 		delete(unusedTransactions, thash)
@@ -309,10 +311,12 @@ func updateHead(b o.Block) {
 func isLegalExtension(b o.Block) bool {
 	_, badParent := badBlocks[b.ParentPointer]
 	if badParent {
+		fmt.Println("Bad Block! Parent is a bad block: ", b.CalculateBlockHash())
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}
 	if blocks.contains(b.ParentPointer) && blocks.get(b.ParentPointer).Slot >= b.Slot { //Check that slot of parent is smaller
+		fmt.Println("Bad block! Extension on block with higher or same slot: ", b.CalculateBlockHash())
 		badBlocks[b.CalculateBlockHash()] = true
 		return false
 	}

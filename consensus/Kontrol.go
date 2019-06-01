@@ -149,6 +149,7 @@ func drawLottery(slot uint64) {
 
 //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
 func generateBlock(draw string, slot uint64) {
+
 	func() {
 		handlingBlocks.Lock()
 		defer handlingBlocks.Unlock()
