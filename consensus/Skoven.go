@@ -82,7 +82,7 @@ func checkPendingBlocks() {
 					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 					return
 				}
-				if !ValidateDraw(block, leadershipNonce, hardness) {
+				if !ValidateDraw(block, getLeadershipNonce(block.Slot), hardness) {
 					fmt.Println("Consensus could not validate draw of block:", block.CalculateBlockHash())
 					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 					return
