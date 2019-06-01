@@ -80,7 +80,7 @@ func (t *Tree) processBlock(b Block) {
 	// Remove expired contracts from ledger in TL and from ConLayer
 	// Collection storageCosts
 	expiring, reward := smart.NewBlockTreeNode(blockHash, b.ParentPointer, b.Slot)
-	s.CleanExpiredContract(expiring) // TODO: check if correct placement
+	s.CleanExpiredContract(expiring)
 	accumulatedRewards += reward
 
 	// Update state
