@@ -25,7 +25,7 @@ var tLock sync.RWMutex
 var logToFile bool
 
 const transactionGas = uint64(1)
-const blockReward = uint64(100)
+const blockReward = uint64(10000)
 const gasLimit = uint64(1000) //(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct, log_ bool) {
@@ -157,19 +157,33 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
-		if accumulatedGasUse < gasLimit {
-			switch td.GetType() {
-			case CONTRACTCALL:
-				accumulatedGasUse += s.HandleContractCall(td.ContractCall, "", t.head, blockData.SlotNo)
-			case CONTRACTINIT:
-				accumulatedGasUse += s.HandleContractInit(td.ContractInit, "", t.head, blockData.SlotNo)
-			case TRANSACTION:
-				accumulatedGasUse += s.AddTransaction(td.Transaction, transactionGas)
+		if accumulatedGasUse+transactionGas > gasLimit {
+			break
+		}
+		switch td.GetType() {
+		case CONTRACTCALL:
+			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
+			gasUsed := s.HandleContractCall(td.ContractCall, "", t.head, blockData.SlotNo)
+			if accumulatedGasUse+gasUsed > gasLimit {
+				s = oldState
+			} else {
+				accumulatedGasUse += gasUsed
+				addedTransactions = append(addedTransactions, td)
 			}
-
+		case CONTRACTINIT:
+			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
+			gasUsed := s.HandleContractInit(td.ContractInit, "", t.head, blockData.SlotNo)
+			if accumulatedGasUse+gasUsed > gasLimit {
+				s = oldState
+			} else {
+				accumulatedGasUse += gasUsed
+				addedTransactions = append(addedTransactions, td)
+			}
+		case TRANSACTION:
+			gasUsed := s.AddTransaction(td.Transaction, transactionGas)
+			accumulatedGasUse += gasUsed
 			addedTransactions = append(addedTransactions, td)
 		}
-
 	}
 
 	b := Block{blockData.SlotNo,
