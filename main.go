@@ -26,7 +26,7 @@ var newNetwork *bool
 var saveLogFile *bool
 var addr *string
 var port *string
-var autoTransStatus = true
+var autoTransStatus bool
 
 func main() {
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
@@ -39,6 +39,7 @@ func main() {
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
+	autoTransStatus = false
 	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
 	if *addr == "" {
@@ -205,5 +206,4 @@ func autoTrans() {
 		}
 		time.Sleep(time.Second * 5)
 	}
-
 }
