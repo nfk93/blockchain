@@ -41,10 +41,10 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 	// Start processing blocks on one thread, non-concurrently
 	go func() {
 		for {
+			block := <-channels.BlockFromP2P
 			func() {
 				handlingBlocks.Lock()
 				defer handlingBlocks.Unlock()
-				block := <-channels.BlockFromP2P
 				handleBlock(block)
 				checkPendingBlocks()
 			}()
@@ -73,10 +73,22 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 func checkPendingBlocks() {
 	foundBlockToAdd := false
 	func() {
+		pendingBlocksLock.Lock()
+		defer pendingBlocksLock.Unlock()
 		for i, block := range pendingBlocks {
 			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) {
-				foundBlockToAdd = true
+				if !block.ValidateBlock() {
+					fmt.Println("Consensus could not validate block:", block.CalculateBlockHash())
+					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
+					return
+				}
+				if !ValidateDraw(block, leadershipNonce, hardness) {
+					fmt.Println("Consensus could not validate draw of block:", block.CalculateBlockHash())
+					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
+					return
+				}
 				addBlock(block)
+				foundBlockToAdd = true
 				pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 				break
 			}
@@ -118,6 +130,14 @@ func handleBlock(b o.Block) {
 		}()
 		return
 	}
+	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
+		func() {
+			pendingBlocksLock.Lock()
+			defer pendingBlocksLock.Unlock()
+			pendingBlocks = append(pendingBlocks, b)
+		}()
+		return
+	}
 	if !b.ValidateBlock() {
 		if isVerbose {
 			fmt.Println("Consensus could not validate block:", b.CalculateBlockHash())
@@ -126,14 +146,6 @@ func handleBlock(b o.Block) {
 	}
 	if !ValidateDraw(b, leadershipNonce, hardness) {
 		fmt.Println("Consensus could not validate draw of block:", b.CalculateBlockHash())
-		return
-	}
-	if b.Slot > getCurrentSlot() || !blocks.contains(b.ParentPointer) {
-		func() {
-			pendingBlocksLock.Lock()
-			defer pendingBlocksLock.Unlock()
-			pendingBlocks = append(pendingBlocks, b)
-		}()
 		return
 	}
 	addBlock(b)
