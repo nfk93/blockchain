@@ -56,6 +56,11 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 				}
 			}()
 		}
+		func() {
+			handlingBlocks.Lock()
+			defer handlingBlocks.Unlock()
+			checkPendingBlocks()
+		}()
 		sleepyTime := time.Duration(currentSlot)*slotLength - timeSinceGenesis
 		if sleepyTime > 0 {
 			time.Sleep(sleepyTime)
@@ -153,12 +158,6 @@ func drawLottery(slot uint64) {
 
 //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
 func generateBlock(draw string, slot uint64) {
-
-	func() {
-		handlingBlocks.Lock()
-		defer handlingBlocks.Unlock()
-		checkPendingBlocks()
-	}()
 	blockData := o.CreateBlockData{
 		createBlockTransData,
 		sk,

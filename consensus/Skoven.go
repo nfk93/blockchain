@@ -47,7 +47,6 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 				handlingBlocks.Lock()
 				defer handlingBlocks.Unlock()
 				handleBlock(block)
-				checkPendingBlocks()
 			}()
 		}
 	}()
