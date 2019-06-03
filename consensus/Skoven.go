@@ -450,8 +450,8 @@ func getDotString(blocks map[string]o.Block) []byte {
 	// write blockdata
 	logstring := "digraph G {\n"
 	for k, v := range blocks {
-		blockdatastr := fmt.Sprintf("%s [shape=record, label=\"hash: %s\\nslot: %d\\nbaker: %s\"];\n", "block"+k,
-			k[:6], v.Slot, v.BakerID.Hash()[:6])
+		blockdatastr := fmt.Sprintf("%s [shape=record, label=\"hash: %s\\nslot: %d\\nbaker: %s\\nlastFinal: %s\\ntransactions: %s\"];\n",
+			"block"+k, k[:6], v.Slot, v.BakerID.Hash()[:6], v.LastFinalized[:6], len(v.BlockData.Trans))
 		logstring += blockdatastr
 	}
 	for k, v := range blocks {

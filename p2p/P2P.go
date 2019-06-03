@@ -136,6 +136,8 @@ func PrintTransHashList() {
 }
 
 func GetPublicKeys() []crypto.PublicKey {
+	pkLock.RLock()
+	defer pkLock.RUnlock()
 	var pkList []crypto.PublicKey
 	for pk := range publicKeys {
 		pkList = append(pkList, pk)
@@ -238,8 +240,8 @@ func (r *RPCHandler) NewConnection(data NewConnectionData, _ *struct{}) error {
 func broadcastNewConnection(data NewConnectionData) {
 	failed := false
 	func() {
-		peersLock.RLock()
-		defer peersLock.RUnlock()
+		peersLock.Lock()
+		defer peersLock.Unlock()
 		for _, peer := range peers {
 			void := struct{}{}
 			err := peer.Call(RPC_NEW_CONNECTION, data, &void)
@@ -289,8 +291,8 @@ func handleBlock(block objects.Block) {
 func broadcastBlock(block objects.Block) {
 	failed := false
 	func() {
-		peersLock.RLock()
-		defer peersLock.RUnlock()
+		peersLock.Lock()
+		defer peersLock.Unlock()
 		for _, peer := range peers {
 			void := struct{}{}
 			err := peer.Call(RPC_SEND_BLOCK, block, &void)
@@ -340,8 +342,8 @@ func handleTransData(trans objects.TransData) {
 func broadcastTrans(trans objects.TransData) {
 	failed := false
 	func() {
-		peersLock.RLock()
-		defer peersLock.RUnlock()
+		peersLock.Lock()
+		defer peersLock.Unlock()
 		for _, peer := range peers {
 			void := struct{}{}
 			err := peer.Call(RPC_SEND_TRANSDATA, trans, &void)
@@ -387,6 +389,7 @@ func determinePeers() {
 	// determines your peers. Is run every time you receive a new connection
 	peersLock.Lock()
 	defer peersLock.Unlock()
+	fmt.Println("\nDetermining peers...")
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
@@ -398,15 +401,16 @@ func determinePeers() {
 	peers = make([]rpc.Client, peersSize)
 	j := 0
 	for i := 0; i < peersSize; i++ {
-		nextIndex := (myIndex + i + j + 1) % networkSize
 		notConnected := true
 		for notConnected && j < 20 {
+			nextIndex := (myIndex + i + j + 1) % networkSize
 			peerClient, err := rpc.DialHTTP("tcp", connections[nextIndex])
 			if err != nil {
 				j++
 				fmt.Println(fmt.Sprintf("Cant connect to peer %s, error: %s\nTrying next peer... Failed attempts: %d",
 					connections[nextIndex], err.Error(), j))
 			} else {
+				fmt.Println("Connected to %s", connections[nextIndex])
 				peers[i] = *peerClient
 				notConnected = false
 			}
@@ -430,5 +434,5 @@ func getIP() string {
 		panic(err)
 	}
 	fmt.Println("my ip is:", string(ip))
-	return string("127.0.0.1")
+	return string("192.168.87.120")
 }
