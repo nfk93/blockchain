@@ -190,7 +190,7 @@ func autoTrans() {
 			return
 		}
 		currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
-		if int(currentStake)/50 == 0 {
+		if int(currentStake)/50 <= 0 {
 			time.Sleep(time.Second * 5)
 		} else {
 			pkList := p2p.GetPublicKeys()
