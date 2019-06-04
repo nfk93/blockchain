@@ -15,37 +15,36 @@ import (
 var slotLength time.Duration
 var currentSlot uint64
 var slotLock sync.RWMutex
-var oldSystemStake uint64
-var systemStake uint64
 var hardness float64
 var genesisTime time.Time
 var sk SecretKey
 var pk PublicKey
-var lastFinalizedLedger map[string]uint64
-var oldFinalizedLedger map[string]uint64
-var ledgerLock sync.RWMutex
-var leadershipNonce string
-var oldLeadershipNonce string
-var leadershipLock sync.RWMutex
-var currentEpochSlot uint64 // The slot the current epoch began
-var createBlockHead string
-var createBlockTransData []o.TransData
+
+type FinalData struct {
+	stake           map[string]uint64
+	totalstake      uint64
+	leadershipNonce string
+	blockHash       string
+}
+
+var finalData = make(map[uint64]FinalData)
+var finalLock sync.RWMutex
+
+const finalizeInterval = uint64(50)
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
-	finalizeInterval := uint64(50)
 	offset := time.Since(genesisTime)
 	for {
 		if (currentSlot)%finalizeInterval == 0 {
-			finalize(currentSlot - (finalizeInterval / 2))
-			currentEpochSlot = currentSlot
+			finalize(currentSlot - (finalizeInterval))
 		}
-		go drawLottery(currentSlot)
+		drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime) - offset
 		if saveGraphFiles {
 			go func() {
-				blocks.l.Lock()
-				defer blocks.l.Unlock()
+				blocks.rlock()
+				defer blocks.runlock()
 				copy_ := make(map[string]o.Block)
 				for k, v := range blocks.m {
 					copy_[k] = v
@@ -57,19 +56,13 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 			}()
 		}
 		func() {
-			handlingBlocks.Lock()
-			defer handlingBlocks.Unlock()
 			checkPendingBlocks()
 		}()
 		sleepyTime := time.Duration(currentSlot)*slotLength - timeSinceGenesis
 		if sleepyTime > 0 {
 			time.Sleep(sleepyTime)
 		}
-		slotLock.Lock()
-		createBlockHead = getCurrentHead()
-		createBlockTransData = getUnusedTransactions()
-		currentSlot++
-		slotLock.Unlock()
+		currentSlot += 1
 	}
 }
 
@@ -79,137 +72,159 @@ func getCurrentSlot() uint64 {
 	return currentSlot
 }
 
-func getCurrentEpochSlot() uint64 {
-	slotLock.RLock()
-	defer slotLock.RUnlock()
-	return currentEpochSlot
+func getEpoch(slot uint64) uint64 {
+	return slot / finalizeInterval
 }
 
-func processGenesisData(genesisData o.GenesisData) {
+func processGenesisData(genesisData o.GenesisData, blockHash string) {
 	// TODO  -  Use GenesisTime when going away from two-phase implementation
 	hardness = genesisData.Hardness
 	slotLength = genesisData.SlotDuration
-	lastFinalizedLedger = genesisData.InitialState.Ledger
-	leadershipNonce = genesisData.Nonce
-	systemStake = genesisData.InitialState.TotalStake
+	genesisFinalData := FinalData{stake: genesisData.InitialState.Ledger, totalstake: genesisData.InitialState.TotalStake,
+		leadershipNonce: genesisData.Nonce, blockHash: blockHash}
+	finalData[0] = genesisFinalData
 	genesisTime = genesisData.GenesisTime
-	currentEpochSlot = 0
 	go runSlot()
 	go transaction.StartTransactionLayer(channels, saveGraphFiles)
 }
 
 func finalize(slot uint64) {
-	finalLock.Lock()
-	defer finalLock.Unlock()
-	head := blocks.get(getCurrentHead())
-	for {
-		if head.Slot <= slot {
-			newLeadershipNonce(head)
-			finalHash := head.CalculateBlockHash()
-			lastFinalized = finalHash
-			lastFinalizedSlot = head.Slot
-			go updateStake()
+	if isVerbose {
+		fmt.Println("Finalizing at slot", slot)
+	}
+	if slot == 0 {
+		// do nothing
+		/*
+			fmt.Println(12)
+			newNonce := finalData[0].leadershipNonce
+			fmt.Println(13)
+			finalHash := finalData[0].blockHash
+			fmt.Println(14)
 			channels.FinalizeToTrans <- finalHash
-			break
-		}
-		head = blocks.get(head.ParentPointer)
+			fmt.Println(15)
+			state := <-channels.StateFromTrans
+			fmt.Println(16)
+			finData := getFinalData(state, newNonce, finalHash)
+			fmt.Println(17)
+			finalData[epoch] = finData
+			fmt.Println(18) */
+	} else {
+		func() {
+			epoch := getEpoch(slot)
+			blocks.rlock()
+			defer blocks.runlock()
+			finalLock.Lock()
+			defer finalLock.Unlock()
+			head := blocks.get(getCurrentHead())
+			for {
+				parent := blocks.get(head.ParentPointer)
+				if parent.Slot < slot {
+					finalHash := head.CalculateBlockHash()
+					if isVerbose {
+						fmt.Println("Finalizing block", finalHash[:6]+"...")
+					}
+					newNonce := newLeadershipNonce(head)
+					channels.FinalizeToTrans <- finalHash
+					state := <-channels.StateFromTrans
+					finData := getFinalData(state, newNonce, finalHash)
+					finalData[epoch] = finData
+					break
+				}
+				head = parent
+			}
+		}()
+	}
+	if isVerbose {
+		fmt.Println(fmt.Sprintf("Finalized slot %d successfully", slot))
+		PrintCurrentStake()
 	}
 }
 
-func newLeadershipNonce(finalBlock o.Block) {
+func getFinalData(state o.State, leadershipNonce, blockHash string) FinalData {
+	m := state.Ledger
+	// add contract accounts to owners mining pool
+	for k, v := range state.ConStake {
+		conowner := state.ConOwners[k]
+		conownerhash := conowner.Hash()
+		m[conownerhash] += v
+	}
+	return FinalData{stake: m, totalstake: state.TotalStake, leadershipNonce: leadershipNonce, blockHash: blockHash}
+}
+
+func newLeadershipNonce(finalBlock o.Block) string {
 	var buf bytes.Buffer
+	previousFinal := finalBlock.LastFinalized
 	head := finalBlock
 	for {
-		if head.Slot == lastFinalizedSlot {
-			break
-		}
 		buf.WriteString(head.BlockNonce.Nonce)
 		head = blocks.get(head.ParentPointer)
+		if head.ParentPointer == previousFinal {
+			break
+		}
 	}
-	leadershipLock.Lock()
-	defer leadershipLock.Unlock()
-	oldLeadershipNonce = leadershipNonce
-	leadershipNonce = HashSHA(buf.String())
-}
-
-func updateStake() {
-	state := <-channels.StateFromTrans
-	ledgerLock.Lock()
-	defer ledgerLock.Unlock()
-	oldFinalizedLedger = lastFinalizedLedger
-	lastFinalizedLedger = state.Ledger
-	oldSystemStake = systemStake
-	systemStake = state.TotalStake
-	if isVerbose {
-		fmt.Println("Finalized Successfully")
-		PrintFinalizedLedger()
-	}
+	return HashSHA(buf.String())
 }
 
 func drawLottery(slot uint64) {
-	winner, draw := CalculateDraw(leadershipNonce, hardness, sk, pk, slot)
+	finalLock.RLock()
+	defer finalLock.RUnlock()
+	blocks.rlock()
+	defer blocks.runlock()
+	fd := finalData[getFinalDataIndex(slot)]
+	leadershipNonce := fd.leadershipNonce
+	lastfinalized := fd.blockHash
+	winner, draw := CalculateDraw(hardness, sk, pk, slot, fd)
 	if winner {
 		if isVerbose {
 			fmt.Println("We won slot " + strconv.Itoa(int(slot)))
 		}
-		generateBlock(draw, slot)
+		generateBlock(draw, slot, leadershipNonce, lastfinalized, getCurrentHead())
 	}
 }
 
 //Sends all unused transactions to the transaction layer for the transaction layer to process for the new block
-func generateBlock(draw string, slot uint64) {
+func generateBlock(draw string, slot uint64, leadershipNonce, lastfinalized, parentHash string) {
 	blockData := o.CreateBlockData{
-		createBlockTransData,
+		getUnusedTransactions(),
 		sk,
 		pk,
 		slot,
 		draw,
-		o.CreateNewBlockNonce(getLeadershipNonce(slot), sk, slot),
-		lastFinalized,
-		createBlockHead}
+		o.CreateNewBlockNonce(leadershipNonce, sk, slot),
+		lastfinalized,
+		parentHash}
 	channels.TransToTrans <- blockData
-	go sendBlock()
-}
-
-func sendBlock() {
 	block := <-channels.BlockFromTrans
-	//channels.BlockFromP2P <- block // TODO change this when using P2P
-	channels.BlockToP2P <- block
+	go func() {
+		channels.BlockToP2P <- block
+	}()
 }
 
 func getLotteryPower(pk PublicKey, slot uint64) float64 {
-	ledgerLock.RLock()
-	defer ledgerLock.RUnlock()
-	if slot >= getCurrentEpochSlot() {
-		return float64(lastFinalizedLedger[pk.Hash()]) / float64(systemStake)
+	finalLock.RLock()
+	defer finalLock.RUnlock()
+	fd, exists := finalData[getEpoch(slot)]
+	if !exists {
+		fmt.Println("ERROR: attempted getting lottery power from unfinalized epoch")
+		return 0
 	} else {
-		return float64(oldFinalizedLedger[pk.Hash()]) / float64(oldSystemStake)
+		return float64(fd.stake[pk.Hash()]) / float64(fd.totalstake)
 	}
 }
 
-func getLeadershipNonce(slot uint64) string {
-	leadershipLock.RLock()
-	defer leadershipLock.RUnlock()
-	if slot >= getCurrentEpochSlot() {
-		return leadershipNonce
-	} else {
-		return oldLeadershipNonce
-	}
-}
-
-func GetLastFinalState() map[string]uint64 {
-	return lastFinalizedLedger
-}
-
-func PrintFinalizedLedger() {
-	ledger := lastFinalizedLedger
+func PrintCurrentStake() {
+	slot := getCurrentSlot()
+	lastFinalEpoch := getEpoch(slot) - 1
 	var keyList []string
-	for k := range ledger {
+	finalLock.RLock()
+	defer finalLock.RUnlock()
+	stake := finalData[lastFinalEpoch].stake
+	for k := range stake {
 		keyList = append(keyList, k)
 	}
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
+		fmt.Printf("Keyhash: %d, Stake: %v\n", k[:10], stake[k])
 	}
 }

@@ -86,7 +86,7 @@ func cliLoop() {
 		case "-ledger":
 			transaction.PrintCurrentLedger()
 		case "-final":
-			consensus.PrintFinalizedLedger()
+			consensus.PrintCurrentStake()
 		case "-start": //"-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness)
@@ -124,7 +124,7 @@ func cliLoop() {
 				}
 			}
 		case "-trans2":
-			currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
+			/*currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
 			for i, p := range p2p.GetPublicKeys() {
 
 				trans := objects.CreateTransaction(publicKey,
@@ -134,7 +134,7 @@ func cliLoop() {
 					secretKey)
 				channels.TransClientInput <- objects.TransData{Transaction: trans}
 
-			}
+			} */
 		case "-trans5":
 			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
 			pkList := p2p.GetPublicKeys()

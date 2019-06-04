@@ -190,7 +190,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		blockData.ParentHash,
 		blockData.Pk,
 		blockData.Draw,
-		BlockNonce{},
+		blockData.BlockNonce,
 		blockData.LastFinalized,
 		BlockData{addedTransactions, GenesisData{}},
 		s.SignHashedState(blockData.Sk),
