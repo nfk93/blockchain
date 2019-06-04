@@ -47,7 +47,7 @@ func (s *State) AddTransaction(t Transaction, gasCost uint64) uint64 {
 	return gasCost
 }
 
-func (s *State) PayBlockRewardOrRemainGas(pk PublicKey, reward uint64) {
+func (s *State) AddAmountToAccount(pk PublicKey, reward uint64) {
 	s.Ledger[pk.Hash()] += reward
 	s.TotalStake += reward // putting back the fees and an block reward if anyone claim it
 }
@@ -107,8 +107,19 @@ func (s *State) returnAmountFromContracts(callerAccount PublicKey, amount uint64
 	s.Ledger[callerAccount.Hash()] += amount
 }
 
+func (s *State) payContractInit(pk PublicKey, gas uint64, prepaid uint64) bool {
+	amount := gas + prepaid
+	owner := pk.Hash()
+	if s.Ledger[owner] > amount {
+		s.Ledger[owner] -= amount
+		s.TotalStake -= amount
+		return true
+	}
+	return false
+}
+
 func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
-	if s.Ledger[contractInit.Owner.Hash()] > contractInit.Prepaid+contractInit.Gas {
+	if paymentAccepted := s.payContractInit(contractInit.Owner, contractInit.Gas, contractInit.Prepaid); paymentAccepted {
 		var addr string
 		var remainGas uint64
 		var err error
@@ -121,11 +132,11 @@ func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash st
 				contractInit.StorageLimit, blockhash)
 		}
 
-		s.PayBlockRewardOrRemainGas(contractInit.Owner, remainGas)
+		s.AddAmountToAccount(contractInit.Owner, remainGas)
 		if err != nil {
+			s.AddAmountToAccount(contractInit.Owner, contractInit.Prepaid)
 			return contractInit.Gas - remainGas
 		} else {
-			s.TotalStake -= contractInit.Prepaid
 			s.InitializeContractAccount(addr, contractInit.Owner)
 			return contractInit.Gas - remainGas
 		}
@@ -155,7 +166,7 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 
 	// Calc how much gas used and refund not used gas to caller
 	gasUsed := contract.Gas - remainingGas
-	s.PayBlockRewardOrRemainGas(contract.Caller, remainingGas)
+	s.AddAmountToAccount(contract.Caller, remainingGas)
 
 	// If contract not successful, then return amount to caller
 	if callerr != nil {

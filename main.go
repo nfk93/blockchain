@@ -159,7 +159,7 @@ func cliLoop() {
 			autoTransStatus = !autoTransStatus
 			go autoTrans()
 		case "-id":
-			fmt.Printf("Your ID is: \n    Public Key short: %v\n    Port: %v\n", publicKey.Hash()[:6], *port)
+			fmt.Printf("Your ID is: \n    Public Key hash: %v\n    Port: %v\n", publicKey.Hash(), *port)
 		case "-verbose":
 			consensus.SwitchVerbose()
 		default:
