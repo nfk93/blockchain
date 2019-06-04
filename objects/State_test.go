@@ -39,7 +39,7 @@ func TestState_AddBlockReward(t *testing.T) {
 
 	trans := CreateTransaction(pk1, pk2, 50, "transOne", sk1)
 	s.AddTransaction(trans, 2)
-	s.PayBlockRewardOrRemainGas(pk1, 2)
+	s.AddAmountToAccount(pk1, 2)
 
 	if s.Ledger[pk1.Hash()] != 150 && s.Ledger[pk1.Hash()] != 50 {
 		t.Error("not correct amount!")

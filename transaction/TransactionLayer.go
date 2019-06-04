@@ -100,7 +100,7 @@ func (t *Tree) processBlock(b Block) {
 	if s.VerifyHashedState(b.StateHash, b.BakerID) && accumulatedGas < gasLimit {
 		// Pay the block creator
 		totalReward := accumulatedGas + storageReward + blockReward
-		s.PayBlockRewardOrRemainGas(b.BakerID, totalReward)
+		s.AddAmountToAccount(b.BakerID, totalReward)
 
 	} else {
 		fmt.Println("Proof of work in block didn't match...")
