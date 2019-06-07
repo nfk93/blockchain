@@ -225,6 +225,6 @@ func PrintCurrentStake() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Keyhash: %d, Stake: %v\n", k[:10], stake[k])
+		fmt.Printf("Keyhash: %v, Stake: %v\n", k[:10], stake[k])
 	}
 }

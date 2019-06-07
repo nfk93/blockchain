@@ -62,7 +62,7 @@ func TestBlockNonce(t *testing.T) {
 		BlockData{},
 		"",
 		""}
-	if !block.validateBlockNonce(leadershipNonce) {
+	if !block.ValidateBlockNonce(leadershipNonce) {
 		t.Error("Nonce validation failed")
 	}
 }

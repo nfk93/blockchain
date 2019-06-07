@@ -159,7 +159,7 @@ func cliLoop() {
 			autoTransStatus = !autoTransStatus
 			go autoTrans()
 		case "-id":
-			fmt.Printf("Your ID is: \n    Public Key short: %v\n    Port: %v\n", publicKey.Hash()[:6], *port)
+			fmt.Printf("Your ID is: \n    Public Key hash: %v\n    Port: %v\n", publicKey.Hash(), *port)
 		case "-verbose":
 			consensus.SwitchVerbose()
 		default:
@@ -190,20 +190,21 @@ func autoTrans() {
 			return
 		}
 		currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
-		if currentStake == 0 {
-			continue
+		if int(currentStake)/50 <= 0 {
+			time.Sleep(time.Second * 5)
+		} else {
+			pkList := p2p.GetPublicKeys()
+			for i := 0; i < 2; i++ {
+				receiverPK := pkList[rand.Intn(len(pkList))]
+				trans := objects.CreateTransaction(publicKey,
+					receiverPK,
+					uint64(rand.Intn(int(currentStake)/50)),
+					strconv.Itoa(i),
+					secretKey)
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
+			}
+			time.Sleep(time.Second * 5)
 		}
 
-		pkList := p2p.GetPublicKeys()
-		for i := 0; i < 2; i++ {
-			receiverPK := pkList[rand.Intn(len(pkList))]
-			trans := objects.CreateTransaction(publicKey,
-				receiverPK,
-				uint64(rand.Intn(int(currentStake)/50)),
-				strconv.Itoa(i),
-				secretKey)
-			channels.TransClientInput <- objects.TransData{Transaction: trans}
-		}
-		time.Sleep(time.Second * 5)
 	}
 }

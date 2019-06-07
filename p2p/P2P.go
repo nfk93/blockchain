@@ -434,5 +434,5 @@ func getIP() string {
 		panic(err)
 	}
 	fmt.Println("my ip is:", string(ip))
-	return string("192.168.87.199")
+	return string("127.0.0.1")
 }

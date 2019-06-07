@@ -105,7 +105,7 @@ func CreateNewBlockNonce(leadershipNonce string, sk SecretKey, slot uint64) Bloc
 	return BlockNonce{newNonce, proof}
 }
 
-func (b *Block) validateBlockNonce(leadershipNonce string) bool {
+func (b *Block) ValidateBlockNonce(leadershipNonce string) bool {
 	var buf bytes.Buffer
 	buf.WriteString("NONCE") //Old block nonce
 	buf.WriteString(leadershipNonce)

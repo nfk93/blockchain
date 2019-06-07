@@ -122,6 +122,14 @@ func ValidateBlock(b o.Block) bool {
 		return false
 	}
 
+	// check that blocknonce is correct
+	if blockNonceValid := b.ValidateBlockNonce(fd.leadershipNonce); !blockNonceValid {
+		if isVerbose {
+			fmt.Println("can't validate BlockNonce of block ", b.CalculateBlockHash())
+		}
+		return false
+	}
+
 	// check that the lastfinalized pointer is correct
 	if lastFinalValid := checkLastFinalizedValidity(b, finalEpoch, fd); !lastFinalValid {
 		if isVerbose {
