@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
@@ -43,7 +42,7 @@ func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 					tree.processBlock(b)
 				}
 			} else {
-				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
+				log.Println("Tree not initialized. Please send Genesis Node!! ")
 			}
 		}
 	}()
@@ -103,7 +102,7 @@ func (t *Tree) processBlock(b Block) {
 		s.AddAmountToAccount(b.BakerID, totalReward)
 
 	} else {
-		fmt.Println("Proof of work in block didn't match...")
+		log.Println("Proof of work in block didn't match...")
 	}
 	// Create new node in the tree
 	t.createNewNode(b, s)
@@ -121,7 +120,7 @@ func (t *Tree) finalize(blockHash string) State {
 		smart.FinalizeBlock(blockHash)
 		return finalizedNode.state
 	} else {
-		fmt.Println("Couldn't finalize")
+		log.Println("Couldn't finalize")
 		return State{}
 	}
 }
@@ -243,6 +242,10 @@ func PrintCurrentLedger() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
+		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
 	}
+}
+
+func GetPk(key string) {
+
 }

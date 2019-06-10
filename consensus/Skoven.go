@@ -5,6 +5,7 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"io/ioutil"
+	"log"
 	"sync"
 )
 
@@ -46,13 +47,13 @@ func StartConsensus(channelStruct o.ChannelStruct, pkey crypto.PublicKey, skey c
 			trans := <-channels.TransFromP2P
 			if isVerbose {
 				if trans.GetType() == o.TRANSACTION {
-					fmt.Printf("received transaction: %d from %s to %s.\n", trans.Transaction.Amount, trans.Transaction.From.Hash()[0:6], trans.Transaction.To.Hash()[0:6])
+					log.Printf("received transaction: %d from %s to %s.\n", trans.Transaction.Amount, trans.Transaction.From.Hash()[0:6], trans.Transaction.To.Hash()[0:6])
 				}
 				if trans.GetType() == o.CONTRACTCALL {
-					fmt.Printf("received contractcall with signature %s\n", trans.ContractCall.Signature[:6]+"...")
+					log.Printf("received contractcall with signature %s\n", trans.ContractCall.Signature[:6]+"...")
 				}
 				if trans.GetType() == o.CONTRACTINIT {
-					fmt.Printf("received contractinit with signature %s\n", trans.ContractInit.Signature[:6]+"...")
+					log.Printf("received contractinit with signature %s\n", trans.ContractInit.Signature[:6]+"...")
 				}
 			}
 			go handleTransData(trans)
@@ -70,7 +71,7 @@ func checkPendingBlocks() {
 				if !ValidateBlock(block) {
 					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 					if isVerbose {
-						fmt.Println("Consensus could not validate block:", block.CalculateBlockHash())
+						log.Println("Consensus could not validate block:", block.CalculateBlockHash())
 					}
 				} else {
 					func() {
@@ -94,7 +95,7 @@ func ValidateBlock(b o.Block) bool {
 	// validate signature
 	if !b.ValidateBlock() {
 		if isVerbose {
-			fmt.Println("block signature is invalid for block ", b.CalculateBlockHash())
+			log.Println("block signature is invalid for block ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -105,7 +106,7 @@ func ValidateBlock(b o.Block) bool {
 	parentblock := blocks.get(b.ParentPointer)
 	if b.Slot <= parentblock.Slot {
 		if isVerbose {
-			fmt.Println("parentblock has lower slotnumber than new block ", b.CalculateBlockHash())
+			log.Println("parentblock has lower slotnumber than new block ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -117,7 +118,7 @@ func ValidateBlock(b o.Block) bool {
 	fd, exists := finalData[finalEpoch]
 	if !exists {
 		if isVerbose {
-			fmt.Println("can't determine final data for block ", b.CalculateBlockHash())
+			log.Println("can't determine final data for block ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -125,7 +126,7 @@ func ValidateBlock(b o.Block) bool {
 	// check that blocknonce is correct
 	if blockNonceValid := b.ValidateBlockNonce(fd.leadershipNonce); !blockNonceValid {
 		if isVerbose {
-			fmt.Println("can't validate BlockNonce of block ", b.CalculateBlockHash())
+			log.Println("can't validate BlockNonce of block ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -133,7 +134,7 @@ func ValidateBlock(b o.Block) bool {
 	// check that the lastfinalized pointer is correct
 	if lastFinalValid := checkLastFinalizedValidity(b, finalEpoch, fd); !lastFinalValid {
 		if isVerbose {
-			fmt.Println("can't validate validity of lastfinal of block ", b.CalculateBlockHash())
+			log.Println("can't validate validity of lastfinal of block ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -142,7 +143,7 @@ func ValidateBlock(b o.Block) bool {
 	validDraw := ValidateDraw(b.Slot, b.Draw, b.BakerID, fd, hardness)
 	if !validDraw {
 		if isVerbose {
-			fmt.Println("can't validate draw of block: ", b.CalculateBlockHash())
+			log.Println("can't validate draw of block: ", b.CalculateBlockHash())
 		}
 		return false
 	}
@@ -215,11 +216,11 @@ func handleBlock2(b o.Block) {
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
 	if isVerbose {
-		fmt.Println("received block ", b.CalculateBlockHash()[:6]+"...")
+		log.Println("received block ", b.CalculateBlockHash()[:6]+"...")
 	}
 	if !genesisReceived {
 		if b.Slot == 0 {
-			fmt.Println("Genesis received! Starting blockchain protocol")
+			log.Println("Genesis received! Starting blockchain protocol")
 			genesisReceived = true
 			handleGenesisBlock(b)
 			return
@@ -246,10 +247,10 @@ func handleBlock(b o.Block) {
 			}()
 			if isVerbose {
 				if !parentExists {
-					fmt.Println(fmt.Sprintf("can't process block %s yet, missing parent %s",
+					log.Println(fmt.Sprintf("can't process block %s yet, missing parent %s",
 						b.CalculateBlockHash()[:6]+"...", b.ParentPointer))
 				} else {
-					fmt.Println(fmt.Sprintf("can't process block %s yet, its slot (%d) is higher than currentslot (%d)",
+					log.Println(fmt.Sprintf("can't process block %s yet, its slot (%d) is higher than currentslot (%d)",
 						b.CalculateBlockHash()[:6]+"...", b.Slot, currentSlot))
 				}
 			}
@@ -259,7 +260,7 @@ func handleBlock(b o.Block) {
 		// checks that all contents of the block can be verified
 		if !ValidateBlock(b) {
 			if isVerbose {
-				fmt.Println("Consensus could not validate block:", b.CalculateBlockHash()[:6]+"...")
+				log.Println("Consensus could not validate block:", b.CalculateBlockHash()[:6]+"...")
 			}
 			done = true
 			return
@@ -361,7 +362,7 @@ func rollback(newHead o.Block) bool {
 	for i := len(newBranch) - 1; i >= 0; i-- {
 		appliedTransactionsSuccess := markTransactionsAsUsed(newBranch[i])
 		if !appliedTransactionsSuccess {
-			fmt.Println("Transaction duplication in branch ending at leaf ", newHead.CalculateBlockHash())
+			log.Println("Transaction duplication in branch ending at leaf ", newHead.CalculateBlockHash())
 			unusedTransactions = oldUnusedTransmap //If rollback involved invalid blocks, we return to the old map
 			return false
 		}
@@ -397,7 +398,7 @@ func markTransactionsAsUsed(b o.Block) bool {
 		_, unused := unusedTransactions[thash]
 		if !unused {
 			unusedTransactions = oldUnusedTransmap
-			fmt.Println(fmt.Sprintf("invalid block %s, reuses transactions", b.CalculateBlockHash()))
+			log.Println(fmt.Sprintf("invalid block %s, reuses transactions", b.CalculateBlockHash()))
 			return false
 		}
 		delete(unusedTransactions, thash)
@@ -437,7 +438,7 @@ func updateHead(b o.Block) {
 		}
 	}
 	if isVerbose {
-		fmt.Println("head of tree is block", getCurrentHead())
+		log.Println("head of tree is block", getCurrentHead())
 	}
 }
 
@@ -516,6 +517,12 @@ func (s *skov) runlock() {
 
 func SwitchVerbose() {
 	isVerbose = !isVerbose
+	if isVerbose {
+		log.Println("Verbose is now on!")
+	} else {
+		log.Println("Verbose is now off!")
+
+	}
 }
 
 func printBlockTreeGraphToFile(filename string, blocks map[string]o.Block) error {

@@ -6,6 +6,7 @@ import (
 	. "github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/transaction"
+	"log"
 	"sort"
 	"strconv"
 	"sync"
@@ -51,7 +52,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 				}
 				err := printBlockTreeGraphToFile(fmt.Sprintf("slot%d", currentSlot), copy_)
 				if err != nil {
-					fmt.Println(fmt.Sprintf("error saving tree: %s", err.Error()))
+					log.Println(fmt.Sprintf("error saving tree: %s", err.Error()))
 				}
 			}()
 		}
@@ -90,7 +91,7 @@ func processGenesisData(genesisData o.GenesisData, blockHash string) {
 
 func finalize(slot uint64) {
 	if isVerbose {
-		fmt.Println("Finalizing at slot", slot)
+		log.Println("Finalizing at slot", slot)
 	}
 	if slot == 0 {
 		// do nothing
@@ -121,7 +122,7 @@ func finalize(slot uint64) {
 				if parent.Slot < slot {
 					finalHash := head.CalculateBlockHash()
 					if isVerbose {
-						fmt.Println("Finalizing block", finalHash[:6]+"...")
+						log.Println("Finalizing block", finalHash[:6]+"...")
 					}
 					newNonce := newLeadershipNonce(head)
 					channels.FinalizeToTrans <- finalHash
@@ -135,7 +136,7 @@ func finalize(slot uint64) {
 		}()
 	}
 	if isVerbose {
-		fmt.Println(fmt.Sprintf("Finalized slot %d successfully", slot))
+		log.Println(fmt.Sprintf("Finalized slot %d successfully", slot))
 		PrintCurrentStake()
 	}
 }
@@ -176,7 +177,7 @@ func drawLottery(slot uint64) {
 	winner, draw := CalculateDraw(hardness, sk, pk, slot, fd)
 	if winner {
 		if isVerbose {
-			fmt.Println("We won slot " + strconv.Itoa(int(slot)))
+			log.Println("We won slot " + strconv.Itoa(int(slot)))
 		}
 		generateBlock(draw, slot, leadershipNonce, lastfinalized, getCurrentHead())
 	}
@@ -205,7 +206,7 @@ func getLotteryPower(pk PublicKey, slot uint64) float64 {
 	defer finalLock.RUnlock()
 	fd, exists := finalData[getEpoch(slot)]
 	if !exists {
-		fmt.Println("ERROR: attempted getting lottery power from unfinalized epoch")
+		log.Println("ERROR: attempted getting lottery power from unfinalized epoch")
 		return 0
 	} else {
 		return float64(fd.stake[pk.Hash()]) / float64(fd.totalstake)
@@ -225,6 +226,6 @@ func PrintCurrentStake() {
 	sort.Strings(keyList)
 
 	for _, k := range keyList {
-		fmt.Printf("Keyhash: %v, Stake: %v\n", k[:10], stake[k])
+		log.Printf("Keyhash: %v, Stake: %v\n", k[:10], stake[k])
 	}
 }
