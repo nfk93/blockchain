@@ -97,13 +97,14 @@ func (t *Tree) processBlock(b Block) {
 	}
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
-	if s.VerifyHashedState(b.StateHash, b.BakerID) && accumulatedGas < gasLimit {
+	if !s.VerifyHashedState(b.StateHash, b.BakerID) {
+		fmt.Println(fmt.Sprintf("State hash in block %s didn't match hash of computed state", b.CalculateBlockHash()))
+	} else if accumulatedGas > gasLimit {
+		fmt.Println(fmt.Sprintf("block %s exceeds maximum gas capacity", b.CalculateBlockHash()))
+	} else {
 		// Pay the block creator
 		totalReward := accumulatedGas + storageReward + blockReward
 		s.AddAmountToAccount(b.BakerID, totalReward)
-
-	} else {
-		fmt.Println("Proof of work in block didn't match...")
 	}
 	// Create new node in the tree
 	t.createNewNode(b, s)

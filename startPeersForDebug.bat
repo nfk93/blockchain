@@ -1,6 +1,6 @@
 del blockchain.exe
 go build
-start "Network Owner" cmd /k blockchain.exe -log=true -slot_duration=3 -hardness=0.4
+start "Network Owner" cmd /k blockchain.exe -log=true -slot_duration=1 -hardness=0.7
 timeout 5
 
 RD /S /Q out
