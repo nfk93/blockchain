@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 )
@@ -420,7 +419,7 @@ func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Errorf("Error reading testfile %s", filepath)
-		log.Fatalf("can't read testfile %s", filepath)
+		panic(err)
 		return nil, err
 	}
 	return dat, nil
@@ -461,6 +460,6 @@ func getFundmeStorage(owner string, fundgoal uint64, amountrsd uint64) value.Val
 func reset() {
 	contracts = make(map[string]contract)
 	stateTree = make(map[string]state)
-	StartSmartContractLayer("genesis")
+	StartSmartContractLayer("genesis", false)
 	DoneCreatingNewBlock()
 }
