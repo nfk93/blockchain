@@ -66,38 +66,6 @@ func listFiles(path string) func(string) []string {
 	}
 }
 
-var completer = readline.NewPrefixCompleter(
-	readline.PcItem("mode",
-		readline.PcItem("vi"),
-		readline.PcItem("emacs"),
-	),
-	readline.PcItem("login"),
-	readline.PcItem("say",
-		readline.PcItemDynamic(listFiles("./"),
-			readline.PcItem("with",
-				readline.PcItem("following"),
-				readline.PcItem("items"),
-			),
-		),
-		readline.PcItem("hello"),
-		readline.PcItem("bye"),
-	),
-	readline.PcItem("setprompt"),
-	readline.PcItem("setpassword"),
-	readline.PcItem("bye"),
-	readline.PcItem("help"),
-	readline.PcItem("go",
-		readline.PcItem("build", readline.PcItem("-o"), readline.PcItem("-v")),
-		readline.PcItem("install",
-			readline.PcItem("-v"),
-			readline.PcItem("-vv"),
-			readline.PcItem("-vvv"),
-		),
-		readline.PcItem("test"),
-	),
-	readline.PcItem("sleep"),
-)
-
 func filterInput(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
@@ -107,17 +75,11 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
-func usage(w io.Writer) {
-	io.WriteString(w, "commands:\n")
-	io.WriteString(w, completer.Tree("    "))
-}
-
 func cliLoop() {
 
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[31m»\033[0m ",
 		HistoryFile:     "/tmp/readline.tmp",
-		AutoComplete:    completer,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 
@@ -146,39 +108,24 @@ func cliLoop() {
 		line = strings.TrimSpace(line)
 		switch {
 		case line == "-h":
-			prettyPrintHelpMessage("-q", "Exit this program")
-			//		prettyPrintHelpMessage("-start", "Begins the blockchain protocol")
-			//		prettyPrintHelpMessage("-verbose", "Initially active. Switches verbose mode between on and off")
-			//		prettyPrintHelpMessage("-id", "Show your public key in short and which port you are listening on")
-			//		prettyPrintHelpMessage("-n", "Print out the network list of who you are connected to")
-			//		prettyPrintHelpMessage("-trans", "Print list of seen transactions")
-			//		prettyPrintHelpMessage("-peers", "Print list of all peers in the network")
-			//		prettyPrintHelpMessage("-public-keys", "Print list of know Public keys in network")
-			//		prettyPrintHelpMessage("-ledger", "Print the current ledger")
-			//		prettyPrintHelpMessage("-final", "Print the last finalized ledger")
-			//		prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
-			//		prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
-			//		prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
-			//		prettyPrintHelpMessage("-autotrans", "Initially active. Starts or stops automatic transfers to random accounts every 5 second")
-
-		case line == "help":
-			usage(l.Stderr())
-
-		case line == "-q":
+			printHelpMenu()
+		case line == "--help":
+			printHelpMenu()
+		case line == "exit":
 			return
-		case line == "-n":
+		case line == "network":
 			p2p.PrintNetworkList()
-		case line == "-trans":
+		case line == "seenTrans":
 			p2p.PrintTransHashList()
-		case line == "-peers":
+		case line == "peers":
 			p2p.PrintPeers()
-		case line == "-public-keys":
+		case line == "publicKeys":
 			p2p.PrintPublicKeys()
-		case line == "-ledger":
+		case line == "ledger":
 			transaction.PrintCurrentLedger()
-		case line == "-final":
+		case line == "final":
 			consensus.PrintCurrentStake()
-		case line == "-start": //"-start_network":
+		case line == "start": //"-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness)
 				if err != nil {
@@ -202,6 +149,7 @@ func cliLoop() {
 			} else {
 				log.Println("Only the network founder can start the network!")
 			}
+		/* //Test Code
 		case line == "-trans1000":
 			for _, p := range p2p.GetPublicKeys() {
 				if p.String() != publicKey.String() {
@@ -215,7 +163,7 @@ func cliLoop() {
 				}
 			}
 		case line == "-trans2":
-			/*currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
+			currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
 			for i, p := range p2p.GetPublicKeys() {
 
 				trans := objects.CreateTransaction(publicKey,
@@ -225,7 +173,7 @@ func cliLoop() {
 					secretKey)
 				channels.TransClientInput <- objects.TransData{Transaction: trans}
 
-			} */
+			}
 		case line == "-trans5":
 			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
 			pkList := p2p.GetPublicKeys()
@@ -253,31 +201,27 @@ func cliLoop() {
 			} else {
 				println("AutoTrans is now off")
 			}
-			go autoTrans()
-		case line == "-id":
+			go autoTrans() */
+		case line == "id":
 			log.Printf("Your ID is: \n    Public Key hash: %v\n    Port: %v\n", publicKey.Hash(), *port)
-		case line == "-verbose":
+		case line == "verbose":
 			consensus.SwitchVerbose()
 
 		case strings.HasPrefix(line, "transaction "):
 			params := strings.Fields(line[12:])
-			noOfParams := 4
+			noOfParams := 2
 
 			var amount uint64
 			var receiver string
 
 			if len(params) == noOfParams {
-				for i := 0; i < noOfParams; i += 2 {
-					if params[i] == "-amount" {
-						am, err := strconv.ParseUint(params[i+1], 10, 64)
-						if err != nil {
-							log.Println("Bad number as transaction amount")
-						}
-						amount = am
-					} else if params[i] == "-receiver" {
-						receiver = params[i+1]
-					}
+				receiver = params[0]
+				amountUint, err := strconv.ParseUint(params[1], 10, 64)
+				if err != nil {
+					log.Println("Bad number as transaction amount")
 				}
+				amount = amountUint
+
 				if amount > 0 && receiver != "" {
 					recPk, success := getPK(receiver)
 					if !success {
@@ -292,25 +236,30 @@ func cliLoop() {
 				}
 			}
 
-			log.Println("Bad input! Use syntax: transaction -amount [uint] -receiver [string]")
+			log.Println("Bad input! Use -h or --help for help menu!")
 
 		case strings.HasPrefix(line, "call "):
 			params := strings.Fields(line[5:])
-			noOfParams := 12
-			var call string
-			var entry string
-			var callParams string
-			var amount uint64
+			noOfParams := 2
+			entry := "main"     //default
+			callParams := ""    //default
+			amount := uint64(0) //default
 			var gas uint64
 			var conAddr string
 
-			if len(params) == noOfParams {
-				for i := 0; i < noOfParams; i += 2 {
-					if params[i] == "-call" {
-						call = params[i+1]
-					} else if params[i] == "-entry" {
+			if len(params) >= noOfParams {
+				conAddr = params[0]
+				gasUint, err := strconv.ParseUint(params[1], 10, 64)
+				if err != nil {
+					log.Println("Bad number as contract gas")
+				}
+				gas = gasUint
+
+				//Flags
+				for i := noOfParams; i < len(params); i += 2 {
+					if params[i] == "-entry" {
 						entry = params[i+1]
-					} else if params[i] == "-callParams" {
+					} else if params[i] == "-params" {
 						callParams = params[i+1]
 					} else if params[i] == "-amount" {
 						am, err := strconv.ParseUint(params[i+1], 10, 64)
@@ -318,18 +267,10 @@ func cliLoop() {
 							log.Println("Bad number as contract amount")
 						}
 						amount = am
-					} else if params[i] == "-gas" {
-						am, err := strconv.ParseUint(params[i+1], 10, 64)
-						if err != nil {
-							log.Println("Bad number as contract gas")
-						}
-						gas = am
-					} else if params[i] == "-conAddr" {
-						conAddr = params[i+1]
 					}
 				}
-				if call != "" && entry != "" && callParams != "" && amount > 0 && gas > 0 && conAddr != "" {
-					conCall := objects.CreateContractCall(call, entry, callParams, amount, gas, conAddr, publicKey, secretKey)
+				if gas > 0 && conAddr != "" {
+					conCall := objects.CreateContractCall("CALL", entry, callParams, amount, gas, conAddr, publicKey, secretKey)
 					log.Printf("Contract Call to %v has been created!", conCall.Address)
 					channels.TransClientInput <- objects.TransData{ContractCall: conCall}
 					goto exit
@@ -337,43 +278,35 @@ func cliLoop() {
 				}
 			}
 
-			log.Println("Bad input! Use syntax: call  init -call [string] -entry [string] -callParams [string] -amount [uint] -gas [uint] -conAddr [string]")
+			log.Println("Bad input! Use -h or --help for help menu!")
 
 		case strings.HasPrefix(line, "init "):
 			params := strings.Fields(line[5:])
-			noOfParams := 8
+			noOfParams := 4
 			var code []byte
 			var gas uint64
 			var prepaid uint64
 			var storageLimit uint64
 
 			if len(params) == noOfParams {
-				fmt.Println(params)
-				for i := 0; i < noOfParams; i += 2 {
-					if params[i] == "-code" {
-						code = readFromFile(params[i+1])
-						fmt.Println(string(code))
-						goto exit
-					} else if params[i] == "-gas" {
-						am, err := strconv.ParseUint(params[i+1], 10, 64)
-						if err != nil {
-							log.Println("Bad number as gas amount")
-						}
-						gas = am
-					} else if params[i] == "-prepaid" {
-						am, err := strconv.ParseUint(params[i+1], 10, 64)
-						if err != nil {
-							log.Println("Bad number as prepaid amount")
-						}
-						prepaid = am
-					} else if params[i] == "-storageLimit" {
-						am, err := strconv.ParseUint(params[i+1], 10, 64)
-						if err != nil {
-							log.Println("Bad number as Storage limit")
-						}
-						storageLimit = am
-					}
+				code = readFromFile(params[0])
+
+				gasUint, err := strconv.ParseUint(params[1], 10, 64)
+				if err != nil {
+					log.Println("Bad number as gas amount")
 				}
+				gas = gasUint
+				prepaidUint, err := strconv.ParseUint(params[2], 10, 64)
+				if err != nil {
+					log.Println("Bad number as prepaid amount")
+				}
+				prepaid = prepaidUint
+
+				storageUint, err := strconv.ParseUint(params[3], 10, 64)
+				if err != nil {
+					log.Println("Bad number as Storage limit")
+				}
+				storageLimit = storageUint
 
 				if code != nil && gas > 0 && prepaid > 0 && storageLimit > 0 {
 					conInit := objects.CreateContractInit(publicKey, code, gas, prepaid, storageLimit, secretKey)
@@ -385,14 +318,46 @@ func cliLoop() {
 				log.Printf("Not %v parameters supplied!", noOfParams)
 			}
 
-			log.Println("Bad input! Use syntax: init -code [Path] -gas [uint] -prepaid [uint] -storageLimit [uint]")
+			log.Println("Bad input! Use -h or --help for help menu!")
 
 		default:
-			println(line, "is not a known command. Type -h for help")
+			println(line, "is not a known command. Type -h or --help for help menu!")
 
 		}
 	exit:
 	}
+}
+func printHelpMenu() {
+	println("  ")
+	prettyPrintHelpMessage("exit", []string{"Exit this program"})
+	prettyPrintHelpMessage("start", []string{"Begins the blockchain protocol"})
+	prettyPrintHelpMessage("verbose", []string{"Initially active. Switches verbose mode between on and off"})
+	prettyPrintHelpMessage("id", []string{"Show your public key in short and which port you are listening on"})
+	prettyPrintHelpMessage("networkList", []string{"Print out the network list of who you are connected to"})
+	prettyPrintHelpMessage("seenTrans", []string{"Print list of seen transactions"})
+	prettyPrintHelpMessage("peers", []string{"Print list of all peers in the network"})
+	prettyPrintHelpMessage("publicKeys", []string{"Print list of know Public keys in network"})
+	prettyPrintHelpMessage("ledger", []string{"Print the current ledger"})
+	prettyPrintHelpMessage("final", []string{"Print the last finalized ledger"})
+	//prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
+	//prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
+	//prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
+	//prettyPrintHelpMessage("-autotrans", "Initially active. Starts or stops automatic transfers to random accounts every 5 second")
+	prettyPrintHelpMessage("transaction RECEIVER AMOUNT", []string{"Send Amount to the Receiver",
+		"", "RECEIVER: A 10 digit prefix of senders publicKey hash",
+		"", "AMOUNT: Positive integer of amount to transfer"})
+	prettyPrintHelpMessage("call ADDRESS GAS ", []string{"Makes a contract call to the specified contract",
+		"", "ADDRESS: The address of the contract",
+		"", "GAS: Positive integer of how much gas to include",
+		"", "",
+		"-entry", "Default: main. Used to specify the entry in the contract to call",
+		"-amount", "Default: 0. Non negative integer of amount included in a contract call",
+		"-params", "Default: \"\". Used to specify parameters to include in contract call "})
+	prettyPrintHelpMessage("init CODE GAS PREPAID STORAGE", []string{"",
+		"", "CODE: path to code file",
+		"", "GAS: Positive integer of how much gas to include",
+		"", "PREPAID: Positive integer of how much prepaid money to attached at contract",
+		"", "STORAGE: Positive integer of max storage usage for a contract"})
 }
 func readFromFile(s string) []byte {
 	bytemsg, err := ioutil.ReadFile(s)
@@ -402,18 +367,24 @@ func readFromFile(s string) []byte {
 	return bytemsg
 }
 
-func prettyPrintHelpMessage(command string, explain string) {
+func prettyPrintHelpMessage(command string, explain []string) {
 	var buf bytes.Buffer
-	buf.WriteString("Command: ")
-	buf.WriteString(command)
-	for i := 0; i < 15-len(command); i++ {
+	buf.WriteString("  " + command)
+	for i := 0; i < 36-len(command); i++ {
 		buf.WriteString(" ")
 	}
-	buf.WriteString("-> Action: ")
-	buf.WriteString(explain)
-	buf.WriteString("\n")
+	buf.WriteString(explain[0] + "\n")
 
-	log.Println(buf.String())
+	for i := 1; i < len(explain); i += 2 {
+		buf.WriteString("        " + explain[i])
+		for p := 0; p < 30-len(explain[i]); p++ {
+			buf.WriteString(" ")
+		}
+		buf.WriteString(explain[i+1] + "\n")
+
+	}
+
+	println(buf.String())
 }
 
 func autoTrans() {
@@ -445,7 +416,9 @@ func autoTrans() {
 
 func getPK(prefix string) (crypto.PublicKey, bool) {
 	pkList := p2p.GetPublicKeys()
-
+	if len(prefix) < 10 {
+		log.Println("Receivers key is to short...")
+	}
 	for _, pk := range pkList {
 		if strings.HasPrefix(pk.Hash(), prefix) {
 			return pk, true
