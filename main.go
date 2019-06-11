@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -149,6 +150,35 @@ func cliLoop() {
 			}
 
 		case strings.HasPrefix(line, "contractInfo "):
+			params := strings.Fields(line[13:])
+			conAddr := params[0]
+			conState := smart.GetContractState(conAddr)
+
+			log.Printf(" Contract: %v \n Balance: %v \n Prepaid: %v \n Storage Limit: %v\n Storage: %v \n",
+				conAddr, conState.Balance, conState.PrepaidStorage, conState.Storagecap, conState.Storage)
+
+			if len(params) == 3 && params[1] == "-o" { // with output file
+				var targetFileName string
+				targetFileName = params[2]
+				contract := smart.GetContract(conAddr)
+
+				func() {
+					f, err := os.Create(targetFileName)
+					if err != nil {
+						log.Println(err)
+						return
+					}
+					_, err = f.WriteString(contract.Code)
+					if err != nil {
+						log.Println(err)
+					}
+					err = f.Close()
+					if err != nil {
+						log.Println(err)
+					}
+				}()
+
+			}
 
 		case line == "final":
 			consensus.PrintCurrentStake()

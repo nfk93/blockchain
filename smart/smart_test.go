@@ -43,17 +43,17 @@ func TestInitiateContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist")
 	} else {
-		if contstate.storagecap != 10000 {
+		if contstate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(contstate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 0)) {
-			t.Errorf("storage has wrong value of %s", contstate.storage)
+		if !value.Equals(contstate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 0)) {
+			t.Errorf("Storage has wrong value of %s", contstate.Storage)
 		}
 	}
 }
 
 func TestInitiateContract2(t *testing.T) {
-	// not high enough storage limit
+	// not high enough Storage limit
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
@@ -114,13 +114,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist1")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 100000 {
+		if fundmestate.Balance != 100000 {
 			t.Errorf("")
 		}
 	}
@@ -132,13 +132,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist2")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 1100000 {
+		if fundmestate.Balance != 1100000 {
 			t.Errorf("")
 		}
 	}
@@ -163,13 +163,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist2")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 0 {
+		if fundmestate.Balance != 0 {
 			t.Errorf("")
 		}
 	}
@@ -204,32 +204,32 @@ func TestBranching(t *testing.T) {
 	_, _, _, err = CallContract(addr, "main", "4", 1, 20000, "3")
 
 	block1state := stateTree["1"].contractStates[addr]
-	if !value.Equals(block1state.storage, value.IntVal{1}) {
+	if !value.Equals(block1state.Storage, value.IntVal{1}) {
 		t.Errorf("")
 	}
-	if block1state.balance != 0 {
+	if block1state.Balance != 0 {
 		t.Errorf("")
 	}
 
 	block2state := stateTree["2"].contractStates[addr]
-	if !value.Equals(block2state.storage, value.IntVal{2}) {
+	if !value.Equals(block2state.Storage, value.IntVal{2}) {
 		t.Errorf("")
 	}
-	if block2state.prepaidStorage != 10000-3*64 {
+	if block2state.PrepaidStorage != 10000-3*64 {
 		t.Errorf("")
 	}
-	if block2state.balance != 0 {
+	if block2state.Balance != 0 {
 		t.Errorf("")
 	}
 
 	block3state := stateTree["3"].contractStates[addr]
-	if !value.Equals(block3state.storage, value.IntVal{5}) {
+	if !value.Equals(block3state.Storage, value.IntVal{5}) {
 		t.Errorf("")
 	}
-	if block3state.prepaidStorage != 10000-4*64 {
+	if block3state.PrepaidStorage != 10000-4*64 {
 		t.Errorf("")
 	}
-	if block3state.balance != 1 {
+	if block3state.Balance != 1 {
 		t.Errorf("")
 	}
 }
@@ -243,7 +243,7 @@ func TestStorageSizeIncrease(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	_, _, _, err = CallContract(addr, "main", "1", 0, 20000, "1")
-	if err == nil || err.Error() != "storage cap exceeded" {
+	if err == nil || err.Error() != "Storage cap exceeded" {
 		t.Errorf("")
 	}
 }
@@ -281,10 +281,10 @@ func TestChainCalls(t *testing.T) {
 	blockstate := stateTree["1"]
 	contractstate1 := blockstate.contractStates[addr1]
 	contractstate2 := blockstate.contractStates[addr2]
-	if contractstate1.balance != 11 {
+	if contractstate1.Balance != 11 {
 		t.Errorf("")
 	}
-	if contractstate2.balance != 6 {
+	if contractstate2.Balance != 6 {
 		t.Errorf("")
 	}
 }
@@ -390,13 +390,13 @@ func TestNewBlock(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist1")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 100000 {
+		if fundmestate.Balance != 100000 {
 			t.Errorf("")
 		}
 	}

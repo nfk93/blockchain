@@ -141,8 +141,10 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	s := State{}
 
 	tLock.RLock()
-	s.Ledger = copyMap(t.treeMap[blockData.ParentHash].state.Ledger)
 	s.ParentHash = blockData.ParentHash
+	s.Ledger = copyMap(t.treeMap[blockData.ParentHash].state.Ledger)
+	s.ConStake = copyMap(t.treeMap[blockData.ParentHash].state.ConStake)
+	s.ConOwners = copyContMap(t.treeMap[blockData.ParentHash].state.ConOwners)
 	s.TotalStake = t.treeMap[s.ParentHash].state.TotalStake
 	tLock.RUnlock()
 

@@ -16,10 +16,10 @@ type state struct {
 }
 
 type contractState struct {
-	balance        uint64
-	prepaidStorage uint64
-	storage        value.Value
-	storagecap     uint64
+	Balance        uint64
+	PrepaidStorage uint64
+	Storage        value.Value
+	Storagecap     uint64
 }
 
 var head string
@@ -55,12 +55,12 @@ func getNewState(parenthash string, slot uint64) (expires []string, s state, sto
 	tempStates := make(map[string]contractState)
 	reward := uint64(0)
 	for k, v := range parentState.contractStates {
-		if v.prepaidStorage < slots*v.storagecap {
-			reward += v.prepaidStorage
+		if v.PrepaidStorage < slots*v.Storagecap {
+			reward += v.PrepaidStorage
 			expiring = append(expiring, k)
 		} else {
-			contractReward := slots * v.storagecap
-			v.prepaidStorage -= contractReward // this is positive, and so doesn't panic
+			contractReward := slots * v.Storagecap
+			v.PrepaidStorage -= contractReward // this is positive, and so doesn't panic
 			tempStates[k] = v
 			reward += contractReward
 		}
@@ -227,7 +227,7 @@ func initiateContract(
 		return ast.TypedExp{}, state{}, gas, fmt.Errorf("storagelimit can't be 0")
 	}
 	if prepaid == 0 || prepaid < storageLimit {
-		return ast.TypedExp{}, state{}, gas, fmt.Errorf("prepaid storage is too low")
+		return ast.TypedExp{}, state{}, gas, fmt.Errorf("prepaid Storage is too low")
 	}
 
 	texp, initstor, remainingGas, returnErr := interpreter.InitiateContract(contractCode, gas)
@@ -236,7 +236,7 @@ func initiateContract(
 		return ast.TypedExp{}, state{}, remainingGas, returnErr
 	} else {
 		if initstor.Size() > storageLimit {
-			return ast.TypedExp{}, state{}, remainingGas, fmt.Errorf("initial storage exceeds storage cap")
+			return ast.TypedExp{}, state{}, remainingGas, fmt.Errorf("initial Storage exceeds Storage cap")
 		}
 
 		tempStates := make(map[string]contractState)
@@ -302,14 +302,14 @@ func interpretContract(
 		return nil, nil, gas, fmt.Errorf("attempted to call non-existing contract at address %s", address)
 	}
 
-	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.storage, amount,
-		state.balance, gas)
-	if sto.Size() > state.storagecap {
-		return nil, nil, gas, fmt.Errorf("storage cap exceeded")
+	oplist, sto, spent, gas := interpreter.InterpretContractCall(contract.tabs, params, entry, state.Storage, amount,
+		state.Balance, gas)
+	if sto.Size() > state.Storagecap {
+		return nil, nil, gas, fmt.Errorf("Storage cap exceeded")
 	}
 
-	state.storage = sto
-	state.balance = state.balance + amount - spent // it is checked in the interpreter that this value isn't negative
+	state.Storage = sto
+	state.Balance = state.Balance + amount - spent // it is checked in the interpreter that this value isn't negative
 	states[address] = state
 
 	// handle operation list
@@ -363,11 +363,19 @@ func getAddress(contractCode []byte) string {
 func getContractBalances(states map[string]contractState) map[string]uint64 {
 	result := make(map[string]uint64)
 	for k, v := range states {
-		result[k] = v.balance
+		result[k] = v.Balance
 	}
 	return result
 }
 
 func GetContracts() map[string]contract {
 	return contracts
+}
+
+func GetContractState(addr string) contractState {
+	return stateTree[head].contractStates[addr]
+}
+
+func GetContract(addr string) contract {
+	return contracts[addr]
 }
