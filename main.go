@@ -58,17 +58,7 @@ func main() {
 	cliLoop()
 }
 
-// Function constructor - constructs new function for listing given directory
-func listFiles(path string) func(string) []string {
-	return func(line string) []string {
-		names := make([]string, 0)
-		files, _ := ioutil.ReadDir(path)
-		for _, f := range files {
-			names = append(names, f.Name())
-		}
-		return names
-	}
-}
+
 
 func filterInput(r rune) (rune, bool) {
 	switch r {
@@ -146,7 +136,7 @@ func cliLoop() {
 			sort.Strings(keyList)
 
 			for _, k := range keyList {
-				log.Printf("Contract %v was created in slot %v.\n", contractMap[k], contractMap[k].CreatedAtSlot)
+				log.Printf("Contract %v was created in slot %v.\n", k, contractMap[k].CreatedAtSlot)
 			}
 
 		case strings.HasPrefix(line, "contractInfo "):
@@ -207,6 +197,7 @@ func cliLoop() {
 			} else {
 				log.Println("Only the network founder can start the network!")
 			}
+
 		case line == "id":
 			log.Printf("Your ID is: \n    Short Public Key hash: %v\n    Full Public Key hash: %v\n    Port: %v\n", publicKey.Hash()[:10], publicKey.Hash(), *port)
 		case line == "verbose":
@@ -420,8 +411,8 @@ func printHelpMenu() {
 		"", "GAS: Positive integer of how much gas to include",
 		"", "",
 		"-entry <string>", "Default: main. Used to specify the entry in the contract to call",
-		"-amount<uint>", "Default: 0. Non negative integer of amount included in a contract call",
-		"-params<string>", "Default: \"\". Used to specify parameters to include in contract call "})
+		"-amount <uint>", "Default: 0. Non negative integer of amount included in a contract call",
+		"-params <string>", "Default: \"\". Used to specify parameters to include in contract call "})
 	prettyPrintHelpMessage("init CODE GAS PREPAID STORAGE", []string{"",
 		"", "CODE: path to code file",
 		"", "GAS: Positive integer of how much gas to include",

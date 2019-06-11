@@ -23,9 +23,9 @@ var tree Tree
 var tLock sync.RWMutex
 var logToFile bool
 
-const transactionGas = uint64(1)
-const blockReward = uint64(10000)
-const gasLimit = uint64(1000) //(Gas limit for blocks) TODO What is good numbers?
+const transactionGas = uint64(100000) // 1 Transaction costs 1 koin
+const blockReward = uint64(200000000) // block reward is 2 times the max gas reward = 2000 koins
+const gasLimit = uint64(100000000) // 1 block can contain 1000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -174,7 +174,9 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 				addedTransactions = append(addedTransactions, td)
 			}
 		case CONTRACTINIT:
-			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
+
+			oldState := State{Ledger: copyMap(s.Ledger), ConOwners:copyContMap(s.ConOwners),ParentHash: s.ParentHash, TotalStake: s.TotalStake}
+
 			gasUsed := s.HandleContractInit(td.ContractInit, "", blockData.ParentHash, blockData.SlotNo)
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
@@ -200,7 +202,6 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		""}
 
 	b.SignBlock(blockData.Sk)
-
 	smart.DoneCreatingNewBlock()
 	return b
 }
