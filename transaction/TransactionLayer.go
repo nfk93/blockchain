@@ -5,6 +5,7 @@ import (
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
 	"log"
+	"fmt"
 	"sort"
 	"sync"
 )
@@ -96,14 +97,16 @@ func (t *Tree) processBlock(b Block) {
 	}
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
-	if s.VerifyHashedState(b.StateHash, b.BakerID) && accumulatedGas < gasLimit {
+	if !s.VerifyHashedState(b.StateHash, b.BakerID) {
+		log.Println(fmt.Sprintf("State hash in block %s didn't match hash of computed state", b.CalculateBlockHash()))
+	} else if accumulatedGas > gasLimit {
+		log.Println(fmt.Sprintf("block %s exceeds maximum gas capacity", b.CalculateBlockHash()))
+	} else {
 		// Pay the block creator
 		totalReward := accumulatedGas + storageReward + blockReward
 		s.AddAmountToAccount(b.BakerID, totalReward)
-
-	} else {
-		log.Println("Proof of work in block didn't match...")
 	}
+
 	// Create new node in the tree
 	t.createNewNode(b, s)
 
@@ -244,8 +247,4 @@ func PrintCurrentLedger() {
 	for _, k := range keyList {
 		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
 	}
-}
-
-func GetPk(key string) {
-
 }

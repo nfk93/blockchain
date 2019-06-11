@@ -95,20 +95,6 @@ func finalize(slot uint64) {
 	}
 	if slot == 0 {
 		// do nothing
-		/*
-			fmt.Println(12)
-			newNonce := finalData[0].leadershipNonce
-			fmt.Println(13)
-			finalHash := finalData[0].blockHash
-			fmt.Println(14)
-			channels.FinalizeToTrans <- finalHash
-			fmt.Println(15)
-			state := <-channels.StateFromTrans
-			fmt.Println(16)
-			finData := getFinalData(state, newNonce, finalHash)
-			fmt.Println(17)
-			finalData[epoch] = finData
-			fmt.Println(18) */
 	} else {
 		func() {
 			epoch := getEpoch(slot)
@@ -120,14 +106,14 @@ func finalize(slot uint64) {
 			for {
 				parent := blocks.get(head.ParentPointer)
 				if parent.Slot < slot {
-					finalHash := head.CalculateBlockHash()
+					finalHash := head.LastFinalized
 					if isVerbose {
 						log.Println("Finalizing block", finalHash[:6]+"...")
 					}
 					newNonce := newLeadershipNonce(head)
 					channels.FinalizeToTrans <- finalHash
 					state := <-channels.StateFromTrans
-					finData := getFinalData(state, newNonce, finalHash)
+					finData := getFinalData(state, newNonce, head.CalculateBlockHash())
 					finalData[epoch] = finData
 					break
 				}

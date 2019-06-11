@@ -33,6 +33,7 @@ var port *string
 var autoTransStatus bool
 
 func main() {
+
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", 1, "Specify the slot length (default=1sec)")
