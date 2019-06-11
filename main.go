@@ -22,6 +22,7 @@ var pk2 crypto.PublicKey
 
 var slotduration *int
 var hardness *float64
+var finalizeInterval *uint64
 var newNetwork *bool
 var saveLogFile *bool
 var addr *string
@@ -33,6 +34,7 @@ func main() {
 	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
 	slotduration = flag.Int("slot_duration", 1, "Specify the slot length (default=1sec)")
 	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
+	finalizeInterval = flag.Uint64("finalize_interval", 50, "Specify the finalization interval (default=50")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	saveLogFile = flag.Bool("log", false, "will save logs of all transactions and blocks if true (default=false)")
 	flag.Parse()
@@ -89,7 +91,7 @@ func cliLoop() {
 			consensus.PrintCurrentStake()
 		case "-start": //"-start_network":
 			if *newNetwork {
-				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness)
+				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness, *finalizeInterval)
 				if err != nil {
 					log.Fatal(err)
 				}

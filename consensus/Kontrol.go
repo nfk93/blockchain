@@ -17,6 +17,7 @@ var currentSlot uint64
 var slotLock sync.RWMutex
 var hardness float64
 var genesisTime time.Time
+var finalizeInterval uint64
 var sk SecretKey
 var pk PublicKey
 
@@ -29,8 +30,6 @@ type FinalData struct {
 
 var finalData = make(map[uint64]FinalData)
 var finalLock sync.RWMutex
-
-const finalizeInterval = uint64(50)
 
 func runSlot() { //Calls drawLottery every slot and increments the currentSlot after slotLength time.
 	currentSlot = 1
@@ -83,6 +82,7 @@ func processGenesisData(genesisData o.GenesisData, blockHash string) {
 	genesisFinalData := FinalData{stake: genesisData.InitialState.Ledger, totalstake: genesisData.InitialState.TotalStake,
 		leadershipNonce: genesisData.Nonce, blockHash: blockHash}
 	finalData[0] = genesisFinalData
+	finalizeInterval = genesisData.FinalizeInterval
 	genesisTime = genesisData.GenesisTime
 	go runSlot()
 	go transaction.StartTransactionLayer(channels, saveGraphFiles)
@@ -94,20 +94,6 @@ func finalize(slot uint64) {
 	}
 	if slot == 0 {
 		// do nothing
-		/*
-			fmt.Println(12)
-			newNonce := finalData[0].leadershipNonce
-			fmt.Println(13)
-			finalHash := finalData[0].blockHash
-			fmt.Println(14)
-			channels.FinalizeToTrans <- finalHash
-			fmt.Println(15)
-			state := <-channels.StateFromTrans
-			fmt.Println(16)
-			finData := getFinalData(state, newNonce, finalHash)
-			fmt.Println(17)
-			finalData[epoch] = finData
-			fmt.Println(18) */
 	} else {
 		func() {
 			epoch := getEpoch(slot)
