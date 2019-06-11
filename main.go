@@ -47,9 +47,9 @@ func main() {
 	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
 	if *addr == "" {
-		fmt.Println("When all other clients are ready, use -start to begin the Blockchain protocol or -h for help with further commands!")
+		fmt.Println("When all other clients are ready, use start to begin the Blockchain protocol or -h for help with further commands!")
 	} else {
-		fmt.Println("This client is ready for the Blockchain protocol to start. Use -h for further commands!")
+		fmt.Println("This client is ready for the Blockchain protocol to start. Use -h or --help for further commands!")
 	}
 	cliLoop()
 }
