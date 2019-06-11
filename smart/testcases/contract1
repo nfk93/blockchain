@@ -8,3 +8,4 @@ let%entry main (a: address) storage =
     let transfer = Account.transfer kn111223344556677889900aabbccddeeff11223344556677889900aabbccddeeff amount in
     let call_op = Contract.call a amount "main" () in
     ( [transfer; call_op], storage)
+

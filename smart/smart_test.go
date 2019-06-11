@@ -32,8 +32,8 @@ func TestInitiateContract(t *testing.T) {
 		t.Errorf("should have less remaining gas. Had: %d", remaining)
 	}
 	if c, exists := contracts[addr]; exists {
-		if c.createdAtSlot != 5 {
-			t.Errorf("createdAtSlot has wrong value")
+		if c.CreatedAtSlot != 5 {
+			t.Errorf("CreatedAtSlot has wrong value")
 		}
 	} else {
 		t.Errorf("contract doesn't exist")

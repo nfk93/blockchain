@@ -6,7 +6,6 @@ import (
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
 	"log"
-	"sort"
 	"sync"
 )
 
@@ -43,7 +42,7 @@ func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 					tree.processBlock(b)
 				}
 			} else {
-				fmt.Println("Tree not initialized. Please send Genesis Node!! ")
+				log.Println("Tree not initialized. Please send Genesis Node!! ")
 			}
 		}
 	}()
@@ -98,14 +97,15 @@ func (t *Tree) processBlock(b Block) {
 
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if !s.VerifyHashedState(b.StateHash, b.BakerID) {
-		fmt.Println(fmt.Sprintf("State hash in block %s didn't match hash of computed state", b.CalculateBlockHash()))
+		log.Println(fmt.Sprintf("State hash in block %s didn't match hash of computed state", b.CalculateBlockHash()))
 	} else if accumulatedGas > gasLimit {
-		fmt.Println(fmt.Sprintf("block %s exceeds maximum gas capacity", b.CalculateBlockHash()))
+		log.Println(fmt.Sprintf("block %s exceeds maximum gas capacity", b.CalculateBlockHash()))
 	} else {
 		// Pay the block creator
 		totalReward := accumulatedGas + storageReward + blockReward
 		s.AddAmountToAccount(b.BakerID, totalReward)
 	}
+
 	// Create new node in the tree
 	t.createNewNode(b, s)
 
@@ -122,7 +122,7 @@ func (t *Tree) finalize(blockHash string) State {
 		smart.FinalizeBlock(blockHash)
 		return finalizedNode.state
 	} else {
-		fmt.Println("Couldn't finalize")
+		log.Println("Couldn't finalize")
 		return State{}
 	}
 }
@@ -232,18 +232,18 @@ func GetCurrentLedger() map[string]uint64 {
 	return tree.treeMap[tree.head].state.Ledger
 }
 
-func PrintCurrentLedger() {
-	tLock.RLock()
-	ledger := tree.treeMap[tree.head].state.Ledger
-	tLock.RUnlock()
-
-	var keyList []string
-	for k := range ledger {
-		keyList = append(keyList, k)
-	}
-	sort.Strings(keyList)
-
-	for _, k := range keyList {
-		fmt.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
-	}
-}
+//func PrintCurrentLedger() {
+//	tLock.RLock()
+//	ledger := tree.treeMap[tree.head].state.Ledger
+//	tLock.RUnlock()
+//
+//	var keyList []string
+//	for k := range ledger {
+//		keyList = append(keyList, k)
+//	}
+//	sort.Strings(keyList)
+//
+//	for _, k := range keyList {
+//		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
+//	}
+//}

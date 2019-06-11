@@ -22,6 +22,7 @@ type contractState struct {
 	storagecap     uint64
 }
 
+var head string
 var contracts = make(map[string]contract)
 var stateTree = make(map[string]state)
 var newBlockState state
@@ -43,6 +44,7 @@ func NewBlockTreeNode(blockhash, parenthash string, slot uint64) (expiringContra
 	if log {
 		// TODO log contracts and contractstates to file
 	}
+	head = blockhash
 	return expiring, reward
 }
 
@@ -132,7 +134,7 @@ func FinalizeBlock(blockHash string) {
 	blockstate := stateTree[blockHash]
 	for k, v := range contracts {
 		if _, exists := blockstate.contractStates[k]; !exists {
-			if v.createdAtSlot < blockstate.slot {
+			if v.CreatedAtSlot < blockstate.slot {
 				delete(contracts, k)
 			}
 		}
@@ -364,4 +366,8 @@ func getContractBalances(states map[string]contractState) map[string]uint64 {
 		result[k] = v.balance
 	}
 	return result
+}
+
+func GetContracts() map[string]contract {
+	return contracts
 }

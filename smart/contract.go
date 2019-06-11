@@ -7,5 +7,5 @@ import (
 type contract struct {
 	code          string
 	tabs          ast.TypedExp
-	createdAtSlot uint64
+	CreatedAtSlot uint64
 }

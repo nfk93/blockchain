@@ -123,7 +123,7 @@ func PrintNetworkList() {
 	nLock.RLock()
 	defer nLock.RUnlock()
 	for _, k := range setAsList(networkList) {
-		fmt.Println(k)
+		log.Println(k)
 	}
 }
 
@@ -131,7 +131,7 @@ func PrintTransHashList() {
 	transSeen.rlock()
 	defer transSeen.runlock()
 	for _, k := range setAsList(transSeen.m) {
-		fmt.Println(k)
+		log.Println(k)
 	}
 }
 
@@ -155,7 +155,7 @@ func PrintPublicKeys() {
 		}
 	}
 	for _, k := range list {
-		fmt.Println(k.String())
+		log.Println(k.Hash()[:10])
 	}
 }
 
@@ -163,14 +163,14 @@ func PrintPeers() {
 	peersLock.RLock()
 	defer peersLock.RUnlock()
 	for _, v := range peers {
-		fmt.Println(v)
+		log.Println(v)
 	}
 }
 
 func listenForRPC(port string) {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		fmt.Println("error starting network listener: ", err.Error())
+		log.Println("error starting network listener: ", err.Error())
 		log.Fatal("error starting network listener: ", err.Error())
 	}
 	rpcObj := new(RPCHandler)
@@ -246,7 +246,7 @@ func broadcastNewConnection(data NewConnectionData) {
 			void := struct{}{}
 			err := peer.Call(RPC_NEW_CONNECTION, data, &void)
 			if err != nil {
-				fmt.Println("error broadcasting newConnection: ", err.Error())
+				log.Println("error broadcasting newConnection: ", err.Error())
 				failed = true
 				return
 			}
@@ -297,7 +297,7 @@ func broadcastBlock(block objects.Block) {
 			void := struct{}{}
 			err := peer.Call(RPC_SEND_BLOCK, block, &void)
 			if err != nil {
-				fmt.Println("error broadcasting block: ", err.Error())
+				log.Println("error broadcasting block: ", err.Error())
 				failed = true
 				return
 			}
@@ -348,7 +348,7 @@ func broadcastTrans(trans objects.TransData) {
 			void := struct{}{}
 			err := peer.Call(RPC_SEND_TRANSDATA, trans, &void)
 			if err != nil {
-				fmt.Println("error broadcasting transaction: ", err.Error())
+				log.Println("error broadcasting transaction: ", err.Error())
 				failed = true
 				return
 			}
@@ -389,7 +389,7 @@ func determinePeers() {
 	// determines your peers. Is run every time you receive a new connection
 	peersLock.Lock()
 	defer peersLock.Unlock()
-	fmt.Println("\nDetermining peers...")
+	log.Println("\nDetermining peers...")
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
@@ -407,10 +407,10 @@ func determinePeers() {
 			peerClient, err := rpc.DialHTTP("tcp", connections[nextIndex])
 			if err != nil {
 				j++
-				fmt.Println(fmt.Sprintf("Cant connect to peer %s, error: %s\nTrying next peer... Failed attempts: %d",
+				log.Println(fmt.Sprintf("Cant connect to peer %s, error: %s\nTrying next peer... Failed attempts: %d",
 					connections[nextIndex], err.Error(), j))
 			} else {
-				fmt.Println("Connected to %s", connections[nextIndex])
+				log.Println("Connected to %s", connections[nextIndex])
 				peers[i] = *peerClient
 				notConnected = false
 			}
@@ -434,5 +434,5 @@ func getIP() string {
 		panic(err)
 	}
 	fmt.Println("my ip is:", string(ip))
-	return string("192.168.87.120")
+	return string("127.0.0.1")
 }
