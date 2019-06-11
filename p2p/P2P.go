@@ -155,7 +155,7 @@ func PrintPublicKeys() {
 		}
 	}
 	for _, k := range list {
-		log.Println(k.String())
+		log.Println(k.Hash()[:10])
 	}
 }
 

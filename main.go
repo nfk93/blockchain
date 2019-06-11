@@ -149,61 +149,8 @@ func cliLoop() {
 			} else {
 				log.Println("Only the network founder can start the network!")
 			}
-		/* //Test Code
-		case line == "-trans1000":
-			for _, p := range p2p.GetPublicKeys() {
-				if p.String() != publicKey.String() {
-
-					trans := objects.CreateTransaction(publicKey,
-						p,
-						1000,
-						publicKey.String()+time.Now().String(),
-						secretKey)
-					channels.TransClientInput <- objects.TransData{Transaction: trans}
-				}
-			}
-		case line == "-trans2":
-			currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
-			for i, p := range p2p.GetPublicKeys() {
-
-				trans := objects.CreateTransaction(publicKey,
-					p,
-					currentStake/uint64(len(p2p.GetPublicKeys())),
-					strconv.Itoa(i),
-					secretKey)
-				channels.TransClientInput <- objects.TransData{Transaction: trans}
-
-			}
-		case line == "-trans5":
-			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
-			pkList := p2p.GetPublicKeys()
-
-			if currentStake == 0 {
-				continue
-			}
-			amount := uint64(rand.Intn(int(currentStake) / 20))
-
-			for i := 0; i < 5; i++ {
-				receiverPK := pkList[rand.Intn(len(pkList))]
-				trans := objects.CreateTransaction(publicKey,
-					receiverPK,
-					amount,
-					strconv.Itoa(i),
-					secretKey)
-				channels.TransClientInput <- objects.TransData{Transaction: trans}
-			}
-
-			// starts Go routine that randomly keeps making transactions to others
-		case line == "-autotrans":
-			autoTransStatus = !autoTransStatus
-			if autoTransStatus {
-				println("AutoTrans is now on")
-			} else {
-				println("AutoTrans is now off")
-			}
-			go autoTrans() */
 		case line == "id":
-			log.Printf("Your ID is: \n    Public Key hash: %v\n    Port: %v\n", publicKey.Hash(), *port)
+			log.Printf("Your ID is: \n    Short Public Key hash: %v\n    Full Public Key hash: %v\n    Port: %v\n", publicKey.Hash()[:10], publicKey.Hash(), *port)
 		case line == "verbose":
 			consensus.SwitchVerbose()
 
@@ -325,6 +272,60 @@ func cliLoop() {
 
 		}
 	exit:
+		/* //Test Code
+		case line == "-trans1000":
+			for _, p := range p2p.GetPublicKeys() {
+				if p.String() != publicKey.String() {
+
+					trans := objects.CreateTransaction(publicKey,
+						p,
+						1000,
+						publicKey.String()+time.Now().String(),
+						secretKey)
+					channels.TransClientInput <- objects.TransData{Transaction: trans}
+				}
+			}
+		case line == "-trans2":
+			currentStake := consensus.GetLastFinalState()[publicKey.Hash()]
+			for i, p := range p2p.GetPublicKeys() {
+
+				trans := objects.CreateTransaction(publicKey,
+					p,
+					currentStake/uint64(len(p2p.GetPublicKeys())),
+					strconv.Itoa(i),
+					secretKey)
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
+
+			}
+		case line == "-trans5":
+			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
+			pkList := p2p.GetPublicKeys()
+
+			if currentStake == 0 {
+				continue
+			}
+			amount := uint64(rand.Intn(int(currentStake) / 20))
+
+			for i := 0; i < 5; i++ {
+				receiverPK := pkList[rand.Intn(len(pkList))]
+				trans := objects.CreateTransaction(publicKey,
+					receiverPK,
+					amount,
+					strconv.Itoa(i),
+					secretKey)
+				channels.TransClientInput <- objects.TransData{Transaction: trans}
+			}
+
+			// starts Go routine that randomly keeps making transactions to others
+		case line == "-autotrans":
+			autoTransStatus = !autoTransStatus
+			if autoTransStatus {
+				println("AutoTrans is now on")
+			} else {
+				println("AutoTrans is now off")
+			}
+			go autoTrans() */
+
 	}
 }
 func printHelpMenu() {
