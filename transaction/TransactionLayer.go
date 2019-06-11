@@ -1,12 +1,11 @@
 package transaction
 
 import (
+	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	. "github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/smart"
 	"log"
-	"fmt"
-	"sort"
 	"sync"
 )
 
@@ -233,18 +232,18 @@ func GetCurrentLedger() map[string]uint64 {
 	return tree.treeMap[tree.head].state.Ledger
 }
 
-func PrintCurrentLedger() {
-	tLock.RLock()
-	ledger := tree.treeMap[tree.head].state.Ledger
-	tLock.RUnlock()
-
-	var keyList []string
-	for k := range ledger {
-		keyList = append(keyList, k)
-	}
-	sort.Strings(keyList)
-
-	for _, k := range keyList {
-		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
-	}
-}
+//func PrintCurrentLedger() {
+//	tLock.RLock()
+//	ledger := tree.treeMap[tree.head].state.Ledger
+//	tLock.RUnlock()
+//
+//	var keyList []string
+//	for k := range ledger {
+//		keyList = append(keyList, k)
+//	}
+//	sort.Strings(keyList)
+//
+//	for _, k := range keyList {
+//		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
+//	}
+//}
