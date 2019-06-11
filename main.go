@@ -279,7 +279,12 @@ func cliLoop() {
 					}
 				}
 				if amount > 0 && receiver != "" {
-					newTrans := objects.CreateTransaction(publicKey, publicKey, amount, "", secretKey)
+					recPk, success := getPK(receiver)
+					if !success {
+						log.Printf("Public Key for %v did not exist", receiver)
+						goto exit
+					}
+					newTrans := objects.CreateTransaction(publicKey, recPk, amount, "", secretKey)
 					log.Printf("Transaction with id: %v has been created!", newTrans.ID)
 					channels.TransClientInput <- objects.TransData{Transaction: newTrans}
 					goto exit
@@ -436,4 +441,15 @@ func autoTrans() {
 		}
 
 	}
+}
+
+func getPK(prefix string) (crypto.PublicKey, bool) {
+	pkList := p2p.GetPublicKeys()
+
+	for _, pk := range pkList {
+		if strings.HasPrefix(pk.Hash(), prefix) {
+			return pk, true
+		}
+	}
+	return crypto.PublicKey{}, false
 }
