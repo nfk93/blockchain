@@ -413,6 +413,43 @@ func TestNewBlock(t *testing.T) {
 	if newBlockState.contractStates != nil || newBlockState.slot != 0 || newBlockState.parenthash != "" {
 		t.Errorf("")
 	}
+
+	// testing that calling new contract doesn't mute the parent block
+	addr, _, _ = InitiateContract(fundme, 400000, 100000, 10000, "1")
+	previous := stateTree["1"].contractStates[addr]
+	prevBal := previous.Balance
+	prevPre := previous.PrepaidStorage
+	fmt.Println("old prepaid:     ", prevPre)
+	prevSto := value.Copy(previous.Storage)
+	prevCap := previous.Storagecap
+	_, _ = SetStartingPointForNewBlock("1", 12)
+	_, _, _, err = CallContractOnNewBlock(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		100000, 40000)
+	if err != nil {
+		t.Errorf("error in contractcall: %s", err.Error())
+		return
+	}
+	fmt.Println(newBlockState.contractStates[addr].PrepaidStorage)
+	if newBlockState.contractStates[addr].PrepaidStorage >= 100000 {
+		t.Errorf("prepaid should be lower")
+	}
+
+	DoneCreatingNewBlock()
+	currentstate := stateTree["1"].contractStates[addr]
+	fmt.Println("current prepaid: ", currentstate.PrepaidStorage)
+	fmt.Println(currentstate.Storage)
+	if prevBal != currentstate.Balance {
+		t.Errorf("parent balance mutated")
+	}
+	if prevPre != currentstate.PrepaidStorage {
+		t.Errorf("parent prepaid mutated")
+	}
+	if prevCap != currentstate.Storagecap {
+		t.Errorf("parent storage cap mutated")
+	}
+	if !value.Equals(prevSto, currentstate.Storage) {
+		t.Errorf("parent storage mutated")
+	}
 }
 
 func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {

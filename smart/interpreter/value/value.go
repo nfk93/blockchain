@@ -287,3 +287,55 @@ func Equals(val1, val2 Value) bool {
 		return false
 	}
 }
+
+func Copy(v Value) Value {
+	switch v.(type) {
+	case StringVal:
+		v := v.(StringVal)
+		return StringVal{v.Value}
+	case IntVal:
+		v := v.(IntVal)
+		return IntVal{v.Value}
+	case KeyVal:
+		v := v.(KeyVal)
+		return KeyVal{v.Value}
+	case BoolVal:
+		v := v.(BoolVal)
+		return BoolVal{v.Value}
+	case KoinVal:
+		v := v.(KoinVal)
+		return KoinVal{v.Value}
+	case UnitVal:
+		return UnitVal{}
+	case NatVal:
+		v := v.(NatVal)
+		return NatVal{v.Value}
+	case AddressVal:
+		v := v.(AddressVal)
+		return AddressVal{v.Value}
+	case ListVal:
+		v := v.(ListVal)
+		l := make([]Value, 0)
+		for _, v := range v.Values {
+			l = append(l, Copy(v))
+		}
+		return ListVal{l}
+	case TupleVal:
+		v := v.(TupleVal)
+		l := make([]Value, 0)
+		for _, v := range v.Values {
+			l = append(l, Copy(v))
+		}
+		return TupleVal{l}
+	case StructVal:
+		v := v.(StructVal)
+		m := make(map[string]Value)
+		for k1, v1 := range v.Field {
+			m[k1] = Copy(v1)
+		}
+		return StructVal{m}
+	default:
+		log.Printf("error copying value %s", v)
+		return nil
+	}
+}

@@ -60,8 +60,9 @@ func getNewState(parenthash string, slot uint64) (expires []string, s state, sto
 			expiring = append(expiring, k)
 		} else {
 			contractReward := slots * v.Storagecap
-			v.PrepaidStorage -= contractReward // this is positive, and so doesn't panic
-			tempStates[k] = v
+			copied := copyContractState(v)
+			copied.PrepaidStorage -= contractReward
+			tempStates[k] = copied
 			reward += contractReward
 		}
 	}
@@ -169,7 +170,7 @@ func CallContractOnNewBlock(
 
 	newstate, transfers, remainingGas, err := handleContractCall(newBlockState, allcontracts, amount, gas_, address, entry, params)
 	if err != nil {
-		return nil, nil, remainingGas, callError
+		return nil, nil, remainingGas, err
 	} else {
 		newBlockState = newstate
 		return getContractBalances(newstate.contractStates), transfers, remainingGas, nil
@@ -241,7 +242,7 @@ func initiateContract(
 
 		tempStates := make(map[string]contractState)
 		for k, v := range blockstate.contractStates {
-			tempStates[k] = v
+			tempStates[k] = copyContractState(v)
 		}
 
 		tempStates[address] = contractState{0, prepaid, initstor,
@@ -249,6 +250,11 @@ func initiateContract(
 		newState := state{tempStates, blockstate.slot, blockstate.parenthash}
 		return texp, newState, remainingGas, nil
 	}
+}
+
+func copyContractState(state contractState) contractState {
+	return contractState{Balance: state.Balance, PrepaidStorage: state.PrepaidStorage,
+		Storage: value.Copy(state.Storage), Storagecap: state.Storagecap}
 }
 
 func handleContractCall(
@@ -274,7 +280,7 @@ func handleContractCall(
 
 	tempStates := make(map[string]contractState)
 	for k, v := range blockstate.contractStates {
-		tempStates[k] = v
+		tempStates[k] = copyContractState(v)
 	}
 
 	newStates, transfers, gas, callError := interpretContract(address, entry, paramval, amount, gas, tempStates, contracts_)
