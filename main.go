@@ -9,11 +9,14 @@ import (
 	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/objects"
 	"github.com/nfk93/blockchain/p2p"
+	"github.com/nfk93/blockchain/smart"
 	"github.com/nfk93/blockchain/transaction"
 	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -50,23 +53,11 @@ func main() {
 	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
 	if *addr == "" {
-		fmt.Println("When all other clients are ready, use start to begin the Blockchain protocol or -h for help with further commands!")
+		fmt.Println("When all other clients are ready, use start to begin the Blockchain protocol or -h or --help for help with further commands!")
 	} else {
 		fmt.Println("This client is ready for the Blockchain protocol to start. Use -h or --help for further commands!")
 	}
 	cliLoop()
-}
-
-// Function constructor - constructs new function for listing given directory
-func listFiles(path string) func(string) []string {
-	return func(line string) []string {
-		names := make([]string, 0)
-		files, _ := ioutil.ReadDir(path)
-		for _, f := range files {
-			names = append(names, f.Name())
-		}
-		return names
-	}
 }
 
 func filterInput(r rune) (rune, bool) {
@@ -125,14 +116,68 @@ func cliLoop() {
 		case line == "publicKeys":
 			p2p.PrintPublicKeys()
 		case line == "ledger":
-			transaction.PrintCurrentLedger()
+			ledger := transaction.GetCurrentLedger()
+			var keyList []string
+			for k := range ledger {
+				keyList = append(keyList, k)
+			}
+			sort.Strings(keyList)
+
+			for _, k := range keyList {
+				log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
+			}
+
+		case line == "contracts":
+			contractMap := smart.GetContracts()
+			var keyList []string
+			for k := range contractMap {
+				keyList = append(keyList, k)
+			}
+			sort.Strings(keyList)
+
+			for _, k := range keyList {
+				log.Printf("Contract %v was created in slot %v.\n", k, contractMap[k].CreatedAtSlot)
+			}
+
+		case strings.HasPrefix(line, "contractInfo "):
+			params := strings.Fields(line[13:])
+			conAddr := params[0]
+			conState := smart.GetContractState(conAddr)
+
+			log.Printf(" Contract: %v \n Balance: %v \n Prepaid: %v \n Storage Limit: %v\n Storage: %v \n",
+				conAddr, conState.Balance, conState.PrepaidStorage, conState.Storagecap, conState.Storage)
+
+			if len(params) == 3 && params[1] == "-o" { // with output file
+				var targetFileName string
+				targetFileName = params[2]
+				contract := smart.GetContract(conAddr)
+
+				func() {
+					f, err := os.Create(targetFileName)
+					if err != nil {
+						log.Println(err)
+						return
+					}
+					_, err = f.WriteString(contract.Code)
+					if err != nil {
+						log.Println(err)
+					}
+					err = f.Close()
+					if err != nil {
+						log.Println(err)
+					}
+				}()
+
+			}
+
 		case line == "final":
 			consensus.PrintCurrentStake()
 		case line == "start": //"-start_network":
 			if *newNetwork {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness, *finalizeInterval)
 				if err != nil {
-					log.Fatal(err)
+					log.Println(err)
+					goto exit
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
@@ -152,6 +197,7 @@ func cliLoop() {
 			} else {
 				log.Println("Only the network founder can start the network!")
 			}
+
 		case line == "id":
 			log.Printf("Your ID is: \n    Short Public Key hash: %v\n    Full Public Key hash: %v\n    Port: %v\n", publicKey.Hash()[:10], publicKey.Hash(), *port)
 		case line == "verbose":
@@ -169,6 +215,7 @@ func cliLoop() {
 				amountUint, err := strconv.ParseUint(params[1], 10, 64)
 				if err != nil {
 					log.Println("Bad number as transaction amount")
+					goto exit
 				}
 				amount = amountUint
 
@@ -192,7 +239,7 @@ func cliLoop() {
 			params := strings.Fields(line[5:])
 			noOfParams := 2
 			entry := "main"     //default
-			callParams := ""    //default
+			callParams := "()"  //default
 			amount := uint64(0) //default
 			var gas uint64
 			var conAddr string
@@ -202,6 +249,7 @@ func cliLoop() {
 				gasUint, err := strconv.ParseUint(params[1], 10, 64)
 				if err != nil {
 					log.Println("Bad number as contract gas")
+					goto exit
 				}
 				gas = gasUint
 
@@ -215,6 +263,7 @@ func cliLoop() {
 						am, err := strconv.ParseUint(params[i+1], 10, 64)
 						if err != nil {
 							log.Println("Bad number as contract amount")
+							goto exit
 						}
 						amount = am
 					}
@@ -239,22 +288,29 @@ func cliLoop() {
 			var storageLimit uint64
 
 			if len(params) == noOfParams {
-				code = readFromFile(params[0])
+				code, err = readFromFile(params[0])
+				if err != nil {
+					log.Println("Error in reading file: " + err.Error())
+					goto exit
+				}
 
 				gasUint, err := strconv.ParseUint(params[1], 10, 64)
 				if err != nil {
 					log.Println("Bad number as gas amount")
+					goto exit
 				}
 				gas = gasUint
 				prepaidUint, err := strconv.ParseUint(params[2], 10, 64)
 				if err != nil {
 					log.Println("Bad number as prepaid amount")
+					goto exit
 				}
 				prepaid = prepaidUint
 
 				storageUint, err := strconv.ParseUint(params[3], 10, 64)
 				if err != nil {
 					log.Println("Bad number as Storage limit")
+					goto exit
 				}
 				storageLimit = storageUint
 
@@ -332,7 +388,7 @@ func cliLoop() {
 	}
 }
 func printHelpMenu() {
-	println("  ")
+	println("Command", []string{"Description"})
 	prettyPrintHelpMessage("exit", []string{"Exit this program"})
 	prettyPrintHelpMessage("start", []string{"Begins the blockchain protocol"})
 	prettyPrintHelpMessage("verbose", []string{"Initially active. Switches verbose mode between on and off"})
@@ -343,10 +399,12 @@ func printHelpMenu() {
 	prettyPrintHelpMessage("publicKeys", []string{"Print list of know Public keys in network"})
 	prettyPrintHelpMessage("ledger", []string{"Print the current ledger"})
 	prettyPrintHelpMessage("final", []string{"Print the last finalized ledger"})
-	//prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
-	//prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
-	//prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
-	//prettyPrintHelpMessage("-autotrans", "Initially active. Starts or stops automatic transfers to random accounts every 5 second")
+	prettyPrintHelpMessage("contracts", []string{"Prints a list of all currently active contracts"})
+	prettyPrintHelpMessage("contractInfo ADDRESS", []string{"Prints info of a given contract",
+		"", "ADDRESS: The address of a given contract",
+		"", "",
+		"-o <string>", "Path with filename of output file. Path should be without file extension.",
+	})
 	prettyPrintHelpMessage("transaction RECEIVER AMOUNT", []string{"Send Amount to the Receiver",
 		"", "RECEIVER: A 10 digit prefix of senders publicKey hash",
 		"", "AMOUNT: Positive integer of amount to transfer"})
@@ -354,21 +412,21 @@ func printHelpMenu() {
 		"", "ADDRESS: The address of the contract",
 		"", "GAS: Positive integer of how much gas to include",
 		"", "",
-		"-entry", "Default: main. Used to specify the entry in the contract to call",
-		"-amount", "Default: 0. Non negative integer of amount included in a contract call",
-		"-params", "Default: \"\". Used to specify parameters to include in contract call "})
+		"-entry <string>", "Default: main. Used to specify the entry in the contract to call",
+		"-amount <uint>", "Default: 0. Non negative integer of amount included in a contract call",
+		"-params <string>", "Default: \"()\". Used to specify parameters to include in contract call "})
 	prettyPrintHelpMessage("init CODE GAS PREPAID STORAGE", []string{"",
 		"", "CODE: path to code file",
 		"", "GAS: Positive integer of how much gas to include",
 		"", "PREPAID: Positive integer of how much prepaid money to attached at contract",
 		"", "STORAGE: Positive integer of max storage usage for a contract"})
 }
-func readFromFile(s string) []byte {
+func readFromFile(s string) ([]byte, error) {
 	bytemsg, err := ioutil.ReadFile(s)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return bytemsg
+	return bytemsg, nil
 }
 
 func prettyPrintHelpMessage(command string, explain []string) {

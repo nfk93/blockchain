@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/transaction"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -67,7 +68,13 @@ func checkPendingBlocks() {
 		pendingBlocksLock.Lock()
 		defer pendingBlocksLock.Unlock()
 		for i, block := range pendingBlocks {
-			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) {
+			finalexists := false
+			func() {
+				finalLock.RLock()
+				defer finalLock.RUnlock()
+				_, finalexists = finalData[getFinalDataIndex(block.Slot)]
+			}()
+			if block.Slot <= getCurrentSlot() && blocks.contains(block.ParentPointer) && finalexists {
 				if !ValidateBlock(block) {
 					pendingBlocks = append(pendingBlocks[:i], pendingBlocks[i+1:]...)
 					if isVerbose {
@@ -238,8 +245,11 @@ func handleBlock(b o.Block) {
 	func() {
 		blocks.rlock()
 		defer blocks.runlock()
+		finalLock.RLock()
+		defer finalLock.RUnlock()
 		// check if the parent of a block exists, and if it doesn't it adds it to pendingblocks
-		if parentExists := blocks.contains(b.ParentPointer); !parentExists || b.Slot > getCurrentSlot() {
+		_, finalexists := finalData[getFinalDataIndex(b.Slot)]
+		if parentExists := blocks.contains(b.ParentPointer); !parentExists || b.Slot > getCurrentSlot() || !finalexists {
 			func() {
 				pendingBlocksLock.Lock()
 				defer pendingBlocksLock.Unlock()
@@ -249,6 +259,9 @@ func handleBlock(b o.Block) {
 				if !parentExists {
 					log.Println(fmt.Sprintf("can't process block %s yet, missing parent %s",
 						b.CalculateBlockHash()[:6]+"...", b.ParentPointer))
+				} else if !finalexists {
+					log.Println(fmt.Sprintf("can't process block %s yet, have not calculated required finaldata yet",
+						b.CalculateBlockHash()[:6]+"..."))
 				} else {
 					log.Println(fmt.Sprintf("can't process block %s yet, its slot (%d) is higher than currentslot (%d)",
 						b.CalculateBlockHash()[:6]+"...", b.Slot, currentSlot))
@@ -517,11 +530,11 @@ func (s *skov) runlock() {
 
 func SwitchVerbose() {
 	isVerbose = !isVerbose
+	transaction.SetVerbose(isVerbose)
 	if isVerbose {
 		log.Println("Verbose is now on!")
 	} else {
 		log.Println("Verbose is now off!")
-
 	}
 }
 

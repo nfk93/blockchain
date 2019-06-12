@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 )
@@ -33,8 +32,8 @@ func TestInitiateContract(t *testing.T) {
 		t.Errorf("should have less remaining gas. Had: %d", remaining)
 	}
 	if c, exists := contracts[addr]; exists {
-		if c.createdAtSlot != 5 {
-			t.Errorf("createdAtSlot has wrong value")
+		if c.CreatedAtSlot != 5 {
+			t.Errorf("CreatedAtSlot has wrong value")
 		}
 	} else {
 		t.Errorf("contract doesn't exist")
@@ -43,17 +42,17 @@ func TestInitiateContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist")
 	} else {
-		if contstate.storagecap != 10000 {
+		if contstate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(contstate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 0)) {
-			t.Errorf("storage has wrong value of %s", contstate.storage)
+		if !value.Equals(contstate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 0)) {
+			t.Errorf("Storage has wrong value of %s", contstate.Storage)
 		}
 	}
 }
 
 func TestInitiateContract2(t *testing.T) {
-	// not high enough storage limit
+	// not high enough Storage limit
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
@@ -114,13 +113,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist1")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 100000 {
+		if fundmestate.Balance != 100000 {
 			t.Errorf("")
 		}
 	}
@@ -132,13 +131,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist2")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 1100000 {
+		if fundmestate.Balance != 1100000 {
 			t.Errorf("")
 		}
 	}
@@ -163,13 +162,13 @@ func TestCallContract(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist2")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 1100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 0 {
+		if fundmestate.Balance != 0 {
 			t.Errorf("")
 		}
 	}
@@ -204,32 +203,32 @@ func TestBranching(t *testing.T) {
 	_, _, _, err = CallContract(addr, "main", "4", 1, 20000, "3")
 
 	block1state := stateTree["1"].contractStates[addr]
-	if !value.Equals(block1state.storage, value.IntVal{1}) {
+	if !value.Equals(block1state.Storage, value.IntVal{1}) {
 		t.Errorf("")
 	}
-	if block1state.balance != 0 {
+	if block1state.Balance != 0 {
 		t.Errorf("")
 	}
 
 	block2state := stateTree["2"].contractStates[addr]
-	if !value.Equals(block2state.storage, value.IntVal{2}) {
+	if !value.Equals(block2state.Storage, value.IntVal{2}) {
 		t.Errorf("")
 	}
-	if block2state.prepaidStorage != 10000-3*64 {
+	if block2state.PrepaidStorage != 10000-3*64 {
 		t.Errorf("")
 	}
-	if block2state.balance != 0 {
+	if block2state.Balance != 0 {
 		t.Errorf("")
 	}
 
 	block3state := stateTree["3"].contractStates[addr]
-	if !value.Equals(block3state.storage, value.IntVal{5}) {
+	if !value.Equals(block3state.Storage, value.IntVal{5}) {
 		t.Errorf("")
 	}
-	if block3state.prepaidStorage != 10000-4*64 {
+	if block3state.PrepaidStorage != 10000-4*64 {
 		t.Errorf("")
 	}
-	if block3state.balance != 1 {
+	if block3state.Balance != 1 {
 		t.Errorf("")
 	}
 }
@@ -243,7 +242,7 @@ func TestStorageSizeIncrease(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	_, _, _, err = CallContract(addr, "main", "1", 0, 20000, "1")
-	if err == nil || err.Error() != "storage cap exceeded" {
+	if err == nil || err.Error() != "Storage cap exceeded" {
 		t.Errorf("")
 	}
 }
@@ -281,10 +280,10 @@ func TestChainCalls(t *testing.T) {
 	blockstate := stateTree["1"]
 	contractstate1 := blockstate.contractStates[addr1]
 	contractstate2 := blockstate.contractStates[addr2]
-	if contractstate1.balance != 11 {
+	if contractstate1.Balance != 11 {
 		t.Errorf("")
 	}
-	if contractstate2.balance != 6 {
+	if contractstate2.Balance != 6 {
 		t.Errorf("")
 	}
 }
@@ -390,13 +389,13 @@ func TestNewBlock(t *testing.T) {
 	if !exists {
 		t.Errorf("contract state doesn't exist1")
 	} else {
-		if fundmestate.storagecap != 10000 {
+		if fundmestate.Storagecap != 10000 {
 			t.Errorf("")
 		}
-		if !value.Equals(fundmestate.storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
-			t.Errorf("storage has wrong value of %s", fundmestate.storage)
+		if !value.Equals(fundmestate.Storage, getFundmeStorage("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", 1100000, 100000)) {
+			t.Errorf("Storage has wrong value of %s", fundmestate.Storage)
 		}
-		if fundmestate.balance != 100000 {
+		if fundmestate.Balance != 100000 {
 			t.Errorf("")
 		}
 	}
@@ -414,13 +413,50 @@ func TestNewBlock(t *testing.T) {
 	if newBlockState.contractStates != nil || newBlockState.slot != 0 || newBlockState.parenthash != "" {
 		t.Errorf("")
 	}
+
+	// testing that calling new contract doesn't mute the parent block
+	addr, _, _ = InitiateContract(fundme, 400000, 100000, 10000, "1")
+	previous := stateTree["1"].contractStates[addr]
+	prevBal := previous.Balance
+	prevPre := previous.PrepaidStorage
+	fmt.Println("old prepaid:     ", prevPre)
+	prevSto := value.Copy(previous.Storage)
+	prevCap := previous.Storagecap
+	_, _ = SetStartingPointForNewBlock("1", 12)
+	_, _, _, err = CallContractOnNewBlock(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		100000, 40000)
+	if err != nil {
+		t.Errorf("error in contractcall: %s", err.Error())
+		return
+	}
+	fmt.Println(newBlockState.contractStates[addr].PrepaidStorage)
+	if newBlockState.contractStates[addr].PrepaidStorage >= 100000 {
+		t.Errorf("prepaid should be lower")
+	}
+
+	DoneCreatingNewBlock()
+	currentstate := stateTree["1"].contractStates[addr]
+	fmt.Println("current prepaid: ", currentstate.PrepaidStorage)
+	fmt.Println(currentstate.Storage)
+	if prevBal != currentstate.Balance {
+		t.Errorf("parent balance mutated")
+	}
+	if prevPre != currentstate.PrepaidStorage {
+		t.Errorf("parent prepaid mutated")
+	}
+	if prevCap != currentstate.Storagecap {
+		t.Errorf("parent storage cap mutated")
+	}
+	if !value.Equals(prevSto, currentstate.Storage) {
+		t.Errorf("parent storage mutated")
+	}
 }
 
 func getCodeBytes(t *testing.T, filepath string) ([]byte, error) {
 	dat, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Errorf("Error reading testfile %s", filepath)
-		log.Fatalf("can't read testfile %s", filepath)
+		panic(err)
 		return nil, err
 	}
 	return dat, nil
@@ -461,6 +497,6 @@ func getFundmeStorage(owner string, fundgoal uint64, amountrsd uint64) value.Val
 func reset() {
 	contracts = make(map[string]contract)
 	stateTree = make(map[string]state)
-	StartSmartContractLayer("genesis")
+	StartSmartContractLayer("genesis", false)
 	DoneCreatingNewBlock()
 }
