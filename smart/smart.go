@@ -31,6 +31,7 @@ var log bool
 
 func StartSmartContractLayer(genesishash string, log_ bool) {
 	log = log_
+
 	contractStates := make(map[string]contractState)
 	stateTree[genesishash] = state{contractStates, 0, ""}
 }
@@ -169,7 +170,7 @@ func CallContractOnNewBlock(
 
 	newstate, transfers, remainingGas, err := handleContractCall(newBlockState, allcontracts, amount, gas_, address, entry, params)
 	if err != nil {
-		return nil, nil, remainingGas, callError
+		return nil, nil, remainingGas, err
 	} else {
 		newBlockState = newstate
 		return getContractBalances(newstate.contractStates), transfers, remainingGas, nil

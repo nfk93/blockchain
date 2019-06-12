@@ -22,13 +22,15 @@ type Tree struct {
 var tree Tree
 var tLock sync.RWMutex
 var logToFile bool
+var verbose bool
 
 const transactionGas = uint64(100000) // 1 Transaction costs 1 koin
 const blockReward = uint64(200000000) // block reward is 2 times the max gas reward = 2000 koins
-const gasLimit = uint64(100000000) // 1 block can contain 1000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
+const gasLimit = uint64(100000000)    // 1 block can contain 1000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	tree = Tree{make(map[string]TreeNode), ""}
+	verbose = false
 	logToFile = log_
 	// Process a Block coming from the consensus layer
 	go func() {
@@ -86,11 +88,26 @@ func (t *Tree) processBlock(b Block) {
 		for _, td := range b.BlockData.Trans {
 			switch td.GetType() {
 			case CONTRACTCALL:
-				accumulatedGas += s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
+				fmt.Println("The Ledger at processing is currently:", s.Ledger)
+				accGas, err := s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
+				accumulatedGas += accGas
+				if err != nil && verbose {
+					log.Println(err)
+				}
+				fmt.Println("The Ledger at processing at step 1 is currently:", s.Ledger)
+
 			case CONTRACTINIT:
-				accumulatedGas += s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
+				accGas, err := s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
+				accumulatedGas += accGas
+				if err != nil && verbose {
+					log.Println(err)
+				}
 			case TRANSACTION:
-				accumulatedGas += s.AddTransaction(td.Transaction, transactionGas)
+				accGas, err := s.AddTransaction(td.Transaction, transactionGas)
+				accumulatedGas += accGas
+				if err != nil && verbose {
+					log.Println(err)
+				}
 			}
 		}
 	}
@@ -98,6 +115,7 @@ func (t *Tree) processBlock(b Block) {
 	// Verify our new state matches the state of the block creator to ensure he has also done the same work
 	if !s.VerifyHashedState(b.StateHash, b.BakerID) {
 		log.Println(fmt.Sprintf("State hash in block %s didn't match hash of computed state", b.CalculateBlockHash()))
+		//fmt.Println(s)
 	} else if accumulatedGas > gasLimit {
 		log.Println(fmt.Sprintf("block %s exceeds maximum gas capacity", b.CalculateBlockHash()))
 	} else {
@@ -157,7 +175,7 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	}
 	// Remove expired contracts from ledger in TL and from ConLayer
 	s.CleanExpiredContract(expiring)
-
+	print := false
 	accumulatedGasUse := uint64(0)
 	for _, td := range blockData.TransList {
 		if accumulatedGasUse+transactionGas > gasLimit {
@@ -165,19 +183,27 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		}
 		switch td.GetType() {
 		case CONTRACTCALL:
-			oldState := State{Ledger: copyMap(s.Ledger), ParentHash: s.ParentHash, TotalStake: s.TotalStake}
-			gasUsed := s.HandleContractCall(td.ContractCall, "", blockData.ParentHash, blockData.SlotNo)
+			oldState := copyState(s)
+			fmt.Println("The Ledger at creation is currently:", s.Ledger)
+			gasUsed, err := s.HandleContractCall(td.ContractCall, "", blockData.ParentHash, blockData.SlotNo)
+			if err != nil && verbose {
+				log.Println(err)
+			}
+			fmt.Println("The Ledger at creation at step 1 is currently:", s.Ledger)
+
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
 			} else {
 				accumulatedGasUse += gasUsed
 				addedTransactions = append(addedTransactions, td)
 			}
+			print = true
 		case CONTRACTINIT:
-
-			oldState := State{Ledger: copyMap(s.Ledger), ConOwners:copyContMap(s.ConOwners),ParentHash: s.ParentHash, TotalStake: s.TotalStake}
-
-			gasUsed := s.HandleContractInit(td.ContractInit, "", blockData.ParentHash, blockData.SlotNo)
+			oldState := copyState(s)
+			gasUsed, err := s.HandleContractInit(td.ContractInit, "", blockData.ParentHash, blockData.SlotNo)
+			if err != nil && verbose {
+				log.Println(err)
+			}
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
 			} else {
@@ -185,10 +211,17 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 				addedTransactions = append(addedTransactions, td)
 			}
 		case TRANSACTION:
-			gasUsed := s.AddTransaction(td.Transaction, transactionGas)
+			gasUsed, err := s.AddTransaction(td.Transaction, transactionGas)
+			if err != nil && verbose {
+				log.Println(err)
+			}
 			accumulatedGasUse += gasUsed
 			addedTransactions = append(addedTransactions, td)
 		}
+	}
+
+	if print {
+		//fmt.Println(s)
 	}
 
 	b := Block{blockData.SlotNo,
@@ -204,6 +237,9 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 	b.SignBlock(blockData.Sk)
 	smart.DoneCreatingNewBlock()
 	return b
+}
+func copyState(s State) State {
+	return State{copyMap(s.Ledger), copyMap(s.ConStake), copyContMap(s.ConOwners), s.ParentHash, s.TotalStake}
 }
 
 // Helpers
@@ -235,18 +271,6 @@ func GetCurrentLedger() map[string]uint64 {
 	return tree.treeMap[tree.head].state.Ledger
 }
 
-//func PrintCurrentLedger() {
-//	tLock.RLock()
-//	ledger := tree.treeMap[tree.head].state.Ledger
-//	tLock.RUnlock()
-//
-//	var keyList []string
-//	for k := range ledger {
-//		keyList = append(keyList, k)
-//	}
-//	sort.Strings(keyList)
-//
-//	for _, k := range keyList {
-//		log.Printf("Amount %v is owned by %v\n", ledger[k], k[:10])
-//	}
-//}
+func SetVerbose(b bool) {
+	verbose = b
+}
