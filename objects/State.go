@@ -4,6 +4,7 @@ import (
 	"bytes"
 	. "github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/smart"
+	"github.com/pkg/errors"
 	"sort"
 	"strconv"
 )
@@ -26,25 +27,25 @@ func NewInitialState(key PublicKey) State {
 }
 
 //Returns gasCost
-func (s *State) AddTransaction(t Transaction, gasCost uint64) uint64 {
+func (s *State) AddTransaction(t Transaction, gasCost uint64) (uint64, error) {
 	//TODO: Handle checks of legal transactions
 	amountWithFees := t.Amount + gasCost
 
 	if !t.VerifyTransaction() {
 		// fmt.Println("The transactions didn't verify", t)
-		return 0
+		return 0, errors.New("Transaction signature didn't verify!")
 	}
 
 	// Sender has to be able to pay both the amount and the fee
 	if s.Ledger[t.From.Hash()] < amountWithFees {
 		// fmt.Println("Not enough money on senders account")
-		return 0
+		return 0, errors.New("Not enough funds for Transaction!")
 	}
 
 	s.Ledger[t.From.Hash()] -= amountWithFees
 	s.Ledger[t.To.Hash()] += t.Amount
 	s.TotalStake -= gasCost // Take the fee out of the system
-	return gasCost
+	return gasCost, nil
 }
 
 func (s *State) AddAmountToAccount(pk PublicKey, reward uint64) {
@@ -118,7 +119,7 @@ func (s *State) payContractInit(pk PublicKey, gas uint64, prepaid uint64) bool {
 	return false
 }
 
-func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) uint64 {
+func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash string, parenthash string, slot uint64) (uint64, error) {
 	if paymentAccepted := s.payContractInit(contractInit.Owner, contractInit.Gas, contractInit.Prepaid); paymentAccepted {
 		var addr string
 		var remainGas uint64
@@ -135,20 +136,20 @@ func (s *State) HandleContractInit(contractInit ContractInitialize, blockhash st
 		s.AddAmountToAccount(contractInit.Owner, remainGas)
 		if err != nil {
 			s.AddAmountToAccount(contractInit.Owner, contractInit.Prepaid)
-			return contractInit.Gas - remainGas
+			return contractInit.Gas - remainGas, err
 		} else {
 			s.InitializeContractAccount(addr, contractInit.Owner)
-			return contractInit.Gas - remainGas
+			return contractInit.Gas - remainGas, nil
 		}
 	} else {
-		return 0
+		return 0, errors.New("Not enough funds for contract initialization")
 	}
 }
 
-func (s *State) HandleContractCall(contract ContractCall, blockhash string, parenthash string, slot uint64) uint64 {
+func (s *State) HandleContractCall(contract ContractCall, blockhash string, parenthash string, slot uint64) (uint64, error) {
 	// Transfer funds from caller to contract
 	if !s.FundContractCall(contract.Caller, contract.Amount, contract.Gas) {
-		return 0
+		return 0, errors.New("Not enough funds for contract call")
 	}
 	var newContractLedger map[string]uint64
 	var transferList []smart.ContractTransaction
@@ -171,14 +172,16 @@ func (s *State) HandleContractCall(contract ContractCall, blockhash string, pare
 	// If contract not successful, then return amount to caller
 	if callerr != nil {
 		s.returnAmountFromContracts(contract.Caller, contract.Amount)
-		return gasUsed
+
+		return gasUsed, callerr
 	}
 	// If contract succeeded, execute the transactions from the contract layer
 	s.ConStake = newContractLedger
 	for _, t := range transferList {
 		s.AddContractTransaction(t)
 	}
-	return gasUsed
+
+	return gasUsed, nil
 }
 
 // Get list of contract addresses that expire from the smart contract layer

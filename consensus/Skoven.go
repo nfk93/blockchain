@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nfk93/blockchain/crypto"
 	o "github.com/nfk93/blockchain/objects"
+	"github.com/nfk93/blockchain/transaction"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -517,11 +518,11 @@ func (s *skov) runlock() {
 
 func SwitchVerbose() {
 	isVerbose = !isVerbose
+	transaction.SetVerbose(isVerbose)
 	if isVerbose {
 		log.Println("Verbose is now on!")
 	} else {
 		log.Println("Verbose is now off!")
-
 	}
 }
 

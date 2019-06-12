@@ -58,8 +58,6 @@ func main() {
 	cliLoop()
 }
 
-
-
 func filterInput(r rune) (rune, bool) {
 	switch r {
 	// block CtrlZ feature
@@ -239,7 +237,7 @@ func cliLoop() {
 			params := strings.Fields(line[5:])
 			noOfParams := 2
 			entry := "main"     //default
-			callParams := ""    //default
+			callParams := "()"  //default
 			amount := uint64(0) //default
 			var gas uint64
 			var conAddr string
@@ -399,10 +397,12 @@ func printHelpMenu() {
 	prettyPrintHelpMessage("publicKeys", []string{"Print list of know Public keys in network"})
 	prettyPrintHelpMessage("ledger", []string{"Print the current ledger"})
 	prettyPrintHelpMessage("final", []string{"Print the last finalized ledger"})
-	//prettyPrintHelpMessage("-trans1000", "Transfer 1000k to all known public keys in the network")
-	//prettyPrintHelpMessage("-trans2", "Transfer an even share of your current stake to everyone in the network including yourself")
-	//prettyPrintHelpMessage("-trans5", "Transfer 5 random amounts to random accounts")
-	//prettyPrintHelpMessage("-autotrans", "Initially active. Starts or stops automatic transfers to random accounts every 5 second")
+	prettyPrintHelpMessage("contracts", []string{"Prints a list of all currently active contracts"})
+	prettyPrintHelpMessage("contractInfo ADDRESS", []string{"Prints info of a given contract",
+		"", "ADDRESS: The address of a given contract",
+		"", "",
+		"-o <string>", "Path with filename of output file. Path should be without file extension.",
+	})
 	prettyPrintHelpMessage("transaction RECEIVER AMOUNT", []string{"Send Amount to the Receiver",
 		"", "RECEIVER: A 10 digit prefix of senders publicKey hash",
 		"", "AMOUNT: Positive integer of amount to transfer"})
@@ -412,7 +412,7 @@ func printHelpMenu() {
 		"", "",
 		"-entry <string>", "Default: main. Used to specify the entry in the contract to call",
 		"-amount <uint>", "Default: 0. Non negative integer of amount included in a contract call",
-		"-params <string>", "Default: \"\". Used to specify parameters to include in contract call "})
+		"-params <string>", "Default: \"()\". Used to specify parameters to include in contract call "})
 	prettyPrintHelpMessage("init CODE GAS PREPAID STORAGE", []string{"",
 		"", "CODE: path to code file",
 		"", "GAS: Positive integer of how much gas to include",

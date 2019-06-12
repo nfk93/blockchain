@@ -31,6 +31,7 @@ var log bool
 
 func StartSmartContractLayer(genesishash string, log_ bool) {
 	log = log_
+
 	contractStates := make(map[string]contractState)
 	stateTree[genesishash] = state{contractStates, 0, ""}
 }
