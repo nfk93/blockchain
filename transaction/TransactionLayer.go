@@ -24,9 +24,9 @@ var tLock sync.RWMutex
 var logToFile bool
 var verbose bool
 
-const transactionGas = uint64(100000) // 1 Transaction costs 1 koin
+const transactionGas = uint64(10000)  // 1 Transaction costs 0.1 koin
 const blockReward = uint64(200000000) // block reward is 2 times the max gas reward = 2000 koins
-const gasLimit = uint64(100000000)    // 1 block can contain 1000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
+const gasLimit = uint64(100000000)    // 1 block can contain 10000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	tree = Tree{make(map[string]TreeNode), ""}
@@ -88,14 +88,11 @@ func (t *Tree) processBlock(b Block) {
 		for _, td := range b.BlockData.Trans {
 			switch td.GetType() {
 			case CONTRACTCALL:
-				fmt.Println("The Ledger at processing is currently:", s.Ledger)
 				accGas, err := s.HandleContractCall(td.ContractCall, blockHash, b.ParentPointer, b.Slot)
 				accumulatedGas += accGas
 				if err != nil && verbose {
 					log.Println(err)
 				}
-				fmt.Println("The Ledger at processing at step 1 is currently:", s.Ledger)
-
 			case CONTRACTINIT:
 				accGas, err := s.HandleContractInit(td.ContractInit, blockHash, b.ParentPointer, b.Slot)
 				accumulatedGas += accGas
@@ -183,13 +180,12 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 		}
 		switch td.GetType() {
 		case CONTRACTCALL:
+
 			oldState := copyState(s)
-			fmt.Println("The Ledger at creation is currently:", s.Ledger)
 			gasUsed, err := s.HandleContractCall(td.ContractCall, "", blockData.ParentHash, blockData.SlotNo)
 			if err != nil && verbose {
 				log.Println(err)
 			}
-			fmt.Println("The Ledger at creation at step 1 is currently:", s.Ledger)
 
 			if accumulatedGasUse+gasUsed > gasLimit {
 				s = oldState
@@ -197,7 +193,6 @@ func (t *Tree) createNewBlock(blockData CreateBlockData) Block {
 				accumulatedGasUse += gasUsed
 				addedTransactions = append(addedTransactions, td)
 			}
-			print = true
 		case CONTRACTINIT:
 			oldState := copyState(s)
 			gasUsed, err := s.HandleContractInit(td.ContractInit, "", blockData.ParentHash, blockData.SlotNo)

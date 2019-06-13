@@ -2,6 +2,7 @@ package objects
 
 import (
 	. "github.com/nfk93/blockchain/crypto"
+	"github.com/nfk93/blockchain/transaction"
 	"testing"
 )
 
@@ -71,6 +72,20 @@ func TestState_FundContractCall(t *testing.T) {
 	if s.TotalStake != 100-20 {
 		t.Error("TotalStake is not correct...")
 	}
+}
+
+func initState() {
+	channels := CreateChannelStruct()
+	go transaction.StartTransactionLayer(channels, false)
+}
+
+func BenchmarkState_AddTransactionTransactions(b *testing.B) {
+	sk, pk := KeyGen(2048)
+	_, pk1 := KeyGen(2048)
+	transaction := CreateTransaction(pk, pk1, 100000, "", sk)
+	state := NewInitialState(pk)
+	b.ResetTimer()
+	state.AddTransaction(transaction, uint64(200000))
 }
 
 //func TestState_CleanContractLedger(t *testing.T) {
