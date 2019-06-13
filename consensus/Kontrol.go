@@ -14,11 +14,12 @@ import (
 )
 
 var slotLength time.Duration
+var epochLength uint64
 var currentSlot uint64
 var slotLock sync.RWMutex
 var hardness float64
 var genesisTime time.Time
-var finalizeInterval uint64
+var finalizeGap uint64
 var sk SecretKey
 var pk PublicKey
 
@@ -36,8 +37,13 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 	currentSlot = 1
 	offset := time.Since(genesisTime)
 	for {
-		if (currentSlot)%finalizeInterval == 0 {
-			finalize(currentSlot - (finalizeInterval))
+		if (currentSlot)%epochLength == 0 {
+			finalizeSlot := currentSlot - finalizeGap
+			if finalizeSlot > 0 {
+				finalize(currentSlot - (finalizeGap))
+			} else {
+				finalize(0)
+			}
 		}
 		drawLottery(currentSlot)
 		timeSinceGenesis := time.Since(genesisTime) - offset
@@ -73,7 +79,7 @@ func getCurrentSlot() uint64 {
 }
 
 func getEpoch(slot uint64) uint64 {
-	return slot / finalizeInterval
+	return slot / finalizeGap
 }
 
 func processGenesisData(genesisData o.GenesisData, blockHash string) {
@@ -83,7 +89,8 @@ func processGenesisData(genesisData o.GenesisData, blockHash string) {
 	genesisFinalData := FinalData{stake: genesisData.InitialState.Ledger, totalstake: genesisData.InitialState.TotalStake,
 		leadershipNonce: genesisData.Nonce, blockHash: blockHash}
 	finalData[0] = genesisFinalData
-	finalizeInterval = genesisData.FinalizeInterval
+	finalizeGap = genesisData.FinalizeGap
+	epochLength = genesisData.EpochLength
 	genesisTime = genesisData.GenesisTime
 	go runSlot()
 	go transaction.StartTransactionLayer(channels, saveGraphFiles)
@@ -104,8 +111,7 @@ func finalize(slot uint64) {
 			defer finalLock.Unlock()
 			head := blocks.get(getCurrentHead())
 			for {
-				parent := blocks.get(head.ParentPointer)
-				if parent.Slot < slot {
+				if head.Slot < slot {
 					finalHash := head.LastFinalized
 					if isVerbose {
 						log.Println("Finalizing block", finalHash[:6]+"...")
@@ -117,7 +123,7 @@ func finalize(slot uint64) {
 					finalData[epoch] = finData
 					break
 				}
-				head = parent
+				head = blocks.get(head.ParentPointer)
 			}
 		}()
 	}

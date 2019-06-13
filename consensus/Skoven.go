@@ -173,19 +173,25 @@ func checkLastFinalizedValidity(block o.Block, finalEpoch uint64, data FinalData
 	}
 
 	// check that the last finalized block is actually in the branch that we are extending.
-	block_ := block
-	slot := block.Slot
 	blocks.rlock()
 	defer blocks.runlock()
-	for slot > finalEpoch*finalizeInterval {
-		if block_.ParentPointer == data.blockHash {
-			return true
-		} else {
-			block_ = blocks.get(block_.ParentPointer)
-			slot = block_.Slot
+	finalSlot := blocks.get(data.blockHash).Slot
+	block_ := block
+	slot := block.Slot
+	for {
+		if slot < finalSlot {
+			return false
 		}
+		if block_.CalculateBlockHash() == data.blockHash {
+			return true
+		}
+
+		if slot == 0 {
+			return false
+		}
+		block_ = blocks.get(block_.ParentPointer)
+		slot = block_.Slot
 	}
-	return false
 }
 
 //Verifies a transaction and adds it to the transaction map and the unusedTransactions map, if successfully verified.
