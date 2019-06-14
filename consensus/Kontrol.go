@@ -111,7 +111,7 @@ func finalize(slot uint64) {
 			defer finalLock.Unlock()
 			head := blocks.get(getCurrentHead())
 			for {
-				if head.Slot < slot {
+				if head.Slot <= slot {
 					finalHash := head.LastFinalized
 					if isVerbose {
 						log.Println("Finalizing block", finalHash[:6]+"...")

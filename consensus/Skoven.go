@@ -209,23 +209,6 @@ func handleTransData(t o.TransData) {
 	}
 }
 
-func handleBlock2(b o.Block) {
-	blocks.rlock()
-	defer blocks.runlock()
-	// check if the parent of a block exists, and if it doesn't it adds it to pendingblocks
-	if parentExists := blocks.contains(b.ParentPointer); !parentExists || b.Slot >= getCurrentSlot() {
-		func() {
-			pendingBlocksLock.Lock()
-			defer pendingBlocksLock.Unlock()
-			pendingBlocks = append(pendingBlocks, b)
-		}()
-		return
-	}
-	/*if lastFinalValid := checkLastFinalizedValidity(b.LastFinalized); !lastFinalValid {
-
-	} */
-}
-
 //Verifies the block signature and the draw value of a block, and calls addBlock if successful.
 func handleBlock(b o.Block) {
 	if isVerbose {
