@@ -18,7 +18,7 @@ type State struct {
 }
 
 func NewInitialState(key PublicKey) State {
-	initialStake := uint64(100000000000000) // 1 mil
+	initialStake := uint64(1000000000000000) // 10 mil
 	ledger := make(map[string]uint64)
 	conStake := make(map[string]uint64)
 	conledger := make(map[string]PublicKey)

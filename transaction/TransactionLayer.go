@@ -24,9 +24,9 @@ var tLock sync.RWMutex
 var logToFile bool
 var verbose bool
 
-const transactionGas = uint64(10000)  // 1 Transaction costs 0.1 koin
-const blockReward = uint64(200000000) // block reward is 2 times the max gas reward = 2000 koins
-const gasLimit = uint64(100000000)    // 1 block can contain 10000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
+const transactionGas = uint64(10000)   // 1 Transaction costs 0.1 koin
+const blockReward = uint64(1000000000) // block reward is 2 times the max gas reward = 10.000 koins
+const gasLimit = uint64(100000000)     // 1 block can contain 10000 transactions = 1000 gas koins(Gas limit for blocks) TODO What is good numbers?
 
 func StartTransactionLayer(channels ChannelStruct, log_ bool) {
 	tree = Tree{make(map[string]TreeNode), ""}

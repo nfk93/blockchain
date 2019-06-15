@@ -159,13 +159,13 @@ func PrintPublicKeys() {
 	}
 }
 
-func PrintPeers() {
-	peersLock.RLock()
-	defer peersLock.RUnlock()
-	for _, v := range peers {
-		log.Println(v)
-	}
-}
+//func PrintPeers() {
+//	peersLock.RLock()
+//	defer peersLock.RUnlock()
+//	for _, v := range peers {
+//		log.Println(v)
+//	}
+//}
 
 func listenForRPC(port string) {
 	ln, err := net.Listen("tcp", ":"+port)

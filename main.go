@@ -39,7 +39,7 @@ func main() {
 
 	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
 	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
-	slotduration = flag.Int("slot_duration", 1, "Specify the slot length (default=1sec)")
+	slotduration = flag.Int("slot_duration", 10, "Specify the slot length (default=1sec)")
 	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	saveLogFile = flag.Bool("log", false, "will save logs of all transactions and blocks if true (default=false)")
@@ -109,8 +109,8 @@ func cliLoop() {
 			p2p.PrintNetworkList()
 		case line == "seenTrans":
 			p2p.PrintTransHashList()
-		case line == "peers":
-			p2p.PrintPeers()
+		//case line == "peers":
+		//	p2p.PrintPeers()
 		case line == "publicKeys":
 			p2p.PrintPublicKeys()
 		case line == "ledger":
@@ -386,17 +386,17 @@ func cliLoop() {
 	}
 }
 func printHelpMenu() {
-	println("Command", []string{"Description"})
+	prettyPrintHelpMessage("Command:", []string{"Description:"})
 	prettyPrintHelpMessage("exit", []string{"Exit this program"})
 	prettyPrintHelpMessage("start", []string{"Begins the blockchain protocol"})
 	prettyPrintHelpMessage("verbose", []string{"Initially active. Switches verbose mode between on and off"})
 	prettyPrintHelpMessage("id", []string{"Show your public key in short and which port you are listening on"})
-	prettyPrintHelpMessage("networkList", []string{"Print out the network list of who you are connected to"})
-	prettyPrintHelpMessage("seenTrans", []string{"Print list of seen transactions"})
-	prettyPrintHelpMessage("peers", []string{"Print list of all peers in the network"})
+	prettyPrintHelpMessage("network", []string{"Print out the network list of who you are connected to"})
+	//prettyPrintHelpMessage("peers", []string{"Print list of all peers in the network"})
 	prettyPrintHelpMessage("publicKeys", []string{"Print list of know Public keys in network"})
 	prettyPrintHelpMessage("ledger", []string{"Print the current ledger"})
 	prettyPrintHelpMessage("final", []string{"Print the last finalized ledger"})
+	prettyPrintHelpMessage("seenTrans", []string{"Print list of seen transactions"})
 	prettyPrintHelpMessage("contracts", []string{"Prints a list of all currently active contracts"})
 	prettyPrintHelpMessage("contractInfo ADDRESS", []string{"Prints info of a given contract",
 		"", "ADDRESS: The address of a given contract",
