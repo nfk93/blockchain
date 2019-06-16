@@ -44,7 +44,7 @@ func main() {
 	slotduration = flag.Int("slot_duration", 10, "Specify the slot length (default=1sec)")
 	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
 	finalizeGap = flag.Uint64("finalize_gap", 100, "Specify the finalization gap (default=50")
-	epochLength = flag.Uint64("epoch_length", 20, "Specify the epoch length (default=50")
+	epochLength = flag.Uint64("epoch_length", 50, "Specify the epoch length (default=50")
 	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
 	saveLogFile = flag.Bool("log", false, "will save logs of all transactions and blocks if true (default=false)")
 	flag.Parse()
