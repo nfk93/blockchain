@@ -1,0 +1,5 @@
+type storage = int
+
+let%init storage = 1
+
+let%entry main () s = if 2 > 1 then (([] : operation list), 1) else (([] : operation list), 1)

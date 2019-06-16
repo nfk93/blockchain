@@ -1,0 +1,2 @@
+type storage = int
+let%init storage = 1

@@ -1,0 +1,5 @@
+type storage = int list
+
+let%init storage = [1; 2; 3]
+
+let%entry main () s = (([] : operation list), [7; 9; 13])

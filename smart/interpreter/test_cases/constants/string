@@ -1,0 +1,5 @@
+type storage = string
+
+let%init storage = "mom"
+
+let%entry main () s = (([] : operation list), "dank")
