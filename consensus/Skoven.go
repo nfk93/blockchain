@@ -157,12 +157,14 @@ func ValidateBlock(b o.Block) bool {
 	return true
 }
 
-func getFinalDataIndex(s uint64) uint64 {
-	finalEpoch := uint64(0)
-	if e := getEpoch(s); e > 0 {
-		finalEpoch = e - 1
+func getFinalDataIndex(slot uint64) uint64 {
+	slot_ := int(slot)
+	finalizeGap_ := int(finalizeGap)
+	if slot_-finalizeGap_ < 0 {
+		return 0
+	} else {
+		return (slot - finalizeGap) / epochLength
 	}
-	return finalEpoch
 }
 
 func checkLastFinalizedValidity(block o.Block, finalEpoch uint64, data FinalData) bool {
@@ -542,46 +544,6 @@ func setCurrentHead(headHash string) {
 	currentHeadLock.Lock()
 	defer currentHeadLock.Unlock()
 	currentHead = headHash
-}
-
-func getDotString1(blocks map[string]o.Block) []byte {
-	// write blockdata
-	logstring := "digraph G {\n"
-	for k, v := range blocks {
-		str := fmt.Sprintf("subgraph %s { node [style=filled,color=white]; style=filled; color=lightgrey; %s; label=\"blockhash: %s\\nslot: %s\\nbakerid: %s\"; }\n",
-			"cluster"+k, "block"+k, k, v.Slot, v.BakerID.Hash())
-		logstring += str
-	}
-	for k, v := range blocks {
-		blockdatastr := fmt.Sprintf("%s [shape=record, label=\" {", "block"+k)
-		if len(v.BlockData.Trans) == 0 {
-			blockdatastr += "empty } \" ];\n"
-		} else {
-			for i, data := range v.BlockData.Trans {
-				switch data.GetType() {
-				case o.TRANSACTION:
-					blockdatastr += fmt.Sprintf("| %d: TRANSACTION(from: %s, to: %s, amount: %d, id: %s) ", i,
-						data.Transaction.From.Hash(), data.Transaction.To.Hash(), data.Transaction.Amount, data.Transaction.ID)
-				case o.CONTRACTINIT:
-					ci := data.ContractInit
-					blockdatastr += fmt.Sprintf("| %d: CONTRACTINIT(owner: %s, code: [...], gas: %d, prepaid: %d, "+
-						"storagelimit: %d) ", i, ci.Owner, ci.Gas, ci.Prepaid, ci.StorageLimit)
-				case o.CONTRACTCALL:
-					cc := data.ContractCall
-					blockdatastr += fmt.Sprintf("| %d: CONTRACTCALL(caller: %s, address: %s, entry: %s, params: %s, "+
-						"amount: %d, gas: %d", i, cc.Caller, cc.Address, cc.Entry, cc.Params, cc.Amount, cc.Gas)
-				}
-			}
-			blockdatastr += "} \" ];\n"
-		}
-		logstring += blockdatastr
-	}
-	for k, v := range blocks {
-		logstring += fmt.Sprintf("%s -> %s;\n", "block"+v.ParentPointer, "block"+k)
-		logstring += fmt.Sprintf("%s -> %s [style=dotted,color=lightblue];\n", "block"+k, "block"+v.LastFinalized)
-	}
-	logstring += "\n}"
-	return []byte(logstring)
 }
 
 func getDotString(blocks map[string]o.Block) []byte {

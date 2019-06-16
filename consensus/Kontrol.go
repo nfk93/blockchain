@@ -38,7 +38,7 @@ func runSlot() { //Calls drawLottery every slot and increments the currentSlot a
 	offset := time.Since(genesisTime)
 	for {
 		if (currentSlot)%epochLength == 0 {
-			finalizeSlot := currentSlot - finalizeGap
+			finalizeSlot := int(currentSlot) - int(finalizeGap)
 			if finalizeSlot > 0 {
 				finalize(currentSlot - (finalizeGap))
 			} else {
@@ -78,8 +78,9 @@ func getCurrentSlot() uint64 {
 	return currentSlot
 }
 
+//return slot/finalizeGap
 func getEpoch(slot uint64) uint64 {
-	return slot / finalizeGap
+	return slot / epochLength
 }
 
 func processGenesisData(genesisData o.GenesisData, blockHash string) {
@@ -112,7 +113,7 @@ func finalize(slot uint64) {
 			head := blocks.get(getCurrentHead())
 			for {
 				if head.Slot <= slot {
-					finalHash := head.LastFinalized
+					finalHash := finalData[epoch-1].blockHash
 					if isVerbose {
 						log.Println("Finalizing block", finalHash[:6]+"...")
 					}
@@ -207,11 +208,10 @@ func getLotteryPower(pk PublicKey, slot uint64) float64 {
 
 func PrintCurrentStake() {
 	slot := getCurrentSlot()
-	lastFinalEpoch := getEpoch(slot) - 1
 	var keyList []string
 	finalLock.RLock()
 	defer finalLock.RUnlock()
-	stake := finalData[lastFinalEpoch].stake
+	stake := finalData[getFinalDataIndex(slot)].stake
 	for k := range stake {
 		keyList = append(keyList, k)
 	}
