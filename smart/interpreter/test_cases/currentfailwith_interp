@@ -1,8 +1,0 @@
-type storage = koin
-
-let%init storage = 1kn
-
-let%entry main () stoa = (
-    if true then Current.failwith "We're failing, AAAAAAAAAAH!"; (); (); (); (); ();
-    (([]: operation list), 1kn)
-)

@@ -1,8 +1,0 @@
-(* should fail! *)
-
-type storage = int * int * int
-
-let%init storage = (1, 2, 3)
-
-let%entry main () s =
-    let () = 123 in (([]: operation list), s)

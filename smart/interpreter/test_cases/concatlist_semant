@@ -1,5 +1,0 @@
-type storage = int list
-
-let%init storage = ([] : int list)
-
-let%entry main () s = (([] : operation list), 1 :: [1; 2; 3])

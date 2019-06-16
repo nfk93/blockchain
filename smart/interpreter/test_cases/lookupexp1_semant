@@ -1,7 +1,0 @@
-type storage = int
-type record = {a: int; b: string;}
-
-let%init storage = 1
-
-let%entry main (storage : storage) s = let struct = {a = 2; b = "tis";} in
-let d = struct.c in ( ([] : operation list), storage)

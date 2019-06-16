@@ -1,8 +1,0 @@
-type storage = int * int * int
-
-let%init storage = (1, 2, 3)
-
-let%entry main () s =
-    let (a : int) = 15 in
-    let (s1, s2, s3) = s in
-        (([]: operation list), (s1 + a, s2 + a, s3 + a))

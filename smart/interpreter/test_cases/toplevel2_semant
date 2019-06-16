@@ -1,3 +1,0 @@
-type storage = int
-
-let%entry main () s = (([] : operation list), 0)

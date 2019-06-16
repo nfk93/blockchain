@@ -1,7 +1,0 @@
-type storage = int
-
-let%init storage = 12
-
-let%entry main () (storage: storage) = (([] : operation list), storage)
-
-let%entry main2 () s = let a = (12+13 : int) in ([], a)

@@ -1,5 +1,0 @@
-let%entry main1 () () = if true then 1 else 2
-let%entry main2 () () = if if false then true else false then 1 else 2
-let%entry main3 () () = if 14 then 15
-let%entry main4 () () = if 15 then if true then false else true else 15
-let%entry ambiguous () () = if true then if true then 1 else 2

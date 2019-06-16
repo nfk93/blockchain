@@ -1,5 +1,0 @@
-type storage = koin
-
-let%init storage = 1kn
-
-let%entry main () s = (([] : operation list), 133.55kn)

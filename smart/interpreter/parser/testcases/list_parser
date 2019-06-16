@@ -1,5 +1,0 @@
-type storage = int list
-
-let%entry main_1 () () = 1 :: 2 :: 3 :: []
-
-let%entry main_2 () () = 1 :: [2; 3; 4]

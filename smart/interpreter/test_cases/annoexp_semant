@@ -1,6 +1,0 @@
-type storage = unit
-
-let%init storage = ()
-
-let%entry main () sto =
-    let (a : int) = (14 + 15 : int) in (([]: operation list), ())

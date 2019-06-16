@@ -1,5 +1,0 @@
-let%entry main1 () () = a.b <- 12
-
-let%entry main2 () () = a.b.c <- "yo"
-
-let%entry main3 () () = a.aasdqwe.asdq <- (5 + 15)

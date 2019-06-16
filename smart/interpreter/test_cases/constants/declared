@@ -1,6 +1,0 @@
-type mytuple = int * string
-type storage = int * mytuple
-
-let%init storage = (1, (2, "hi"))
-
-let%entry main () s = (([] : operation list), (4, (5, "bye")))

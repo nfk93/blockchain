@@ -1,5 +1,0 @@
-type storage = key
-
-let%init storage = kn12213131242213131242213131242213122131312422131312422131312422131
-
-let%entry main () s = (([] : operation list), kn1aaffaafaaffaafaaffaafaaffaafaaffaaffaafaaffaafaaffaafaaffaafaaff)

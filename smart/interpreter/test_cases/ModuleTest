@@ -1,4 +1,0 @@
-type storage = int
-let%init storage = 1
-let%entry main () s =
-      Current.test 1 2

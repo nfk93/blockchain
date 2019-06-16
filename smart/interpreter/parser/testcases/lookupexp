@@ -1,3 +1,0 @@
-let%entry main1 () () = a.b
-let%entry main2 () () = a.b.c
-let%entry main3 () () = 1 + a.aasdqwe.asdq

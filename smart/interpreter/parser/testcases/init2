@@ -1,9 +1,0 @@
-type storage = {
-    number : int;
-    sometext : string;
-}
-
-let%init storage = {
-    number = 12;
-    sometext = "yo";
-}

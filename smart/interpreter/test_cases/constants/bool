@@ -1,5 +1,0 @@
-type storage = bool
-
-let%init storage = true
-
-let%entry main () s = (([] : operation list), false)
