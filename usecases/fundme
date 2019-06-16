@@ -1,9 +1,3 @@
-
-[%%version 0.3]
-
-  (* Basic Tezos crowdfunding contract *)
-  (* Author - Postables *)
-
 type storage = {
   owner : key;
   funding_goal : koin;

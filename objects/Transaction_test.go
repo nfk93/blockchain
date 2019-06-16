@@ -2,6 +2,7 @@ package objects
 
 import (
 	. "github.com/nfk93/blockchain/crypto"
+	"github.com/nfk93/blockchain/transaction"
 	"testing"
 )
 
@@ -14,5 +15,11 @@ func TestVerifyTransaction(t *testing.T) {
 	if !b.VerifyTransaction() {
 		t.Error("Verification failed")
 	}
+
+}
+
+func initState() {
+	channels := CreateChannelStruct()
+	go transaction.StartTransactionLayer(channels, false)
 
 }

@@ -5,8 +5,8 @@ timeout 5
 
 RD /S /Q out
 MD out
-for /L %%A IN (65001,1,65005) DO (
-	start /MIN "Peer %%A" cmd /k  "blockchain.exe" -a 127.0.0.1:65000 -p %%A
+for /L %%A IN (65001,1,65002) DO (
+	start "Peer %%A" cmd /k  "blockchain.exe" -a 127.0.0.1:65000 -p %%A
 
 	timeout 2
 )
