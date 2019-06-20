@@ -1,6 +1,6 @@
 # Proof-of-Stake Blockchain
 
-This is a CLI implementing a synchronous of a Proof-of-Stake blockchain protocol.
+This is a CLI implementing a synchronous Proof-of-Stake blockchain protocol.
 
 ### Installing
 
