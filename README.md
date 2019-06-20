@@ -60,6 +60,11 @@ This client is ready for the Blockchain protocol to start. Use -h or --help for 
 2019/06/20 11:04:35 Genesis received! Starting blockchain protocol
 »
 ```
+
+Alternatively, you can define your own parameters. We highly recommend a short finalization gap and epoch length, with matching high hardness, when running a test example, since no stake will change until a number of slots equal to the finalization gap + 2 epochs has passed. Your lottery stake, is the stake you had at the previously finalized block, meaning that you won't see it change until slot 140 if your epochlength is 20 and your finalize gap is 100
+
+
+
 To test that the blockchain is indeed working, enable verbose on some of the peers by typing 'verbose' in the commandline. Use the two debug methods "debug-autotrans" and "debug-trans5" to make some test transactions. The full list of commands can be found by typing -h or --help, which lists 
 ```
   Command:                            Description:
