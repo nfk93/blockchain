@@ -39,6 +39,7 @@ var inputTrans chan objects.TransData
 var myKey crypto.PublicKey
 var publicKeys map[crypto.PublicKey]bool
 var pkLock sync.RWMutex
+var runLocally bool
 
 type stringSet struct {
 	m map[string]bool
@@ -75,10 +76,11 @@ func (b *stringSet) contains(s string) bool {
 	return b.m[s]
 }
 
-func StartP2P(connectTo string, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
+func StartP2P(connectTo string, runLocal bool, hostPort string, mypk crypto.PublicKey, channels objects.ChannelStruct) {
 	networkList = make(map[string]bool)
 	blocksSeen = *newStringSet()
 	transSeen = *newStringSet()
+	runLocally = runLocal
 	myIp = getIP()
 	myHostPort = hostPort
 	deliverBlock = channels.BlockFromP2P
@@ -389,7 +391,6 @@ func determinePeers() {
 	// determines your peers. Is run every time you receive a new connection
 	peersLock.Lock()
 	defer peersLock.Unlock()
-	log.Println("\nDetermining peers...")
 	connections := setAsList(networkList)
 	sort.Strings(connections)
 	networkSize := len(connections)
@@ -410,7 +411,7 @@ func determinePeers() {
 				log.Println(fmt.Sprintf("Cant connect to peer %s, error: %s\nTrying next peer... Failed attempts: %d",
 					connections[nextIndex], err.Error(), j))
 			} else {
-				log.Println("Connected to %s", connections[nextIndex])
+				// log.Println("Connected to %s", connections[nextIndex])
 				peers[i] = *peerClient
 				notConnected = false
 			}
@@ -423,16 +424,21 @@ func determinePeers() {
 
 // This is a slightly hacky way to obtain your own IPv4 IP address
 func getIP() string {
-	url := "https://api.ipify.org?format=text"
-	resp, err := http.Get(url)
-	if err != nil {
-		panic(err)
+	if runLocally {
+		fmt.Println("my ip is: 127.0.0.1")
+		return "127.0.0.1"
+	} else {
+		url := "https://api.ipify.org?format=text"
+		resp, err := http.Get(url)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+		ip, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("my ip is:", string(ip))
+		return string(ip)
 	}
-	defer resp.Body.Close()
-	ip, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("my ip is:", string(ip))
-	return string("127.0.0.1")
 }

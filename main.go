@@ -33,6 +33,7 @@ var finalizeGap *uint64
 var epochLength *uint64
 var newNetwork *bool
 var saveLogFile *bool
+var runLocally *bool
 var addr *string
 var port *string
 var autoTransStatus bool
@@ -42,17 +43,18 @@ func main() {
 
 	addr = flag.String("a", "", "Address to connect to, INCLUDING PORT, (if not set, start own network)")
 	port = flag.String("p", "65000", "Port to be listening on used for p2p")
+	runLocally = flag.Bool("run_locally", true, "Set if only running locally")
 	slotduration = flag.Int("slot_duration", 10, "Specify the slot length in seconds")
 	hardness = flag.Float64("hardness", 0.1, "Specify hardness")
 	finalizeGap = flag.Uint64("finalize_gap", 1500, "Specify the finalization gap, only set this is if you're starting a new network")
 	epochLength = flag.Uint64("epoch_length", 100, "Specify the epoch length, only set this is if you're starting a new network")
-	saveLogFile = flag.Bool("log", false, "will save simple log of all blocks in dot format if set (default false)")
+	saveLogFile = flag.Bool("log", false, "Set to write log of tree in each slot to /out (default false)")
 	flag.Parse()
 
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
-	p2p.StartP2P(*addr, *port, publicKey, channels)
+	p2p.StartP2P(*addr, *runLocally, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
 
 	autoTransStatus = false
@@ -397,7 +399,7 @@ func printHelpMenu() {
 	prettyPrintHelpMessage("Command:", []string{"Description:"})
 	prettyPrintHelpMessage("exit", []string{"Exit this program"})
 	prettyPrintHelpMessage("start", []string{"Begins the blockchain protocol"})
-	prettyPrintHelpMessage("verbose", []string{"Initially active. Switches verbose mode between on and off"})
+	prettyPrintHelpMessage("verbose", []string{"Switches verbose mode between on and off, initially off"})
 	prettyPrintHelpMessage("id", []string{"Show your public key in short and which port you are listening on"})
 	prettyPrintHelpMessage("network", []string{"Print out the network list of who you are connected to"})
 	//prettyPrintHelpMessage("peers", []string{"Print list of all peers in the network"})
