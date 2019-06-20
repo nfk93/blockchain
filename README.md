@@ -30,7 +30,7 @@ Usage of blockchain.exe:
   -p string
         Port to be listening on used for p2p (default "65000")
   -run_locally
-        Set if only running locally (default true) (default true)
+        Set if only running locally (default true)
   -slot_duration int
         Specify the slot length in seconds (default 10)
 ```
