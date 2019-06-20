@@ -103,14 +103,14 @@ To test that the blockchain is indeed working, enable verbose on some of the pee
                                       GAS: Positive integer of how much gas to include
 
         -entry <string>               Default: main. Used to specify the entry in the contract to call
-        -amount <uint>                Default: 0. Non negative integer of amount included in a contract call
+        -amount <uint>                Default: 0. Non negative integer of amount included in contract call
         -params <string>              Default: "()". Used to specify parameters to include in contract call
 
   init CODE GAS PREPAID STORAGE
                                       CODE: path to code file
                                       GAS: Positive integer of how much gas to include
-                                      PREPAID: Positive integer of how much prepaid money to attached at contract
-                                      STORAGE: Positive integer of max storage usage for a contract
+                                      PREPAID: Positive integer of how much prepaid money to attach to contract
+                                      STORAGE: Positive integer of max storage usage for contract
 
   debug-trans5                        Sends 1/20 of your stake to 5 random users in the network
 
