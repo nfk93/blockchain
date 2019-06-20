@@ -36,27 +36,31 @@ var saveLogFile *bool
 var addr *string
 var port *string
 var autoTransStatus bool
+var isNetworkStarter bool
 
 func main() {
 
-	addr = flag.String("a", "", "Address to connect to (if not set, start own network)")
-	port = flag.String("p", "65000", "Port to be used for p2p (default=65000)")
-	slotduration = flag.Int("slot_duration", 10, "Specify the slot length (default=1sec)")
-	hardness = flag.Float64("hardness", 0.2, "Specify hardness (default=0.2)")
-	finalizeGap = flag.Uint64("finalize_gap", 100, "Specify the finalization gap (default=50")
-	epochLength = flag.Uint64("epoch_length", 50, "Specify the epoch length (default=50")
-	newNetwork = flag.Bool("new_network", true, "Set this flag to true if you want to start a new network")
-	saveLogFile = flag.Bool("log", false, "will save logs of all transactions and blocks if true (default=false)")
+	addr = flag.String("a", "", "Address to connect to, INCLUDING PORT, (if not set, start own network)")
+	port = flag.String("p", "65000", "Port to be listening on used for p2p")
+	slotduration = flag.Int("slot_duration", 10, "Specify the slot length in seconds")
+	hardness = flag.Float64("hardness", 0.1, "Specify hardness")
+	finalizeGap = flag.Uint64("finalize_gap", 1500, "Specify the finalization gap, only set this is if you're starting a new network")
+	epochLength = flag.Uint64("epoch_length", 100, "Specify the epoch length, only set this is if you're starting a new network")
+	saveLogFile = flag.Bool("log", false, "will save simple log of all blocks in dot format if set (default false)")
 	flag.Parse()
+
 	secretKey, publicKey = crypto.KeyGen(2048)
 	_, pk2 = crypto.KeyGen(2048)
 	channels = objects.CreateChannelStruct()
-	autoTransStatus = false
 	p2p.StartP2P(*addr, *port, publicKey, channels)
 	consensus.StartConsensus(channels, publicKey, secretKey, false, *saveLogFile)
+
+	autoTransStatus = false
 	if *addr == "" {
+		isNetworkStarter = true
 		fmt.Println("When all other clients are ready, use start to begin the Blockchain protocol or -h or --help for help with further commands!")
 	} else {
+		isNetworkStarter = false
 		fmt.Println("This client is ready for the Blockchain protocol to start. Use -h or --help for further commands!")
 	}
 	cliLoop()
@@ -175,7 +179,7 @@ func cliLoop() {
 		case line == "final":
 			consensus.PrintCurrentStake()
 		case line == "start": //"-start_network":
-			if *newNetwork {
+			if isNetworkStarter {
 				genesisdata, err := objects.NewGenesisData(publicKey, time.Second*time.Duration(*slotduration), *hardness, *finalizeGap, *epochLength)
 				if err != nil {
 					log.Println(err)
@@ -183,21 +187,22 @@ func cliLoop() {
 				}
 				genesisblock := objects.Block{Slot: 0, BlockData: objects.BlockData{GenesisData: genesisdata}}
 				channels.BlockToP2P <- genesisblock
-				publicKeys := p2p.GetPublicKeys()
-				for i, v := range publicKeys {
-					if i > 4 {
-						break
-					} else {
-						trans := objects.CreateTransaction(publicKey,
-							v,
-							uint64(10000000000000),
-							strconv.Itoa(i),
-							secretKey)
-						channels.TransClientInput <- objects.TransData{Transaction: trans}
-					}
-				}
+				/*
+					publicKeys := p2p.GetPublicKeys()
+					for i, v := range publicKeys {
+						if i > 4 {
+							break
+						} else {
+							trans := objects.CreateTransaction(publicKey,
+								v,
+								uint64(10000000000000),
+								strconv.Itoa(i),
+								secretKey)
+							channels.TransClientInput <- objects.TransData{Transaction: trans}
+						}
+					} */
 			} else {
-				log.Println("Only the network founder can start the network!")
+				log.Println("Only the network starter can start the network!")
 			}
 
 		case line == "id":
@@ -330,9 +335,6 @@ func cliLoop() {
 
 		default:
 			println(line, "is not a known command. Type -h or --help for help menu!")
-
-		}
-	exit:
 		/* //Test Code
 		case line == "-trans1000":
 			for _, p := range p2p.GetPublicKeys() {
@@ -357,8 +359,8 @@ func cliLoop() {
 					secretKey)
 				channels.TransClientInput <- objects.TransData{Transaction: trans}
 
-			}
-		case line == "-trans5":
+			} */
+		case line == "debug-trans5":
 			currentStake := transaction.GetCurrentLedger()[publicKey.Hash()]
 			pkList := p2p.GetPublicKeys()
 
@@ -377,18 +379,20 @@ func cliLoop() {
 				channels.TransClientInput <- objects.TransData{Transaction: trans}
 			}
 
+		case line == "debug-autotrans":
 			// starts Go routine that randomly keeps making transactions to others
-		case line == "-autotrans":
 			autoTransStatus = !autoTransStatus
 			if autoTransStatus {
 				println("AutoTrans is now on")
 			} else {
 				println("AutoTrans is now off")
 			}
-			go autoTrans() */
-
+			go autoTrans()
+		}
 	}
+exit:
 }
+
 func printHelpMenu() {
 	prettyPrintHelpMessage("Command:", []string{"Description:"})
 	prettyPrintHelpMessage("exit", []string{"Exit this program"})
@@ -422,6 +426,8 @@ func printHelpMenu() {
 		"", "GAS: Positive integer of how much gas to include",
 		"", "PREPAID: Positive integer of how much prepaid money to attached at contract",
 		"", "STORAGE: Positive integer of max storage usage for a contract"})
+	prettyPrintHelpMessage("debug-trans5", []string{"Sends 1/20 of your stake to 5 random users in the network"})
+	prettyPrintHelpMessage("debug-autotrans", []string{"Toggle: Sends 1/50 of your stake to 5 random users in the network every 5 seconds"})
 }
 func readFromFile(s string) ([]byte, error) {
 	bytemsg, err := ioutil.ReadFile(s)
@@ -452,7 +458,6 @@ func prettyPrintHelpMessage(command string, explain []string) {
 }
 
 func autoTrans() {
-
 	for {
 		// checks if autotrans should stop
 		if !autoTransStatus {
