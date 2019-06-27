@@ -122,6 +122,9 @@ func InitiateContract(
 	}
 
 	address := getAddress(creator, nonce, contractCode)
+	if _, exists := newBlockState.contractStates[address]; exists {
+		return "", gas, fmt.Errorf("contract already exists on designated address")
+	}
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, blockstate)
 	if log {
 		// TODO log contracts and contractstates to file
@@ -193,6 +196,9 @@ func InitiateContractOnNewBlock(
 	storageLimit uint64,
 ) (addr string, remainingGas uint64, err error) {
 	address := getAddress(creator, nonce, contractCode)
+	if _, exists := newBlockState.contractStates[address]; exists {
+		return "", gas, fmt.Errorf("contract already exists on designated address")
+	}
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, newBlockState)
 	if err != nil {
 		return "", remainingGas, err
