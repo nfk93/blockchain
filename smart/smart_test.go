@@ -2,11 +2,14 @@ package smart
 
 import (
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
 	"io/ioutil"
 	"os"
 	"testing"
 )
+
+var _, pk = crypto.KeyGen(2048)
 
 func TestNewBlockTreeNode(t *testing.T) {
 	reset()
@@ -23,7 +26,7 @@ func TestInitiateContract(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
-	addr, remaining, err := InitiateContract(fundme, 1000000, 100000, 10000, "1")
+	addr, remaining, err := InitiateContract(pk, "nonce", fundme, 1000000, 100000, 10000, "1")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err.Error())
 		return
@@ -56,7 +59,7 @@ func TestInitiateContract2(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
-	_, remaining, err := InitiateContract(fundme, 1000000, 100000, 100, "1")
+	_, remaining, err := InitiateContract(pk, "nonce", fundme, 1000000, 100000, 100, "1")
 	if err == nil {
 		t.Errorf("should have error")
 		return
@@ -71,7 +74,7 @@ func TestInitiateContract3(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
-	_, remaining, err := InitiateContract(fundme, 1000000, 9000, 10000, "1")
+	_, remaining, err := InitiateContract(pk, "nonce", fundme, 1000000, 9000, 10000, "1")
 	if err == nil {
 		t.Errorf("should have error")
 		return
@@ -86,7 +89,7 @@ func TestInitiateContract4(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
-	_, remaining, err := InitiateContract(fundme, 200000, 100000, 10000, "1")
+	_, remaining, err := InitiateContract(pk, "nonce", fundme, 200000, 100000, 10000, "1")
 	if err == nil {
 		t.Errorf("should have error")
 		return
@@ -100,7 +103,7 @@ func TestCallContract(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	fundme := getFundMeCode(t)
-	addr, _, _ := InitiateContract(fundme, 400000, 100000, 10000, "1")
+	addr, _, _ := InitiateContract(pk, "nonce", fundme, 400000, 100000, 10000, "1")
 	ledger, trans, remainingGas, err := CallContract(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		100000, 40000, "1")
 
@@ -192,7 +195,7 @@ func TestBranching(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code := getSimpleIntStorage(t)
-	addr, _, err := InitiateContract(code, 130000, 10000, 64, "1")
+	addr, _, err := InitiateContract(pk, "nonce", code, 130000, 10000, 64, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -237,7 +240,7 @@ func TestStorageSizeIncrease(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code := getIntListStorage(t)
-	addr, _, err := InitiateContract(code, 150000, 10000, 64, "1")
+	addr, _, err := InitiateContract(pk, "nonce", code, 150000, 10000, 64, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -252,11 +255,11 @@ func TestChainCalls(t *testing.T) {
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code1 := getContract1(t)
 	code2 := getContract2(t)
-	addr1, _, err := InitiateContract(code1, 200000, 10000, 64, "1")
+	addr1, _, err := InitiateContract(pk, "nonce", code1, 200000, 10000, 64, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	addr2, _, err := InitiateContract(code2, 200000, 10000, 64, "1")
+	addr2, _, err := InitiateContract(pk, "nonce", code2, 200000, 10000, 64, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -292,12 +295,12 @@ func TestExpiringContract(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code := getIntListStorage(t)
-	addr1, _, err := InitiateContract(code, 150000, 1500, 150, "1")
+	addr1, _, err := InitiateContract(pk, "nonce", code, 150000, 1500, 150, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	code = getSimpleIntStorage(t)
-	addr2, _, err := InitiateContract(code, 150000, 1100, 100, "1")
+	addr2, _, err := InitiateContract(pk, "nonce", code, 150000, 1100, 100, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -341,7 +344,7 @@ func TestFinalizeBlock1(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code := getIntListStorage(t)
-	addr, _, err := InitiateContract(code, 150000, 1000, 100, "1")
+	addr, _, err := InitiateContract(pk, "nonce", code, 150000, 1000, 100, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -359,13 +362,13 @@ func TestFinalizeBlock2(t *testing.T) {
 	reset()
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	code := getIntListStorage(t)
-	_, _, err := InitiateContract(code, 150000, 1000, 100, "1")
+	_, _, err := InitiateContract(pk, "nonce", code, 150000, 1000, 100, "1")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 	_, _ = NewBlockTreeNode("2", "1", 16)
 	_, _ = NewBlockTreeNode("3", "2", 20)
-	addr, _, err := InitiateContract(code, 150000, 1000, 64*2, "3")
+	addr, _, err := InitiateContract(pk, "nonce", code, 150000, 1000, 64*2, "3")
 	FinalizeBlock("2")
 	_, _, _, err = CallContract(addr, "main", "1", 0, 100000, "3")
 	if err != nil {
@@ -378,7 +381,7 @@ func TestNewBlock(t *testing.T) {
 	_, _ = NewBlockTreeNode("1", "genesis", 5)
 	_, _ = SetStartingPointForNewBlock("1", 11)
 	fundme := getFundMeCode(t)
-	addr, _, _ := InitiateContractOnNewBlock(fundme, 400000, 100000, 10000)
+	addr, _, _ := InitiateContractOnNewBlock(pk, "nonce", fundme, 400000, 100000, 10000)
 	_, _, _, err := CallContractOnNewBlock(addr, "main", "kn1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		100000, 40000)
 	if err != nil {
@@ -415,7 +418,7 @@ func TestNewBlock(t *testing.T) {
 	}
 
 	// testing that calling new contract doesn't mute the parent block
-	addr, _, _ = InitiateContract(fundme, 400000, 100000, 10000, "1")
+	addr, _, _ = InitiateContract(pk, "nonce", fundme, 400000, 100000, 10000, "1")
 	previous := stateTree["1"].contractStates[addr]
 	prevBal := previous.Balance
 	prevPre := previous.PrepaidStorage

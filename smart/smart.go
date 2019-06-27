@@ -3,6 +3,7 @@ package smart
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/nfk93/blockchain/crypto"
 	"github.com/nfk93/blockchain/smart/interpreter"
 	"github.com/nfk93/blockchain/smart/interpreter/ast"
 	"github.com/nfk93/blockchain/smart/interpreter/value"
@@ -104,6 +105,8 @@ func CallContract(
  * Precondition: blockhash points to an existing state, i.e. _, exists := stateTree[blockhash] is always true
  */
 func InitiateContract(
+	creator crypto.PublicKey,
+	nonce string,
 	contractCode []byte,
 	gas uint64,
 	prepaid uint64,
@@ -118,7 +121,7 @@ func InitiateContract(
 		return "", 0, fmt.Errorf(errstring)
 	}
 
-	address := getAddress(contractCode)
+	address := getAddress(creator, nonce, contractCode)
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, blockstate)
 	if log {
 		// TODO log contracts and contractstates to file
@@ -182,12 +185,14 @@ func CallContractOnNewBlock(
  * Precondition: newBlockState is defined
  */
 func InitiateContractOnNewBlock(
+	creator crypto.PublicKey,
+	nonce string,
 	contractCode []byte,
 	gas uint64,
 	prepaid uint64,
 	storageLimit uint64,
 ) (addr string, remainingGas uint64, err error) {
-	address := getAddress(contractCode)
+	address := getAddress(creator, nonce, contractCode)
 	texp, newstate, remainingGas, err := initiateContract(contractCode, address, gas, prepaid, storageLimit, newBlockState)
 	if err != nil {
 		return "", remainingGas, err
@@ -362,8 +367,9 @@ func decodeParameters(params string) (value.Value, error) {
 	return paramparser.ParseParams(params)
 }
 
-func getAddress(contractCode []byte) string {
-	bytes := sha256.Sum256(contractCode)
+func getAddress(creator crypto.PublicKey, nonce string, contractCode []byte) string {
+	tohash := creator.Hash() + nonce + string(contractCode)
+	bytes := sha256.Sum256([]byte(tohash))
 	return fmt.Sprintf("%x", bytes)
 }
 
